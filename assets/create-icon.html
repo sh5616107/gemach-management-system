@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>יצירת אייקון למערכת גמ"ח</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        #canvas { border: 1px solid #ccc; margin: 20px; }
+        button { padding: 10px 20px; margin: 10px; font-size: 16px; }
+    </style>
+</head>
+<body>
+    <h1>יצירת אייקון למערכת ניהול גמ"ח</h1>
+    <canvas id="canvas" width="512" height="512"></canvas>
+    <br>
+    <button onclick="downloadIcon()">הורד אייקון PNG</button>
+    
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // רקע כחול
+        ctx.fillStyle = '#3498db';
+        ctx.fillRect(0, 0, 512, 512);
+        
+        // מעגל לבן
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(256, 256, 200, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // טקסט גמ"ח
+        ctx.fillStyle = '#2c3e50';
+        ctx.font = 'bold 80px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('גמ"ח', 256, 200);
+        
+        // סמל כסף
+        ctx.font = '60px Arial';
+        ctx.fillText('💰', 256, 300);
+        
+        // טקסט ניהול
+        ctx.font = 'bold 40px Arial';
+        ctx.fillText('ניהול', 256, 360);
+        
+        function downloadIcon() {
+            const link = document.createElement('a');
+            link.download = 'icon.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., v2.1.0)'
+        required: true
+        default: 'v2.1.0'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build React app
+      run: npm run build
+      
+    - name: Install Electron dependencies
+      run: npm run postinstall
+      
+    - name: Build Electron app
+      run: npm run dist
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: gemach-management-system-windows
+        path: |
+          dist-electron/*.exe
+          dist-electron/*.exe.blockmap
+          
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.event.inputs.version || github.ref_name }}
+        name: מערכת ניהול גמ"ח ${{ github.event.inputs.version || github.ref_name }}
+        body: |
+          ## 🏛️ מערכת ניהול גמ"ח - גרסה ${{ github.event.inputs.version || github.ref_name }}
+          
+          ### ✨ תכונות עיקריות:
+          - 💰 ניהול הלוואות מתקדם עם מעקב פרעונות
+          - 🏦 ניהול פקדונות ומשיכות
+          - 🎁 ניהול תרומות עם הדפסת קבלות
+          - 🖨️ הדפסה משופרת עם פתרון בעיית Windows
+          - 📁 שמירת PDF (ב-Electron)
+          - ⚙️ פונקציות מתקדמות אופציונליות
+          - 🎨 ממשק בעברית עם ערכות נושא
+          - 📊 דוחות וסטטיסטיקות
+          
+          ### 🔧 הוראות התקנה:
+          1. הורד את קובץ ה-Setup.exe
+          2. הפעל את הקובץ והתקן
+          3. פתח את האפליקציה
+          4. התחל להזין נתונים
+          
+          ### 📚 תיעוד מלא:
+          ראה את ה-README בפרויקט למדריך שימוש מפורט.
+          
+          ---
+          **פותח עבור קהילת הגמ"חים בישראל 🇮🇱**
+        files: |
+          dist-electron/*.exe
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

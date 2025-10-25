@@ -2,6 +2,22 @@
 
 מערכת ניהול מתקדמת לגמילות חסדים הכוללת ניהול הלוואות, פקדונות ותרומות עם ממשק בעברית וכלים מתקדמים.
 
+## 📥 הורדה והתקנה
+
+### 💻 הורדת קובץ EXE (מומלץ)
+[![הורד את הגרסה האחרונה](https://img.shields.io/github/v/release/sh5616107/gemach-management-system?label=הורד%20גרסה&style=for-the-badge&color=blue)](https://github.com/sh5616107/gemach-management-system/releases/latest)
+
+**לחץ על הקישור למעלה או:**
+1. לך ל-[עמוד השחרורים](https://github.com/sh5616107/gemach-management-system/releases)
+2. הורד את קובץ ה-Setup.exe מהגרסה האחרונה
+3. הפעל את הקובץ והתקן
+4. פתח את האפליקציה מתפריט התחל
+
+### 🌐 הרצה בדפדפן
+ניתן גם להריץ ישירות בדפדפן מבלי להתקין - [לחץ כאן](https://sh5616107.github.io/gemach-management-system/)
+
+---
+
 ## 🚀 התחלה מהירה
 
 ### התקנה ראשונית

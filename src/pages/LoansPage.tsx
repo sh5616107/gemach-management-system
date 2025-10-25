@@ -1370,6 +1370,31 @@ function LoansPage() {
                   value={currentLoan.loanDate || ''}
                   onChange={(e) => handleLoanChange('loanDate', e.target.value)}
                 />
+                {(() => {
+                  const today = new Date().toISOString().split('T')[0]
+                  const loanDate = currentLoan.loanDate
+                  
+                  if (loanDate && loanDate > today) {
+                    const daysUntil = Math.ceil((new Date(loanDate).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24))
+                    return (
+                      <small style={{ 
+                        color: '#3498db', 
+                        fontSize: '12px', 
+                        display: 'block', 
+                        marginTop: '5px',
+                        background: 'rgba(52, 152, 219, 0.1)',
+                        padding: '5px 8px',
+                        borderRadius: '4px',
+                        border: '1px solid rgba(52, 152, 219, 0.3)'
+                      }}>
+                        🕐 <strong>הלוואה מתוכננת</strong> - תופעל בעוד {daysUntil === 1 ? 'יום אחד' : `${daysUntil} ימים`}
+                        <br />
+                        💡 לא תוצג בדף הבית עד התאריך הזה
+                      </small>
+                    )
+                  }
+                  return null
+                })()}
               </div>
             </div>
 
@@ -1811,6 +1836,128 @@ function LoansPage() {
                           }}
                         >
                           מחק
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* הלוואות עתידיות */}
+        {db.getFutureLoans().length > 0 && (
+          <div style={{ marginTop: '30px' }}>
+            <h4 style={{ 
+              marginBottom: '15px', 
+              color: '#3498db',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
+            }}>
+              🕐 הלוואות מתוכננות ({db.getFutureLoans().length})
+              <span style={{
+                background: '#3498db',
+                color: 'white',
+                padding: '3px 8px',
+                borderRadius: '10px',
+                fontSize: '12px'
+              }}>
+                לא פעילות עדיין
+              </span>
+            </h4>
+            <div style={{
+              background: 'rgba(52, 152, 219, 0.1)',
+              border: '2px solid rgba(52, 152, 219, 0.3)',
+              borderRadius: '8px',
+              padding: '15px',
+              marginBottom: '15px'
+            }}>
+              <p style={{ margin: '0', fontSize: '14px', color: '#2c3e50' }}>
+                💡 <strong>הלוואות מתוכננות</strong> הן הלוואות עם תאריך עתידי שעדיין לא הופעלו.
+                הן לא מוצגות בדף הבית ולא נחשבות כחובות עד שמגיע התאריך שלהן.
+              </p>
+            </div>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>שם הלווה</th>
+                  <th>סכום</th>
+                  <th>תאריך הלוואה</th>
+                  <th>תאריך החזרה</th>
+                  <th>ימים עד הפעלה</th>
+                  <th>הערות</th>
+                  <th>פעולות</th>
+                </tr>
+              </thead>
+              <tbody>
+                {db.getFutureLoansWithBorrowers().map((loan) => (
+                  <tr key={loan.id} style={{
+                    background: 'rgba(52, 152, 219, 0.05)'
+                  }}>
+                    <td style={{ fontWeight: 'bold' }}>
+                      {loan.borrowerName}
+                    </td>
+                    <td style={{ color: '#3498db', fontWeight: 'bold' }}>
+                      {db.formatCurrency(loan.amount)}
+                    </td>
+                    <td>{new Date(loan.loanDate).toLocaleDateString('he-IL')}</td>
+                    <td>{new Date(loan.returnDate).toLocaleDateString('he-IL')}</td>
+                    <td>
+                      <span style={{
+                        background: loan.daysUntilActive <= 7 ? '#f39c12' : '#3498db',
+                        color: 'white',
+                        padding: '3px 8px',
+                        borderRadius: '10px',
+                        fontSize: '12px',
+                        fontWeight: 'bold'
+                      }}>
+                        {loan.daysUntilActive === 1 ? 'מחר' : 
+                         loan.daysUntilActive === 0 ? 'היום' :
+                         `${loan.daysUntilActive} ימים`}
+                      </span>
+                    </td>
+                    <td style={{ fontSize: '12px', maxWidth: '150px' }}>
+                      {loan.notes || '-'}
+                    </td>
+                    <td>
+                      <button
+                        onClick={() => selectLoan(loan.id)}
+                        style={{
+                          padding: '5px 10px',
+                          fontSize: '12px',
+                          backgroundColor: '#3498db',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          marginLeft: '5px'
+                        }}
+                      >
+                        ערוך
+                      </button>
+                      {loan.daysUntilActive <= 0 && (
+                        <button
+                          onClick={() => {
+                            // הפעל את ההלוואה עכשיו
+                            const today = new Date().toISOString().split('T')[0]
+                            db.updateLoan(loan.id, { loanDate: today })
+                            loadData()
+                            showNotification('✅ ההלוואה הופעלה!', 'success')
+                          }}
+                          style={{
+                            padding: '5px 10px',
+                            fontSize: '12px',
+                            backgroundColor: '#27ae60',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            marginLeft: '5px'
+                          }}
+                        >
+                          🚀 הפעל עכשיו
                         </button>
                       )}
                     </td>

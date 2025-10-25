@@ -380,10 +380,10 @@ class GemachDatabase {
     return amount > 0 && amount <= balance
   }
 
-  // חישוב יתרת חוב כוללת של לווה
+  // חישוב יתרת חוב כוללת של לווה (רק הלוואות פעילות, לא עתידיות)
   getBorrowerTotalBalance(borrowerId: number): number {
     const borrowerLoans = this.dataFile.loans.filter(loan =>
-      loan.borrowerId === borrowerId && loan.status === 'active'
+      loan.borrowerId === borrowerId && this.isLoanActive(loan)
     )
 
     return borrowerLoans.reduce((total, loan) => {
@@ -553,11 +553,16 @@ class GemachDatabase {
 
   // סטטיסטיקות
   getStats() {
-    const loans = this.dataFile.loans
+    const allLoans = this.dataFile.loans
+    const activeLoans = this.getActiveLoans()
+    const futureLoans = this.getFutureLoans()
     const deposits = this.dataFile.deposits
     const donations = this.dataFile.donations
 
-    const totalLoansAmount = loans.reduce((sum, loan) => sum + loan.amount, 0)
+    const totalLoansAmount = allLoans.reduce((sum, loan) => sum + loan.amount, 0)
+    const activeLoansAmount = activeLoans.reduce((sum, loan) => sum + loan.amount, 0)
+    const futureLoansAmount = futureLoans.reduce((sum, loan) => sum + loan.amount, 0)
+    
     // חישוב רק הפקדות פעילות (לא נמשכו במלואן)
     const activeDeposits = deposits.filter(deposit => deposit.status === 'active')
     const totalDepositsAmount = activeDeposits.reduce((sum, deposit) => {
@@ -566,18 +571,22 @@ class GemachDatabase {
     }, 0)
     const totalDonationsAmount = donations.reduce((sum, donation) => sum + donation.amount, 0)
 
-    // חישוב יתרת הלוואות אמיתית (אחרי פרעונות)
-    const totalLoansBalance = loans.reduce((sum, loan) => sum + this.getLoanBalance(loan.id), 0)
+    // חישוב יתרת הלוואות אמיתית (רק הלוואות פעילות, אחרי פרעונות)
+    const totalLoansBalance = activeLoans.reduce((sum, loan) => sum + this.getLoanBalance(loan.id), 0)
 
     return {
-      totalLoans: loans.length,
-      totalDeposits: activeDeposits.length, // רק הפקדות פעילות
+      totalLoans: allLoans.length,
+      activeLoans: activeLoans.length,
+      futureLoans: futureLoans.length,
+      totalDeposits: activeDeposits.length,
       totalDonations: donations.length,
       totalLoansAmount,
-      totalLoansBalance, // יתרה אמיתית של הלוואות
-      totalDepositsAmount, // רק יתרת הפקדות פעילות
+      activeLoansAmount,
+      futureLoansAmount,
+      totalLoansBalance, // יתרה אמיתית של הלוואות פעילות בלבד
+      totalDepositsAmount,
       totalDonationsAmount,
-      balance: totalDonationsAmount + totalDepositsAmount - totalLoansBalance, // חישוב נכון: תרומות + פקדונות - הלוואות שניתנו
+      balance: totalDonationsAmount + totalDepositsAmount - totalLoansBalance, // חישוב נכון: תרומות + פקדונות - הלוואות פעילות
       lastUpdated: this.dataFile.lastUpdated
     }
   }
@@ -587,11 +596,56 @@ class GemachDatabase {
     return this.dataFile.loans.map(loan => {
       const borrower = this.dataFile.borrowers.find(b => b.id === loan.borrowerId)
       const balance = this.getLoanBalance(loan.id)
+      const isActive = this.isLoanActive(loan)
+      const isFuture = this.isLoanFuture(loan)
+      
       return {
         ...loan,
         borrowerName: borrower ? `${borrower.firstName} ${borrower.lastName}` : 'לא ידוע',
         borrower,
-        balance
+        balance,
+        isActive,
+        isFuture,
+        loanStatus: isFuture ? 'future' : isActive ? 'active' : loan.status
+      }
+    })
+  }
+
+  // רשימת הלוואות פעילות עם פרטי לווים
+  getActiveLoansWithBorrowers() {
+    return this.getActiveLoans().map(loan => {
+      const borrower = this.dataFile.borrowers.find(b => b.id === loan.borrowerId)
+      const balance = this.getLoanBalance(loan.id)
+      
+      return {
+        ...loan,
+        borrowerName: borrower ? `${borrower.firstName} ${borrower.lastName}` : 'לא ידוע',
+        borrower,
+        balance,
+        isActive: true,
+        isFuture: false,
+        loanStatus: 'active'
+      }
+    })
+  }
+
+  // רשימת הלוואות עתידיות עם פרטי לווים
+  getFutureLoansWithBorrowers() {
+    return this.getFutureLoans().map(loan => {
+      const borrower = this.dataFile.borrowers.find(b => b.id === loan.borrowerId)
+      const today = new Date()
+      const loanDate = new Date(loan.loanDate)
+      const daysUntilActive = Math.ceil((loanDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+      
+      return {
+        ...loan,
+        borrowerName: borrower ? `${borrower.firstName} ${borrower.lastName}` : 'לא ידוע',
+        borrower,
+        balance: loan.amount, // הלוואה עתידית - הסכום המלא
+        isActive: false,
+        isFuture: true,
+        loanStatus: 'future',
+        daysUntilActive
       }
     })
   }
@@ -773,15 +827,45 @@ class GemachDatabase {
     this.saveData()
   }
 
-  // זיהוי הלוואות באיחור
+  // בדיקה אם הלוואה פעילה (לא עתידית)
+  isLoanActive(loan: DatabaseLoan): boolean {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    const loanDate = new Date(loan.loanDate)
+    loanDate.setHours(0, 0, 0, 0)
+    
+    return loanDate <= today && loan.status === 'active'
+  }
+
+  // בדיקה אם הלוואה עתידית
+  isLoanFuture(loan: DatabaseLoan): boolean {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    const loanDate = new Date(loan.loanDate)
+    loanDate.setHours(0, 0, 0, 0)
+    
+    return loanDate > today && loan.status === 'active'
+  }
+
+  // קבלת הלוואות פעילות בלבד (לא עתידיות)
+  getActiveLoans(): DatabaseLoan[] {
+    return this.dataFile.loans.filter(loan => this.isLoanActive(loan))
+  }
+
+  // קבלת הלוואות עתידיות
+  getFutureLoans(): DatabaseLoan[] {
+    return this.dataFile.loans.filter(loan => this.isLoanFuture(loan))
+  }
+
+  // זיהוי הלוואות באיחור (רק מהלוואות הפעילות)
   getOverdueLoans() {
     const today = new Date()
     today.setHours(0, 0, 0, 0) // התחלת היום
 
-    return this.dataFile.loans
+    return this.getActiveLoans()
       .filter(loan => {
-        if (loan.status !== 'active') return false
-
         const returnDate = new Date(loan.returnDate)
         returnDate.setHours(0, 0, 0, 0)
 
@@ -823,31 +907,42 @@ class GemachDatabase {
     }
   }
 
-  // סיכום לווים עם סך ההלוואות שלהם
+  // סיכום לווים עם סך ההלוואות שלהם (רק הלוואות פעילות)
   getBorrowersSummary() {
     const borrowersMap = new Map()
 
     this.dataFile.borrowers.forEach(borrower => {
-      const borrowerLoans = this.dataFile.loans.filter(loan =>
-        loan.borrowerId === borrower.id && loan.status === 'active'
+      const activeLoans = this.dataFile.loans.filter(loan =>
+        loan.borrowerId === borrower.id && this.isLoanActive(loan)
+      )
+      
+      const futureLoans = this.dataFile.loans.filter(loan =>
+        loan.borrowerId === borrower.id && this.isLoanFuture(loan)
       )
 
-      if (borrowerLoans.length > 0) {
-        const totalAmount = borrowerLoans.reduce((sum, loan) => sum + loan.amount, 0)
-        const totalBalance = borrowerLoans.reduce((sum, loan) => sum + this.getLoanBalance(loan.id), 0)
+      if (activeLoans.length > 0) {
+        const totalAmount = activeLoans.reduce((sum, loan) => sum + loan.amount, 0)
+        const totalBalance = activeLoans.reduce((sum, loan) => sum + this.getLoanBalance(loan.id), 0)
 
         borrowersMap.set(borrower.id, {
           id: borrower.id,
           name: `${borrower.firstName} ${borrower.lastName}`,
           phone: borrower.phone,
           city: borrower.city,
-          loansCount: borrowerLoans.length,
+          loansCount: activeLoans.length,
+          futureLoansCount: futureLoans.length,
           totalAmount,
           totalBalance,
-          loans: borrowerLoans.map(loan => ({
+          loans: activeLoans.map(loan => ({
             id: loan.id,
             amount: loan.amount,
             balance: this.getLoanBalance(loan.id),
+            returnDate: loan.returnDate
+          })),
+          futureLoans: futureLoans.map(loan => ({
+            id: loan.id,
+            amount: loan.amount,
+            loanDate: loan.loanDate,
             returnDate: loan.returnDate
           }))
         })

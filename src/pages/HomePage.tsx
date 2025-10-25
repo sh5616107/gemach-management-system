@@ -297,6 +297,49 @@ function HomePage() {
           )}
         </div>
 
+        {/* התראות הלוואות עתידיות שצריכות להיות מופעלות */}
+        {(() => {
+          const futureLoansToActivate = db.getFutureLoans().filter(loan => {
+            const today = new Date()
+            const loanDate = new Date(loan.loanDate)
+            return loanDate <= today
+          })
+          
+          return futureLoansToActivate.length > 0 && (
+            <div style={{
+              background: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
+              color: 'white',
+              padding: '20px',
+              borderRadius: '10px',
+              margin: '20px auto',
+              maxWidth: '800px',
+              boxShadow: '0 4px 15px rgba(52, 152, 219, 0.3)',
+              textAlign: 'center'
+            }}>
+              <h3 style={{ marginBottom: '15px', fontSize: '20px' }}>
+                🚀 הלוואות מוכנות להפעלה!
+              </h3>
+              <p style={{ fontSize: '16px', marginBottom: '15px' }}>
+                יש {futureLoansToActivate.length} הלוואות מתוכננות שמועד ההפעלה שלהן הגיע
+              </p>
+              <button
+                onClick={() => navigate('/loans')}
+                style={{
+                  background: 'white',
+                  color: '#3498db',
+                  border: 'none',
+                  padding: '10px 20px',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold'
+                }}
+              >
+                📋 עבור לניהול הלוואות
+              </button>
+            </div>
+          )
+        })()}
+
         {/* התראות הלוואות באיחור */}
         {showOverdueAlert && db.getSettings().showOverdueWarnings && (
           <div style={{
@@ -419,8 +462,13 @@ function HomePage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginTop: '20px' }}>
             <div style={{ textAlign: 'center' }}>
               <h4 style={{ color: '#e74c3c', marginBottom: '10px' }}>הלוואות</h4>
-              <p>{stats.totalLoans} הלוואות</p>
-              <p>סכום מקורי: {db.formatCurrency(stats.totalLoansAmount)}</p>
+              <p>{stats.activeLoans} הלוואות פעילות</p>
+              {stats.futureLoans > 0 && (
+                <p style={{ color: '#3498db', fontSize: '14px' }}>
+                  🕐 {stats.futureLoans} מתוכננות
+                </p>
+              )}
+              <p>סכום פעיל: {db.formatCurrency(stats.activeLoansAmount)}</p>
               <p style={{ color: '#e74c3c', fontWeight: 'bold' }}>
                 יתרה לפרעון: {db.formatCurrency(stats.totalLoansBalance)}
               </p>

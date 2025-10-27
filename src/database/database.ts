@@ -8,7 +8,7 @@ export interface DatabaseBorrower {
   phone: string
   address: string
   email: string
-  idNumber?: string
+  idNumber: string // מספר זהות - שדה חובה ויחודי
 }
 
 export interface DatabaseLoan {
@@ -22,6 +22,7 @@ export interface DatabaseLoan {
   reminderSent?: string // תאריך שליחת התראה אחרונה
   isRecurring?: boolean // האם הלוואה מחזורית
   recurringDay?: number // יום בחודש להלוואה מחזורית (1-31)
+  recurringMonths?: number // כמה חודשים ההלוואה המחזורית תמשך
   autoPayment?: boolean // פרעון אוטומטי
   autoPaymentAmount?: number // סכום פרעון אוטומטי
   autoPaymentDay?: number // יום בחודש לפרעון אוטומטי
@@ -43,6 +44,7 @@ export interface DatabasePayment {
 export interface DatabaseDeposit {
   id: number
   depositorName: string
+  idNumber: string // מספר זהות - שדה חובה ויחודי
   amount: number
   depositDate: string
   depositPeriod: number
@@ -82,6 +84,7 @@ export interface DatabaseSettings {
   // הגדרות פונקציות מתקדמות
   enableRecurringLoans: boolean // הפעלת הלוואות מחזוריות
   enableRecurringPayments: boolean // הפעלת פרעונות מחזוריים
+  requireIdNumber: boolean // האם מספר זהות חובה לכל לווה
 }
 
 interface DatabaseFile {
@@ -116,9 +119,10 @@ class GemachDatabase {
       headerTitle: 'מערכת לניהול גמ"ח כספים',
       footerText: 'אמר רבי אבא אמר רבי שמעון בן לקיש גדול המלוה יותר מן העושה צדקה (שבת סג.)',
       contactText: 'ניתן להפצה לזיכוי הרבים\n⭐ עולם חסד יבנה',
-      // פונקציות מתקדמות - כבויות כברירת מחדל
-      enableRecurringLoans: false,
-      enableRecurringPayments: false
+      // פונקציות מתקדמות - מופעלות כברירת מחדל
+      enableRecurringLoans: true,
+      enableRecurringPayments: true,
+      requireIdNumber: false // כברירת מחדל לא חובה - מתאים לשימוש אישי
     }
   }
 
@@ -126,6 +130,10 @@ class GemachDatabase {
     this.loadData()
     this.migrateOldData()
     this.migrateLoanDates()
+    this.migrateBorrowersIdNumbers()
+    this.migrateDepositsIdNumbers()
+    this.migrateRequireIdNumberSetting()
+    this.updateTextsToNewDefaults() // עדכון טקסטים לברירות מחדל חדשות
   }
 
   private loadData(): void {
@@ -251,10 +259,98 @@ class GemachDatabase {
     }
   }
 
+  // פונקציה לבדיקת תקינות מספר זהות ישראלי
+  validateIsraeliId(id: string): boolean {
+    // הסר רווחים ומקפים
+    const cleanId = id.replace(/[\s-]/g, '')
+    
+    // בדוק שהמספר מכיל רק ספרות ואורכו 9
+    if (!/^\d{9}$/.test(cleanId)) {
+      return false
+    }
+
+    // בדיקת ספרת ביקורת
+    let sum = 0
+    for (let i = 0; i < 9; i++) {
+      let digit = parseInt(cleanId[i])
+      if (i % 2 === 1) {
+        digit *= 2
+        if (digit > 9) {
+          digit = Math.floor(digit / 10) + (digit % 10)
+        }
+      }
+      sum += digit
+    }
+
+    return sum % 10 === 0
+  }
+
+  // פונקציה לבדיקה אם מספר זהות כבר קיים
+  private isIdNumberExists(idNumber: string): boolean {
+    const cleanId = idNumber.replace(/[\s-]/g, '')
+    return this.dataFile.borrowers.some(borrower => 
+      borrower.idNumber.replace(/[\s-]/g, '') === cleanId
+    )
+  }
+
   // לווים
-  addBorrower(borrower: Omit<DatabaseBorrower, 'id'>): DatabaseBorrower {
+  addBorrower(borrower: Omit<DatabaseBorrower, 'id'>): DatabaseBorrower | { error: string } {
+    const settings = this.getSettings()
+    
+    // בדוק אם מספר זהות חובה
+    if (settings.requireIdNumber) {
+      // בדוק שמספר הזהות לא ריק
+      if (!borrower.idNumber || borrower.idNumber.trim() === '') {
+        return { error: 'מספר זהות הוא שדה חובה (ניתן לשנות בהגדרות)' }
+      }
+
+      // בדוק תקינות מספר הזהות
+      if (!this.validateIsraeliId(borrower.idNumber)) {
+        return { error: 'מספר זהות לא תקין' }
+      }
+
+      // בדוק אם מספר הזהות כבר קיים
+      if (this.isIdNumberExists(borrower.idNumber)) {
+        const existingBorrower = this.dataFile.borrowers.find(b => 
+          b.idNumber.replace(/[\s-]/g, '') === borrower.idNumber.replace(/[\s-]/g, '')
+        )
+        return { 
+          error: `לווה עם מספר זהות זה כבר קיים במערכת: ${existingBorrower?.firstName} ${existingBorrower?.lastName}` 
+        }
+      }
+    } else {
+      // אם מספר זהות לא חובה, אבל אם הוזן - בדוק תקינות
+      if (borrower.idNumber && borrower.idNumber.trim() !== '') {
+        if (!this.validateIsraeliId(borrower.idNumber)) {
+          return { error: 'מספר זהות לא תקין (או השאר ריק)' }
+        }
+        
+        if (this.isIdNumberExists(borrower.idNumber)) {
+          const existingBorrower = this.dataFile.borrowers.find(b => 
+            b.idNumber.replace(/[\s-]/g, '') === borrower.idNumber.replace(/[\s-]/g, '')
+          )
+          return { 
+            error: `לווה עם מספר זהות זה כבר קיים במערכת: ${existingBorrower?.firstName} ${existingBorrower?.lastName}` 
+          }
+        }
+      } else {
+        // בדוק כפילות שם אם אין מספר זהות
+        const fullName = `${borrower.firstName.trim()} ${borrower.lastName.trim()}`
+        const existingBorrower = this.dataFile.borrowers.find(b =>
+          `${b.firstName.trim()} ${b.lastName.trim()}`.toLowerCase() === fullName.toLowerCase()
+        )
+        if (existingBorrower) {
+          return { error: `לווה בשם "${fullName}" כבר קיים במערכת. הוסף מספר זהות כדי להבדיל בינם.` }
+        }
+      }
+    }
+
+    // נקה את מספר הזהות (הסר רווחים ומקפים) אם קיים
+    const cleanIdNumber = borrower.idNumber ? borrower.idNumber.replace(/[\s-]/g, '') : ''
+
     const newBorrower: DatabaseBorrower = {
       ...borrower,
+      idNumber: cleanIdNumber,
       id: this.getNextId(this.dataFile.borrowers)
     }
     this.dataFile.borrowers.push(newBorrower)
@@ -266,12 +362,108 @@ class GemachDatabase {
     return this.dataFile.borrowers
   }
 
-  updateBorrower(id: number, updates: Partial<DatabaseBorrower>): void {
-    const index = this.dataFile.borrowers.findIndex(borrower => borrower.id === id)
-    if (index !== -1) {
-      this.dataFile.borrowers[index] = { ...this.dataFile.borrowers[index], ...updates }
-      this.saveData()
+  // חיפוש לווה על פי מספר זהות
+  getBorrowerByIdNumber(idNumber: string): DatabaseBorrower | null {
+    const cleanId = idNumber.replace(/[\s-]/g, '')
+    return this.dataFile.borrowers.find(b => 
+      b.idNumber.replace(/[\s-]/g, '') === cleanId
+    ) || null
+  }
+
+  // פורמט יפה למספר זהות (XXX-XX-XXXX)
+  formatIdNumber(idNumber: string): string {
+    const cleanId = idNumber.replace(/[\s-]/g, '')
+    if (cleanId.length === 9) {
+      return `${cleanId.slice(0, 3)}-${cleanId.slice(3, 5)}-${cleanId.slice(5)}`
     }
+    return cleanId
+  }
+
+  // המרת נתונים ישנים - הוספת מספרי זהות זמניים ללווים ישנים
+  private migrateBorrowersIdNumbers(): void {
+    let needsSave = false
+    
+    this.dataFile.borrowers.forEach((borrower, index) => {
+      if (!borrower.idNumber || borrower.idNumber.trim() === '') {
+        // צור מספר זהות זמני (לא תקין אבל ייחודי)
+        const tempId = `000000${(index + 1).toString().padStart(3, '0')}`
+        ;(borrower as any).idNumber = tempId
+        needsSave = true
+        console.log(`הוסף מספר זהות זמני ללווה ${borrower.firstName} ${borrower.lastName}: ${tempId}`)
+      }
+    })
+
+    if (needsSave) {
+      this.saveData()
+      console.log('הושלמה המרת נתונים - נוספו מספרי זהות זמניים')
+    }
+  }
+
+  // המרת הגדרות - הוספת הגדרת requireIdNumber
+  private migrateRequireIdNumberSetting(): void {
+    if (this.dataFile.settings.requireIdNumber === undefined) {
+      ;(this.dataFile.settings as any).requireIdNumber = false
+      this.saveData()
+      console.log('הוספה הגדרת requireIdNumber (כבוי כברירת מחדל)')
+    }
+  }
+
+  // המרת נתונים ישנים - הוספת מספרי זהות זמניים להפקדות ישנות
+  private migrateDepositsIdNumbers(): void {
+    let needsSave = false
+    
+    this.dataFile.deposits.forEach((deposit, index) => {
+      if (!deposit.idNumber || deposit.idNumber.trim() === '') {
+        // צור מספר זהות זמני (לא תקין אבל ייחודי)
+        const tempId = `000000${(index + 100).toString().padStart(3, '0')}`
+        ;(deposit as any).idNumber = tempId
+        needsSave = true
+        console.log(`הוסף מספר זהות זמני למפקיד ${deposit.depositorName}: ${tempId}`)
+      }
+    })
+
+    if (needsSave) {
+      this.saveData()
+      console.log('הושלמה המרת נתונים - נוספו מספרי זהות זמניים להפקדות')
+    }
+  }
+
+  updateBorrower(id: number, updates: Partial<DatabaseBorrower>): { success: boolean; error?: string } {
+    const index = this.dataFile.borrowers.findIndex(borrower => borrower.id === id)
+    if (index === -1) {
+      return { success: false, error: 'לווה לא נמצא' }
+    }
+
+    // אם מעדכנים מספר זהות, בדוק תקינות וכפילות
+    if (updates.idNumber !== undefined) {
+      if (!updates.idNumber || updates.idNumber.trim() === '') {
+        return { success: false, error: 'מספר זהות הוא שדה חובה' }
+      }
+
+      if (!this.validateIsraeliId(updates.idNumber)) {
+        return { success: false, error: 'מספר זהות לא תקין' }
+      }
+
+      // בדוק אם מספר הזהות כבר קיים אצל לווה אחר
+      const cleanNewId = updates.idNumber.replace(/[\s-]/g, '')
+      const existingBorrower = this.dataFile.borrowers.find(b => 
+        b.id !== id && b.idNumber.replace(/[\s-]/g, '') === cleanNewId
+      )
+      
+      if (existingBorrower) {
+        return { 
+          success: false, 
+          error: `מספר זהות זה כבר קיים אצל: ${existingBorrower.firstName} ${existingBorrower.lastName}` 
+        }
+      }
+
+      // נקה את מספר הזהות
+      updates.idNumber = cleanNewId
+    }
+
+    this.dataFile.borrowers[index] = { ...this.dataFile.borrowers[index], ...updates }
+    this.saveData()
+    return { success: true }
   }
 
   deleteBorrower(id: number): boolean {
@@ -460,9 +652,62 @@ class GemachDatabase {
   }
 
   // פקדונות
-  addDeposit(deposit: Omit<DatabaseDeposit, 'id' | 'status'>): DatabaseDeposit {
+  addDeposit(deposit: Omit<DatabaseDeposit, 'id' | 'status'>): DatabaseDeposit | { error: string } {
+    const settings = this.getSettings()
+    
+    // בדוק אם מספר זהות חובה
+    if (settings.requireIdNumber) {
+      // בדוק שמספר הזהות לא ריק
+      if (!deposit.idNumber || deposit.idNumber.trim() === '') {
+        return { error: 'מספר זהות הוא שדה חובה (ניתן לשנות בהגדרות)' }
+      }
+
+      // בדוק תקינות מספר הזהות
+      if (!this.validateIsraeliId(deposit.idNumber)) {
+        return { error: 'מספר זהות לא תקין' }
+      }
+
+      // בדוק אם מספר הזהות כבר קיים בהפקדות
+      const existingDeposit = this.dataFile.deposits.find(d => 
+        d.idNumber.replace(/[\s-]/g, '') === deposit.idNumber.replace(/[\s-]/g, '')
+      )
+      if (existingDeposit) {
+        return { 
+          error: `מפקיד עם מספר זהות זה כבר קיים במערכת: ${existingDeposit.depositorName}` 
+        }
+      }
+    } else {
+      // אם מספר זהות לא חובה, אבל אם הוזן - בדוק תקינות
+      if (deposit.idNumber && deposit.idNumber.trim() !== '') {
+        if (!this.validateIsraeliId(deposit.idNumber)) {
+          return { error: 'מספר זהות לא תקין (או השאר ריק)' }
+        }
+        
+        const existingDeposit = this.dataFile.deposits.find(d => 
+          d.idNumber.replace(/[\s-]/g, '') === deposit.idNumber.replace(/[\s-]/g, '')
+        )
+        if (existingDeposit) {
+          return { 
+            error: `מפקיד עם מספר זהות זה כבר קיים במערכת: ${existingDeposit.depositorName}` 
+          }
+        }
+      } else {
+        // בדוק כפילות שם אם אין מספר זהות
+        const existingDeposit = this.dataFile.deposits.find(d =>
+          d.depositorName.toLowerCase() === deposit.depositorName.toLowerCase()
+        )
+        if (existingDeposit) {
+          return { error: `מפקיד בשם "${deposit.depositorName}" כבר קיים במערכת. הוסף מספר זהות כדי להבדיל בינם.` }
+        }
+      }
+    }
+
+    // נקה את מספר הזהות (הסר רווחים ומקפים) אם קיים
+    const cleanIdNumber = deposit.idNumber ? deposit.idNumber.replace(/[\s-]/g, '') : ''
+
     const newDeposit: DatabaseDeposit = {
       ...deposit,
+      idNumber: cleanIdNumber,
       id: this.getNextId(this.dataFile.deposits),
       status: 'active'
     }
@@ -562,7 +807,7 @@ class GemachDatabase {
     const totalLoansAmount = allLoans.reduce((sum, loan) => sum + loan.amount, 0)
     const activeLoansAmount = activeLoans.reduce((sum, loan) => sum + loan.amount, 0)
     const futureLoansAmount = futureLoans.reduce((sum, loan) => sum + loan.amount, 0)
-    
+
     // חישוב רק הפקדות פעילות (לא נמשכו במלואן)
     const activeDeposits = deposits.filter(deposit => deposit.status === 'active')
     const totalDepositsAmount = activeDeposits.reduce((sum, deposit) => {
@@ -598,7 +843,7 @@ class GemachDatabase {
       const balance = this.getLoanBalance(loan.id)
       const isActive = this.isLoanActive(loan)
       const isFuture = this.isLoanFuture(loan)
-      
+
       return {
         ...loan,
         borrowerName: borrower ? `${borrower.firstName} ${borrower.lastName}` : 'לא ידוע',
@@ -616,7 +861,7 @@ class GemachDatabase {
     return this.getActiveLoans().map(loan => {
       const borrower = this.dataFile.borrowers.find(b => b.id === loan.borrowerId)
       const balance = this.getLoanBalance(loan.id)
-      
+
       return {
         ...loan,
         borrowerName: borrower ? `${borrower.firstName} ${borrower.lastName}` : 'לא ידוע',
@@ -636,7 +881,7 @@ class GemachDatabase {
       const today = new Date()
       const loanDate = new Date(loan.loanDate)
       const daysUntilActive = Math.ceil((loanDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-      
+
       return {
         ...loan,
         borrowerName: borrower ? `${borrower.firstName} ${borrower.lastName}` : 'לא ידוע',
@@ -744,7 +989,8 @@ class GemachDatabase {
         footerText: 'אמר רבי אבא אמר רבי שמעון בן לקיש גדול המלוה יותר מן העושה צדקה (שבת סג.)',
         contactText: 'ניתן להפצה לזיכוי הרבים\n⭐ עולם חסד יבנה',
         enableRecurringLoans: false,
-        enableRecurringPayments: false
+        enableRecurringPayments: false,
+        requireIdNumber: false
       }
     }
     this.saveData()
@@ -816,7 +1062,9 @@ class GemachDatabase {
 
   formatCurrency(amount: number): string {
     const symbol = this.getCurrencySymbol()
-    return `${symbol}${amount.toLocaleString()}`
+    // בדיקת בטיחות - אם amount הוא undefined או null, החזר 0
+    const safeAmount = amount ?? 0
+    return `${symbol}${safeAmount.toLocaleString()}`
   }
 
   // עדכון טקסטים לברירות מחדל חדשות
@@ -831,10 +1079,10 @@ class GemachDatabase {
   isLoanActive(loan: DatabaseLoan): boolean {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    
+
     const loanDate = new Date(loan.loanDate)
     loanDate.setHours(0, 0, 0, 0)
-    
+
     return loanDate <= today && loan.status === 'active'
   }
 
@@ -842,10 +1090,10 @@ class GemachDatabase {
   isLoanFuture(loan: DatabaseLoan): boolean {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    
+
     const loanDate = new Date(loan.loanDate)
     loanDate.setHours(0, 0, 0, 0)
-    
+
     return loanDate > today && loan.status === 'active'
   }
 
@@ -915,7 +1163,7 @@ class GemachDatabase {
       const activeLoans = this.dataFile.loans.filter(loan =>
         loan.borrowerId === borrower.id && this.isLoanActive(loan)
       )
-      
+
       const futureLoans = this.dataFile.loans.filter(loan =>
         loan.borrowerId === borrower.id && this.isLoanFuture(loan)
       )
@@ -927,6 +1175,7 @@ class GemachDatabase {
         borrowersMap.set(borrower.id, {
           id: borrower.id,
           name: `${borrower.firstName} ${borrower.lastName}`,
+          idNumber: borrower.idNumber,
           phone: borrower.phone,
           city: borrower.city,
           loansCount: activeLoans.length,
@@ -950,6 +1199,284 @@ class GemachDatabase {
     })
 
     return Array.from(borrowersMap.values()).sort((a, b) => b.totalBalance - a.totalBalance)
+  }
+
+  // זיהוי הלוואות מחזוריות שצריכות להיווצר היום
+  getPendingRecurringLoans() {
+    const today = new Date()
+    const currentDay = today.getDate()
+
+    console.log(`🔍 בדיקת הלוואות מחזוריות - היום: ${currentDay}`)
+
+    // חפש בכל ההלוואות שמסומנות כמחזוריות (לא משנה הסטטוס)
+    const allRecurringLoans = this.dataFile.loans.filter(loan => loan.isRecurring && loan.recurringDay && loan.recurringMonths)
+
+    console.log('🔍 כל ההלוואות המחזוריות:', allRecurringLoans.map(l => ({
+      id: l.id,
+      recurringDay: l.recurringDay,
+      currentDay,
+      matches: l.recurringDay === currentDay
+    })))
+
+    const recurringLoans = allRecurringLoans.filter(loan => {
+      // בדוק אם היום הוא יום ההלוואה המחזורית
+      const matches = loan.recurringDay === currentDay
+      console.log(`🔍 בדיקת הלוואה ${loan.id}: יום ${loan.recurringDay} === ${currentDay}? ${matches}`)
+      return matches
+    })
+
+    // קבץ לפי לווה + סכום + יום חזרה (כדי לזהות סדרות הלוואות מחזוריות)
+    const recurringGroups = new Map<string, any[]>()
+
+    recurringLoans.forEach(loan => {
+      const key = `${loan.borrowerId}-${loan.amount}-${loan.recurringDay}`
+      if (!recurringGroups.has(key)) {
+        recurringGroups.set(key, [])
+      }
+      recurringGroups.get(key)!.push(loan)
+    })
+
+    const pendingLoans: any[] = []
+
+    recurringGroups.forEach((loans) => {
+      // קח את ההלוואה הראשונה כבסיס (ההלוואה המקורית)
+      const baseLoan = loans.sort((a, b) => a.id - b.id)[0]
+      const borrower = this.dataFile.borrowers.find(b => b.id === baseLoan.borrowerId)
+
+      // חשב כמה הלוואות כבר נוצרו בסדרה הזו
+      const existingCount = loans.length
+      const totalPlanned = baseLoan.recurringMonths || 12
+      const remainingLoans = totalPlanned - existingCount
+
+      // בדוק אם כבר נוצרה הלוואה היום
+      const todayString = today.toISOString().split('T')[0]
+      const hasLoanToday = loans.some(loan => loan.loanDate === todayString)
+
+      if (remainingLoans > 0 && !hasLoanToday) {
+        pendingLoans.push({
+          ...baseLoan,
+          borrowerName: borrower ? `${borrower.firstName} ${borrower.lastName}` : 'לא ידוע',
+          borrower,
+          existingRecurringLoans: existingCount,
+          remainingLoans,
+          canCreate: true,
+          hasLoanToday
+        })
+      }
+    })
+
+    return pendingLoans
+  }
+
+  // פונקציה לבדיקה מהירה של הגדרות
+  checkAdvancedFeatures() {
+    const settings = this.getSettings()
+    console.log('🔧 בדיקת פונקציות מתקדמות:', {
+      enableRecurringLoans: settings.enableRecurringLoans,
+      enableRecurringPayments: settings.enableRecurringPayments,
+      totalLoans: this.dataFile.loans.length,
+      recurringLoans: this.dataFile.loans.filter(l => l.isRecurring).length,
+      autoPaymentLoans: this.dataFile.loans.filter(l => l.autoPayment).length
+    })
+
+    return {
+      recurringEnabled: settings.enableRecurringLoans,
+      paymentsEnabled: settings.enableRecurringPayments,
+      hasRecurringLoans: this.dataFile.loans.some(l => l.isRecurring),
+      hasAutoPayments: this.dataFile.loans.some(l => l.autoPayment)
+    }
+  }
+
+  // פונקציה לדיבוג - מציגה מידע על הלוואות מחזוריות
+  debugRecurringLoans() {
+    const today = new Date()
+    const currentDay = today.getDate()
+    const todayString = today.toISOString().split('T')[0]
+
+    const allRecurringLoans = this.dataFile.loans.filter(loan => loan.isRecurring)
+    const pendingLoans = this.getPendingRecurringLoans()
+
+    console.log('🔍 Debug Recurring Loans:', {
+      today: today.toDateString(),
+      currentDay,
+      todayString,
+      allRecurringLoans: allRecurringLoans.map(loan => {
+        const borrower = this.dataFile.borrowers.find(b => b.id === loan.borrowerId)
+        return {
+          id: loan.id,
+          borrower: borrower ? `${borrower.firstName} ${borrower.lastName}` : 'לא ידוע',
+          amount: loan.amount,
+          loanDate: loan.loanDate,
+          recurringDay: loan.recurringDay,
+          recurringMonths: loan.recurringMonths,
+          isToday: loan.recurringDay === currentDay,
+          status: loan.status,
+          isLoanToday: loan.loanDate === todayString
+        }
+      }),
+      pendingLoans: pendingLoans.map(loan => ({
+        id: loan.id,
+        borrower: loan.borrowerName,
+        amount: loan.amount,
+        recurringDay: loan.recurringDay,
+        existingCount: loan.existingRecurringLoans,
+        remaining: loan.remainingLoans
+      }))
+    })
+
+    return {
+      currentDay,
+      todayString,
+      allRecurringLoans: allRecurringLoans.length,
+      todayRecurring: allRecurringLoans.filter(l => l.recurringDay === currentDay).length,
+      pendingToday: pendingLoans.length,
+      details: {
+        allRecurring: allRecurringLoans,
+        pending: pendingLoans
+      }
+    }
+  }
+
+  // זיהוי פרעונות אוטומטיים שמגיעים היום
+  getPendingAutoPayments() {
+    const today = new Date()
+    const currentDay = today.getDate()
+    const todayString = today.toISOString().split('T')[0]
+
+    return this.getActiveLoans()
+      .filter(loan => loan.autoPayment && loan.autoPaymentAmount && loan.autoPaymentDay)
+      .filter(loan => {
+        // בדוק אם היום הוא יום הפרעון
+        return loan.autoPaymentDay === currentDay
+      })
+      .filter(loan => {
+        // בדוק אם כבר בוצע פרעון אוטומטי היום
+        const hasPaymentToday = this.dataFile.payments.some(payment => 
+          payment.loanId === loan.id && 
+          payment.date === todayString && 
+          payment.type === 'payment' &&
+          payment.notes.includes('פרעון אוטומטי')
+        )
+        return !hasPaymentToday
+      })
+      .map(loan => {
+        const borrower = this.dataFile.borrowers.find(b => b.id === loan.borrowerId)
+        const balance = this.getLoanBalance(loan.id)
+        const paymentAmount = Math.min(loan.autoPaymentAmount!, balance)
+
+        return {
+          ...loan,
+          borrowerName: borrower ? `${borrower.firstName} ${borrower.lastName}` : 'לא ידוע',
+          borrower,
+          balance,
+          paymentAmount,
+          canPay: balance > 0,
+          willComplete: paymentAmount >= balance
+        }
+      })
+  }
+
+  // יצירת הלוואה מחזורית חדשה
+  createRecurringLoan(originalLoanId: number): DatabaseLoan | null {
+    const originalLoan = this.dataFile.loans.find(l => l.id === originalLoanId)
+    if (!originalLoan || !originalLoan.isRecurring) return null
+
+    // בדוק אם עדיין יש הלוואות שצריכות להיווצר
+    const existingRecurringLoans = this.dataFile.loans.filter(l =>
+      l.borrowerId === originalLoan.borrowerId &&
+      l.amount === originalLoan.amount &&
+      l.isRecurring &&
+      l.recurringDay === originalLoan.recurringDay
+    ).length
+
+    const remainingLoans = (originalLoan.recurringMonths || 12) - existingRecurringLoans
+    if (remainingLoans <= 0) return null
+
+    // בדוק אם כבר נוצרה הלוואה היום
+    const today = new Date()
+    const todayString = today.toISOString().split('T')[0]
+    const hasLoanToday = this.dataFile.loans.some(l =>
+      l.borrowerId === originalLoan.borrowerId &&
+      l.amount === originalLoan.amount &&
+      l.isRecurring &&
+      l.recurringDay === originalLoan.recurringDay &&
+      l.loanDate === todayString
+    )
+
+    if (hasLoanToday) {
+      console.log('כבר נוצרה הלוואה היום עבור הלווה הזה')
+      return null
+    }
+
+    // צור הלוואה חדשה עם תאריך היום
+    const loanDate = todayString
+
+    // חשב תאריך החזרה חדש (חודש מהיום)
+    const returnDate = new Date(today)
+    returnDate.setMonth(returnDate.getMonth() + 1)
+
+    const newLoan = this.addLoan({
+      borrowerId: originalLoan.borrowerId,
+      amount: originalLoan.amount,
+      loanDate: loanDate,
+      returnDate: returnDate.toISOString().split('T')[0],
+      loanType: originalLoan.loanType || 'fixed',
+      isRecurring: true,
+      recurringDay: originalLoan.recurringDay,
+      recurringMonths: originalLoan.recurringMonths,
+      autoPayment: originalLoan.autoPayment || false,
+      autoPaymentAmount: originalLoan.autoPaymentAmount || 0,
+      autoPaymentDay: originalLoan.autoPaymentDay || 1,
+      notes: `הלוואה מחזורית #${existingRecurringLoans + 1} מתוך ${originalLoan.recurringMonths || 12}`,
+      guarantor1: originalLoan.guarantor1 || '',
+      guarantor2: originalLoan.guarantor2 || ''
+    })
+
+    console.log('נוצרה הלוואה מחזורית חדשה:', newLoan)
+    return newLoan
+  }
+
+  // ביצוע פרעון אוטומטי
+  executeAutoPayment(loanId: number, amount?: number): boolean {
+    const loan = this.dataFile.loans.find(l => l.id === loanId)
+    if (!loan || !loan.autoPayment) return false
+
+    const balance = this.getLoanBalance(loanId)
+    if (balance <= 0) return false
+
+    // בדוק אם כבר בוצע פרעון אוטומטי היום
+    const todayString = new Date().toISOString().split('T')[0]
+    const hasPaymentToday = this.dataFile.payments.some(payment => 
+      payment.loanId === loanId && 
+      payment.date === todayString && 
+      payment.type === 'payment' &&
+      payment.notes.includes('פרעון אוטומטי')
+    )
+    
+    if (hasPaymentToday) {
+      console.log('כבר בוצע פרעון אוטומטי היום עבור הלוואה', loanId)
+      return false
+    }
+
+    const paymentAmount = amount || Math.min(loan.autoPaymentAmount || 0, balance)
+    if (paymentAmount <= 0) return false
+
+    // הוסף את הפרעון
+    this.addPayment({
+      loanId: loanId,
+      amount: paymentAmount,
+      date: todayString,
+      type: 'payment',
+      notes: `פרעון אוטומטי - ${paymentAmount.toLocaleString()} ש"ח`
+    })
+
+    // בדוק אם ההלוואה נפרעה במלואה
+    const newBalance = this.getLoanBalance(loanId)
+    if (newBalance <= 0) {
+      this.updateLoan(loanId, { status: 'completed' })
+    }
+
+    return true
   }
 
   // המרת הלוואות ישנות להוסיף שדה תאריך הלוואה

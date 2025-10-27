@@ -77,7 +77,8 @@ function SettingsPage() {
     footerText: 'אמר רבי אבא אמר רבי שמעון בן לקיש גדול המלוה יותר מן העושה צדקה (שבת סג.)',
     contactText: 'ניתן להפצה לזיכוי הרבים\n⭐ עולם חסד יבנה',
     enableRecurringLoans: false,
-    enableRecurringPayments: false
+    enableRecurringPayments: false,
+    requireIdNumber: false
   })
 
   useEffect(() => {
@@ -152,7 +153,8 @@ function SettingsPage() {
           footerText: 'אמר רבי אבא אמר רבי שמעון בן לקיש גדול המלוה יותר מן העושה צדקה (שבת סג.)',
           contactText: 'ניתן להפצה לזיכוי הרבים\n⭐ עולם חסד יבנה',
           enableRecurringLoans: false,
-          enableRecurringPayments: false
+          enableRecurringPayments: false,
+          requireIdNumber: false
         }
         setSettings(defaultSettings)
         db.updateSettings(defaultSettings)
@@ -264,6 +266,22 @@ function SettingsPage() {
                 </small>
               </div>
             </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>חובת מספר זהות:</label>
+                <select
+                  value={settings.requireIdNumber ? 'true' : 'false'}
+                  onChange={(e) => handleSettingChange('requireIdNumber', e.target.value === 'true')}
+                >
+                  <option value="false">אופציונלי (מומלץ לשימוש אישי)</option>
+                  <option value="true">חובה (מומלץ לגמ"ח רשמי)</option>
+                </select>
+                <small style={{ display: 'block', color: '#666', marginTop: '5px' }}>
+                  האם לדרוש מספר זהות לכל לווה כדי למנוע כפילויות
+                </small>
+              </div>
+            </div>
           </div>
 
           {/* הגדרות ייצוא */}
@@ -359,6 +377,7 @@ function SettingsPage() {
               <p><strong>ייצוא אוטומטי:</strong> {settings.autoExport ? `מופעל (${settings.exportFrequency})` : 'כבוי'}</p>
               <p><strong>הלוואות מחזוריות:</strong> {settings.enableRecurringLoans ? 'מופעל' : 'כבוי'}</p>
               <p><strong>פרעונות מחזוריים:</strong> {settings.enableRecurringPayments ? 'מופעל' : 'כבוי'}</p>
+              <p><strong>חובת מספר זהות:</strong> {settings.requireIdNumber ? 'חובה' : 'אופציונלי'}</p>
             </div>
           </div>
 

@@ -4,15 +4,15 @@ import { db } from '../database/database'
 
 function HomePage() {
   const navigate = useNavigate()
-  
+
   // פונקציה להצגת הודעות ויזואליות שלא חוסמות
   const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
     const colors = {
       success: '#27ae60',
-      error: '#e74c3c', 
+      error: '#e74c3c',
       info: '#3498db'
     }
-    
+
     const notification = document.createElement('div')
     notification.innerHTML = message
     notification.style.cssText = `
@@ -63,12 +63,16 @@ function HomePage() {
   const closeModal = () => {
     setModalConfig(null)
   }
-  
+
   const [stats, setStats] = useState({
     totalLoans: 0,
+    activeLoans: 0,
+    futureLoans: 0,
     totalDeposits: 0,
     totalDonations: 0,
     totalLoansAmount: 0,
+    activeLoansAmount: 0,
+    futureLoansAmount: 0,
     totalLoansBalance: 0,
     totalDepositsAmount: 0,
     totalDonationsAmount: 0,
@@ -84,6 +88,11 @@ function HomePage() {
   const [contactText, setContactText] = useState('')
   const [isEditingContact, setIsEditingContact] = useState(false)
   const [showOverdueAlert, setShowOverdueAlert] = useState(false)
+  const [pendingRecurringLoans, setPendingRecurringLoans] = useState<any[]>([])
+  const [pendingAutoPayments, setPendingAutoPayments] = useState<any[]>([])
+  const [automationAlertDismissed, setAutomationAlertDismissed] = useState(false)
+
+
 
   useEffect(() => {
     loadStats()
@@ -101,6 +110,79 @@ function HomePage() {
     if (settings.showOverdueWarnings && db.hasOverdueLoans()) {
       setShowOverdueAlert(true)
     }
+
+    // בדוק הלוואות מחזוריות ופרעונות אוטומטיים
+    const recurringLoans = db.getPendingRecurringLoans()
+    const autoPayments = db.getPendingAutoPayments()
+
+    console.log('🏠 loadStats - בדיקת אוטומציה:', {
+      recurringLoans: recurringLoans.length,
+      autoPayments: autoPayments.length,
+      recurringDetails: recurringLoans.map(l => ({ id: l.id, name: l.borrowerName, day: l.recurringDay })),
+      autoDetails: autoPayments.map(p => ({ id: p.id, name: p.borrowerName, day: p.autoPaymentDay, amount: p.paymentAmount }))
+    })
+
+    setPendingRecurringLoans(recurringLoans)
+    setPendingAutoPayments(autoPayments)
+
+    // אפס את הדגל של סגירת ההתראה אם יש פעולות חדשות
+    if (recurringLoans.length > 0 || autoPayments.length > 0) {
+      setAutomationAlertDismissed(false)
+      console.log('🚨 יש התראות אוטומציה!')
+    } else {
+      console.log('✅ אין התראות אוטומציה')
+    }
+
+    // בדוק אם יש לווים עם מספרי זהות זמניים
+    const borrowersWithTempIds = db.getBorrowers().filter(b =>
+      b.idNumber && b.idNumber.startsWith('000000')
+    )
+    if (borrowersWithTempIds.length > 0) {
+      console.log(`⚠️ יש ${borrowersWithTempIds.length} לווים עם מספרי זהות זמניים`)
+    }
+  }
+
+  // פונקציה לאישור הלוואה מחזורית
+  const approveRecurringLoan = (loan: any) => {
+    const newLoan = db.createRecurringLoan(loan.id)
+    if (newLoan) {
+      showNotification(`✅ הלוואה חדשה נוצרה עבור ${loan.borrowerName} - ${db.formatCurrency(loan.amount)}`, 'success')
+    } else {
+      showNotification('❌ שגיאה ביצירת הלוואה חדשה או שכבר נוצרה הלוואה היום', 'error')
+    }
+  }
+
+  // פונקציה לאישור פרעון אוטומטי
+  const approveAutoPayment = (payment: any) => {
+    const success = db.executeAutoPayment(payment.id, payment.paymentAmount)
+    if (success) {
+      showNotification(`✅ פרעון נרשם עבור ${payment.borrowerName} - ${db.formatCurrency(payment.paymentAmount)}`, 'success')
+    } else {
+      showNotification('❌ שגיאה ברישום הפרעון או שכבר בוצע פרעון היום', 'error')
+    }
+  }
+
+  // פונקציה לאישור מהיר של כל הפעולות
+  const approveAllActions = () => {
+    let successCount = 0
+
+    // אשר כל ההלוואות המחזוריות
+    pendingRecurringLoans.forEach(loan => {
+      if (db.createRecurringLoan(loan.id)) {
+        successCount++
+      }
+    })
+
+    // אשר כל הפרעונות האוטומטיים
+    pendingAutoPayments.forEach(payment => {
+      if (db.executeAutoPayment(payment.id, payment.paymentAmount)) {
+        successCount++
+      }
+    })
+
+    const totalActions = pendingRecurringLoans.length + pendingAutoPayments.length
+    showNotification(`✅ ${successCount} מתוך ${totalActions} פעולות בוצעו בהצלחה`, 'success')
+    loadStats() // רענן את הנתונים
   }
 
   // רענון הדף כל 5 שניות כדי לעדכן נתונים (אבל לא כשעורכים)
@@ -304,7 +386,7 @@ function HomePage() {
             const loanDate = new Date(loan.loanDate)
             return loanDate <= today
           })
-          
+
           return futureLoansToActivate.length > 0 && (
             <div style={{
               background: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
@@ -339,6 +421,205 @@ function HomePage() {
             </div>
           )
         })()}
+
+        {/* התראות הלוואות מחזוריות ופרעונות אוטומטיים */}
+        {!automationAlertDismissed && (pendingRecurringLoans.length > 0 || pendingAutoPayments.length > 0) && (
+          <div style={{
+            background: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
+            color: 'white',
+            padding: '20px',
+            borderRadius: '10px',
+            margin: '20px auto',
+            maxWidth: '800px',
+            boxShadow: '0 4px 15px rgba(52, 152, 219, 0.3)',
+            position: 'relative'
+          }}>
+            <button
+              onClick={() => {
+                // הסתר את ההתראה באופן מיידי
+                setAutomationAlertDismissed(true)
+                setPendingRecurringLoans([])
+                setPendingAutoPayments([])
+              }}
+              style={{
+                position: 'absolute',
+                top: '10px',
+                left: '15px',
+                background: 'rgba(255,255,255,0.2)',
+                border: 'none',
+                color: 'white',
+                borderRadius: '50%',
+                width: '25px',
+                height: '25px',
+                cursor: 'pointer',
+                fontSize: '16px'
+              }}
+            >
+              ×
+            </button>
+
+            <div style={{ textAlign: 'center' }}>
+              <h3 style={{ marginBottom: '15px', fontSize: '20px' }}>
+                🔄 פעולות אוטומטיות מחכות לאישור!
+              </h3>
+
+              {pendingRecurringLoans.length > 0 && (
+                <div style={{ marginBottom: '15px' }}>
+                  <p style={{ fontSize: '16px', marginBottom: '10px' }}>
+                    📅 {pendingRecurringLoans.length} הלוואות מחזוריות צריכות להיווצר היום
+                  </p>
+                  <div style={{ fontSize: '14px', marginBottom: '10px' }}>
+                    {pendingRecurringLoans.slice(0, 3).map((loan, index) => (
+                      <div key={index} style={{
+                        background: 'rgba(255,255,255,0.2)',
+                        padding: '5px 10px',
+                        borderRadius: '15px',
+                        margin: '5px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        <span>{loan.borrowerName} - {db.formatCurrency(loan.amount)}</span>
+                        <button
+                          onClick={() => {
+                            approveRecurringLoan(loan)
+                            // הסר את ההלוואה מהרשימה מיידית
+                            setPendingRecurringLoans(prev => prev.filter(l => l.id !== loan.id))
+                            loadStats() // רענן את הנתונים
+                          }}
+                          style={{
+                            background: '#27ae60',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '20px',
+                            height: '20px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
+                          title="אשר הלוואה זו"
+                        >
+                          ✓
+                        </button>
+                      </div>
+                    ))}
+                    {pendingRecurringLoans.length > 3 && (
+                      <div style={{ fontSize: '12px', marginTop: '5px' }}>
+                        ועוד {pendingRecurringLoans.length - 3} הלוואות...
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {pendingAutoPayments.length > 0 && (
+                <div style={{ marginBottom: '15px' }}>
+                  <p style={{ fontSize: '16px', marginBottom: '10px' }}>
+                    💰 {pendingAutoPayments.length} פרעונות אוטומטיים מחכים לאישור
+                  </p>
+                  <div style={{ fontSize: '14px', marginBottom: '10px' }}>
+                    {pendingAutoPayments.slice(0, 3).map((payment, index) => (
+                      <div key={index} style={{
+                        background: 'rgba(255,255,255,0.2)',
+                        padding: '5px 10px',
+                        borderRadius: '15px',
+                        margin: '5px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}>
+                        <span>{payment.borrowerName} - {db.formatCurrency(payment.paymentAmount)}</span>
+                        <button
+                          onClick={() => {
+                            approveAutoPayment(payment)
+                            // הסר את הפרעון מהרשימה מיידית
+                            setPendingAutoPayments(prev => prev.filter(p => p.id !== payment.id))
+                            loadStats() // רענן את הנתונים
+                          }}
+                          style={{
+                            background: '#27ae60',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '20px',
+                            height: '20px',
+                            cursor: 'pointer',
+                            fontSize: '12px'
+                          }}
+                          title="אשר פרעון זה"
+                        >
+                          ✓
+                        </button>
+                      </div>
+                    ))}
+                    {pendingAutoPayments.length > 3 && (
+                      <div style={{ fontSize: '12px', marginTop: '5px' }}>
+                        ועוד {pendingAutoPayments.length - 3} פרעונות...
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => {
+                    showConfirmModal({
+                      title: 'אישור כל הפעולות',
+                      message: `האם אתה בטוח שברצונך לאשר את כל הפעולות?\n\n${pendingRecurringLoans.length} הלוואות מחזוריות\n${pendingAutoPayments.length} פרעונות אוטומטיים`,
+                      confirmText: 'אשר הכל',
+                      cancelText: 'ביטול',
+                      type: 'info',
+                      onConfirm: () => {
+                        approveAllActions()
+                        // הסתר את ההתראה מיידית
+                        setPendingRecurringLoans([])
+                        setPendingAutoPayments([])
+                        loadStats() // רענן את הנתונים
+                      }
+                    })
+                  }}
+                  style={{
+                    background: 'white',
+                    color: '#3498db',
+                    border: 'none',
+                    padding: '10px 20px',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  ✅ אשר הכל
+                </button>
+                <button
+                  onClick={() => {
+                    // מצא את ההלוואה המחזורית הראשונה שצריכה אישור
+                    if (pendingRecurringLoans.length > 0) {
+                      const firstLoan = pendingRecurringLoans[0]
+                      navigate(`/loans?loanId=${firstLoan.id}`)
+                    } else if (pendingAutoPayments.length > 0) {
+                      const firstPayment = pendingAutoPayments[0]
+                      navigate(`/loans?loanId=${firstPayment.id}`)
+                    } else {
+                      navigate('/loans')
+                    }
+                  }}
+                  style={{
+                    background: 'rgba(255,255,255,0.2)',
+                    color: 'white',
+                    border: '1px solid white',
+                    padding: '10px 20px',
+                    borderRadius: '5px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  📋 בדוק אחד אחד
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* התראות הלוואות באיחור */}
         {showOverdueAlert && db.getSettings().showOverdueWarnings && (
@@ -572,6 +853,7 @@ function HomePage() {
                 <thead>
                   <tr>
                     <th>שם הלווה</th>
+                    <th>מספר זהות</th>
                     <th>עיר</th>
                     <th>טלפון</th>
                     <th>מספר הלוואות</th>
@@ -599,6 +881,9 @@ function HomePage() {
                               איחור {maxDaysOverdue} ימים
                             </div>
                           )}
+                        </td>
+                        <td style={{ fontSize: '12px', color: '#666' }}>
+                          {db.formatIdNumber(borrower.idNumber || '')}
                         </td>
                         <td>{borrower.city}</td>
                         <td>{borrower.phone}</td>
@@ -671,6 +956,99 @@ function HomePage() {
           <button className="btn btn-primary" onClick={importData}>
             📥 ייבוא נתונים
           </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              const name = prompt('הכנס שם לווה לחיפוש:')
+              if (name) {
+                const foundBorrowers = db.getBorrowers().filter(b =>
+                  `${b.firstName} ${b.lastName}`.toLowerCase().includes(name.toLowerCase())
+                )
+                if (foundBorrowers.length === 1) {
+                  navigate(`/loans?borrowerId=${foundBorrowers[0].id}`)
+                } else if (foundBorrowers.length > 1) {
+                  const names = foundBorrowers.map(b => `${b.firstName} ${b.lastName}`).join('\n')
+                  showNotification(`נמצאו ${foundBorrowers.length} לווים:\n${names}\nאנא חפש בצורה יותר ספציפית`, 'info')
+                } else {
+                  showNotification('❌ לא נמצא לווה עם שם זה', 'error')
+                }
+              }
+            }}
+          >
+            🔍 חיפוש לווה
+          </button>
+          <button
+            className="btn"
+            onClick={() => {
+              // בדיקה מהירה של הפונקציות החדשות
+              const featureCheck = db.checkAdvancedFeatures()
+              const debugInfo = db.debugRecurringLoans()
+              const recurringLoans = db.getPendingRecurringLoans()
+              const autoPayments = db.getPendingAutoPayments()
+
+              console.log('🔧 Feature Check:', featureCheck)
+              console.log('🔍 Debug Info:', debugInfo)
+              console.log('📅 Pending Recurring Loans:', recurringLoans)
+              console.log('💰 Pending Auto Payments:', autoPayments)
+
+              let message = `🔍 יום ${debugInfo.currentDay}:\n`
+              message += `⚙️ הלוואות מחזוריות: ${featureCheck.recurringEnabled ? 'מופעל' : 'כבוי'}\n`
+              message += `⚙️ פרעונות אוטומטיים: ${featureCheck.paymentsEnabled ? 'מופעל' : 'כבוי'}\n`
+              message += `📊 ${recurringLoans.length} הלוואות מחזוריות ממתינות\n`
+              message += `💰 ${autoPayments.length} פרעונות אוטומטיים ממתינים\n\n`
+
+              // הוסף פרטים על ההלוואות המחזוריות
+              if (recurringLoans.length > 0) {
+                message += `פרטי הלוואות ממתינות:\n`
+                recurringLoans.forEach((loan, i) => {
+                  message += `${i + 1}. ${loan.borrowerName} - יום ${loan.recurringDay}\n`
+                })
+              }
+
+              showNotification(message, 'info')
+
+              if (recurringLoans.length > 0 || autoPayments.length > 0) {
+                // ההתראה תופיע אוטומטית
+              } else if (!featureCheck.recurringEnabled && !featureCheck.paymentsEnabled) {
+                showNotification('💡 הפונקציות המתקדמות כבויות - עבור להגדרות להפעלה', 'info')
+              }
+            }}
+            style={{ backgroundColor: '#f39c12', color: 'white' }}
+          >
+            🔍 בדוק אוטומציה
+          </button>
+          <button
+            className="btn"
+            onClick={() => {
+              // הצג את כל ההלוואות המחזוריות בצורה ברורה
+              const allLoans = db.getLoans()
+              const recurringLoans = allLoans.filter(l => l.isRecurring)
+              const today = new Date()
+              const currentDay = today.getDate()
+
+              let message = `📊 דוח הלוואות מחזוריות (היום: ${currentDay}):\n\n`
+
+              if (recurringLoans.length === 0) {
+                message += 'אין הלוואות מחזוריות במערכת'
+              } else {
+                recurringLoans.forEach((loan, index) => {
+                  const borrower = db.getBorrowers().find(b => b.id === loan.borrowerId)
+                  const borrowerName = borrower ? `${borrower.firstName} ${borrower.lastName}` : 'לא ידוע'
+                  message += `${index + 1}. ${borrowerName}\n`
+                  message += `   סכום: ₪${loan.amount.toLocaleString()}\n`
+                  message += `   יום בחודש: ${loan.recurringDay}\n`
+                  message += `   תאריך הלוואה: ${loan.loanDate}\n`
+                  message += `   מתאים להיום? ${loan.recurringDay === currentDay ? 'כן' : 'לא'}\n\n`
+                })
+              }
+
+              alert(message)
+            }}
+            style={{ backgroundColor: '#9b59b6', color: 'white' }}
+          >
+            📊 הצג הלוואות מחזוריות
+          </button>
+
           <button
             className="btn"
             onClick={() => {
@@ -947,7 +1325,7 @@ function HomePage() {
 
       {/* מודל אישור */}
       {modalConfig && modalConfig.isOpen && (
-        <div 
+        <div
           style={{
             position: 'fixed',
             top: 0,
@@ -962,7 +1340,7 @@ function HomePage() {
           }}
           onClick={closeModal}
         >
-          <div 
+          <div
             style={{
               backgroundColor: 'white',
               borderRadius: '10px',
@@ -975,15 +1353,15 @@ function HomePage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ 
-              marginBottom: '20px', 
-              color: modalConfig.type === 'danger' ? '#e74c3c' : 
-                     modalConfig.type === 'warning' ? '#f39c12' : '#3498db',
+            <h3 style={{
+              marginBottom: '20px',
+              color: modalConfig.type === 'danger' ? '#e74c3c' :
+                modalConfig.type === 'warning' ? '#f39c12' : '#3498db',
               fontSize: '20px'
             }}>
               {modalConfig.title}
             </h3>
-            
+
             <p style={{
               marginBottom: '30px',
               lineHeight: '1.5',
@@ -993,7 +1371,7 @@ function HomePage() {
             }}>
               {modalConfig.message}
             </p>
-            
+
             <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
               <button
                 onClick={() => {
@@ -1014,7 +1392,7 @@ function HomePage() {
               >
                 {modalConfig.confirmText}
               </button>
-              
+
               <button
                 onClick={() => {
                   if (modalConfig.onCancel) modalConfig.onCancel()

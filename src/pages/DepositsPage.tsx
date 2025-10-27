@@ -78,6 +78,7 @@ function DepositsPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [newDeposit, setNewDeposit] = useState({
     depositorName: '',
+    idNumber: '',
     amount: 0,
     depositDate: '',
     depositPeriod: 12,
@@ -151,6 +152,7 @@ function DepositsPage() {
               <p style="margin: 8px 0;">מספר הפקדה: <strong>${depositNumber}</strong></p>
               <p style="margin: 8px 0;">אנו הח"מ מגמ"ח "<strong>${gemachName}</strong>"</p>
               <p style="margin: 8px 0;">מאשרים בזה כי קיבלנו מאת <strong>${depositorName}</strong></p>
+              ${deposit.idNumber ? `<p style="margin: 8px 0;">ת.ז. <strong>${db.formatIdNumber(deposit.idNumber)}</strong></p>` : ''}
               <p style="margin: 8px 0;">סכום של: <strong>${amount} ש"ח</strong></p>
               <p style="margin: 8px 0;">בתאריך: <strong>${depositDate}</strong></p>
               <p style="margin: 8px 0;">תקופת ההפקדה: <strong>${deposit.depositPeriod} חודשים</strong></p>
@@ -322,6 +324,7 @@ function DepositsPage() {
                 <p>מספר הפקדה: <strong>${depositNumber}</strong></p>
                 <p>אנו הח"מ מגמ"ח "<strong>${gemachName}</strong>"</p>
                 <p>מאשרים בזה כי קיבלנו מאת <strong>${depositorName}</strong></p>
+                ${deposit.idNumber ? `<p>ת.ז. <strong>${db.formatIdNumber(deposit.idNumber)}</strong></p>` : ''}
                 <p>סכום של: <strong>${amount} ש"ח</strong></p>
                 <p>בתאריך: <strong>${depositDate}</strong></p>
                 <p>תקופת ההפקדה: <strong>${deposit.depositPeriod} חודשים</strong></p>
@@ -361,37 +364,50 @@ function DepositsPage() {
   }
 
   const saveDeposit = () => {
-    if (newDeposit.depositorName && newDeposit.amount) {
-      if (editingId) {
-        // עדכון הפקדה קיימת
-        const updatedDeposit = {
-          ...newDeposit,
-          status: (newDeposit.withdrawnAmount && newDeposit.withdrawnAmount >= newDeposit.amount) ? 'withdrawn' : 'active'
-        }
-        db.updateDeposit(editingId, updatedDeposit as DatabaseDeposit)
-        setEditingId(null)
-        showNotification('✅ ההפקדה עודכנה בהצלחה!')
+    if (!newDeposit.depositorName || !newDeposit.amount) {
+      showNotification('⚠️ אנא מלא את השדות החובה: שם המפקיד וסכום', 'error')
+      return
+    }
+
+    // בדוק מספר זהות רק אם זה חובה
+    if (db.getSettings().requireIdNumber && (!newDeposit.idNumber || newDeposit.idNumber.trim() === '')) {
+      showNotification('⚠️ מספר זהות הוא שדה חובה (ניתן לשנות בהגדרות)', 'error')
+      return
+    }
+
+    if (editingId) {
+      // עדכון הפקדה קיימת
+      const updatedDeposit = {
+        ...newDeposit,
+        status: (newDeposit.withdrawnAmount && newDeposit.withdrawnAmount >= newDeposit.amount) ? 'withdrawn' : 'active'
+      }
+      db.updateDeposit(editingId, updatedDeposit as DatabaseDeposit)
+      setEditingId(null)
+      showNotification('✅ ההפקדה עודכנה בהצלחה!')
+    } else {
+      // הפקדה חדשה
+      const result = db.addDeposit(newDeposit)
+      if ('error' in result) {
+        showNotification(`❌ ${result.error}`, 'error')
+        return
       } else {
-        // הפקדה חדשה
-        db.addDeposit(newDeposit)
         showNotification('✅ הפקדון נשמר בהצלחה!')
       }
-      
-      loadDeposits()
-      setNewDeposit({
-        depositorName: '',
-        amount: 0,
-        depositDate: '',
-        depositPeriod: 12,
-        reminderDays: 30,
-        phone: '',
-        notes: '',
-        withdrawnAmount: 0,
-        withdrawnDate: ''
-      })
-    } else {
-      showNotification('⚠️ אנא מלא את השדות החובה: שם המפקיד וסכום', 'error')
     }
+    
+    loadDeposits()
+    setNewDeposit({
+      depositorName: '',
+      idNumber: '',
+      amount: 0,
+      depositDate: '',
+      depositPeriod: 12,
+      reminderDays: 30,
+      phone: '',
+      notes: '',
+      withdrawnAmount: 0,
+      withdrawnDate: ''
+    })
   }
 
   const withdrawDeposit = (depositId: number) => {
@@ -457,12 +473,69 @@ function DepositsPage() {
                 />
               </div>
               <div className="form-group">
+                <label>
+                  מספר זהות: {db.getSettings().requireIdNumber && <span style={{ color: '#e74c3c' }}>*</span>}
+                  <span 
+                    style={{ 
+                      fontSize: '12px', 
+                      color: '#666', 
+                      marginRight: '5px',
+                      cursor: 'help'
+                    }}
+                    title={db.getSettings().requireIdNumber ? 
+                      "מספר זהות ישראלי תקין עם ספרת ביקורת נכונה (חובה)" : 
+                      "מספר זהות ישראלי תקין עם ספרת ביקורת נכונה (אופציונלי)"
+                    }
+                  >
+                    ℹ️
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  value={newDeposit.idNumber}
+                  onChange={(e) => {
+                    const cleanValue = e.target.value.replace(/[^\d\s-]/g, '')
+                    handleInputChange('idNumber', cleanValue)
+                  }}
+                  placeholder={db.getSettings().requireIdNumber ? "דוגמה: 123456782" : "דוגמה: 123456782 (אופציונלי)"}
+                  maxLength={11}
+                  style={{
+                    borderColor: newDeposit.idNumber && !db.validateIsraeliId(newDeposit.idNumber) ? '#e74c3c' : undefined
+                  }}
+                />
+                {newDeposit.idNumber && (
+                  <small style={{ 
+                    color: db.validateIsraeliId(newDeposit.idNumber) ? '#27ae60' : '#e74c3c',
+                    fontSize: '12px',
+                    display: 'block',
+                    marginTop: '2px'
+                  }}>
+                    {(() => {
+                      const cleanId = newDeposit.idNumber.replace(/[\s-]/g, '')
+                      if (cleanId.length !== 9) {
+                        return `נדרשות 9 ספרות (יש ${cleanId.length})`
+                      } else if (db.validateIsraeliId(newDeposit.idNumber)) {
+                        return '✓ מספר זהות תקין'
+                      } else {
+                        return '❌ מספר זהות לא תקין (ספרת ביקורת שגויה)'
+                      }
+                    })()}
+                  </small>
+                )}
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
                 <label>סכום הפקדון:</label>
                 <NumberInput
                   value={newDeposit.amount || 0}
                   onChange={(value) => handleInputChange('amount', value)}
                   placeholder="הזן סכום"
                 />
+              </div>
+              <div className="form-group">
+                {/* שדה ריק לאיזון */}
               </div>
             </div>
             
@@ -536,6 +609,7 @@ function DepositsPage() {
                     setEditingId(null)
                     setNewDeposit({
                       depositorName: '',
+                      idNumber: '',
                       amount: 0,
                       depositDate: '',
                       depositPeriod: 12,
@@ -560,6 +634,7 @@ function DepositsPage() {
                 <tr>
                   <th>מספר</th>
                   <th>שם המפקיד</th>
+                  <th>מספר זהות</th>
                   <th>סכום מקורי</th>
                   <th>נמשך</th>
                   <th>יתרה</th>
@@ -577,6 +652,9 @@ function DepositsPage() {
                     <tr key={deposit.id}>
                       <td>{deposit.id}</td>
                       <td>{deposit.depositorName}</td>
+                      <td style={{ fontSize: '12px', color: '#666' }}>
+                        {db.formatIdNumber(deposit.idNumber || '')}
+                      </td>
                       <td>₪{deposit.amount.toLocaleString()}</td>
                       <td>₪{withdrawnAmount.toLocaleString()}</td>
                       <td>₪{remainingAmount.toLocaleString()}</td>

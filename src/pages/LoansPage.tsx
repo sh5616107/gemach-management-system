@@ -6,7 +6,7 @@ import NumberInput from '../components/NumberInput'
 function LoansPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  
+
   // קבלת הגדרות המערכת
   const settings = db.getSettings()
 
@@ -218,29 +218,25 @@ function LoansPage() {
 
       // בדוק אם יש הלוואות קיימות ללווה
       const borrowerLoans = loans.filter(loan => loan.borrowerId === borrowerId)
-      
+
       if (borrowerLoans.length > 0) {
         // יש הלוואות קיימות - בחר את האחרונה או זו עם היתרה הגבוהה ביותר
         const activeLoan = borrowerLoans
           .filter(loan => db.getLoanBalance(loan.id) > 0)
           .sort((a, b) => db.getLoanBalance(b.id) - db.getLoanBalance(a.id))[0] ||
           borrowerLoans.sort((a, b) => b.id - a.id)[0] // אם אין פעילות, קח את האחרונה
-        
+
         setSelectedLoanId(activeLoan.id)
         setCurrentLoan(activeLoan)
         setPayments(db.getPaymentsByLoanId(activeLoan.id))
       } else {
         // אין הלוואות קיימות - צור הלוואה חדשה
-        const today = new Date().toISOString().split('T')[0]
-        const settings = db.getSettings()
-        const defaultReturnDate = new Date()
-        defaultReturnDate.setMonth(defaultReturnDate.getMonth() + settings.defaultLoanPeriod)
-
+        const today = getTodayString()
         setCurrentLoan({
           borrowerId,
           amount: 0,
           loanDate: today,
-          returnDate: defaultReturnDate.toISOString().split('T')[0],
+          returnDate: calculateDefaultReturnDate(today),
           guarantor1: '',
           guarantor2: '',
           notes: ''
@@ -282,11 +278,40 @@ function LoansPage() {
     }))
   }
 
+  // פונקציה ליצירת תאריך מקומי מתאריך בפורמט YYYY-MM-DD
+  const createLocalDate = (dateString: string): Date => {
+    const [year, month, day] = dateString.split('-').map(Number)
+    return new Date(year, month - 1, day) // חודש מתחיל מ-0
+  }
+
+  // פונקציה להמרת תאריך לפורמט YYYY-MM-DD ללא בעיות אזור זמן
+  const formatDateForInput = (date: Date): string => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  // פונקציה לקבלת תאריך היום בפורמט YYYY-MM-DD
+  const getTodayString = (): string => {
+    return formatDateForInput(new Date())
+  }
+
+  // פונקציה לחישוב תאריך החזרה כברירת מחדל
+  const calculateDefaultReturnDate = (loanDate?: string): string => {
+    const settings = db.getSettings()
+    const baseDate = loanDate ? createLocalDate(loanDate) : new Date()
+    const returnDate = new Date(baseDate)
+    returnDate.setMonth(returnDate.getMonth() + settings.defaultLoanPeriod)
+    return formatDateForInput(returnDate)
+  }
+
   const handleLoanChange = (field: keyof DatabaseLoan, value: string | number | boolean) => {
     // בדיקת תאריכים לוגיים
     if (field === 'returnDate' && typeof value === 'string' && value) {
-      const returnDate = new Date(value)
-      const loanDate = new Date(currentLoan.loanDate || new Date().toISOString().split('T')[0])
+      const returnDate = createLocalDate(value)
+      const loanDateStr = currentLoan.loanDate || getTodayString()
+      const loanDate = createLocalDate(loanDateStr)
 
       if (returnDate < loanDate) {
         showNotification(
@@ -298,8 +323,8 @@ function LoansPage() {
 
     // בדיקה כשמשנים תאריך הלוואה
     if (field === 'loanDate' && typeof value === 'string' && value && currentLoan.returnDate) {
-      const loanDate = new Date(value)
-      const returnDate = new Date(currentLoan.returnDate)
+      const loanDate = createLocalDate(value)
+      const returnDate = createLocalDate(currentLoan.returnDate)
 
       if (loanDate > returnDate) {
         showNotification(
@@ -309,10 +334,21 @@ function LoansPage() {
       }
     }
 
-    setCurrentLoan(prev => ({
-      ...prev,
-      [field]: value
-    }))
+    // לוגיקה מיוחדת לפרעון אוטומטי
+    if (field === 'autoPayment' && value === true) {
+      // כשמפעילים פרעון אוטומטי, הפוך להלוואה קבועה
+      setCurrentLoan(prev => ({
+        ...prev,
+        [field]: value,
+        loanType: 'fixed',
+        autoPaymentDay: prev.autoPaymentDay || 5 // ברירת מחדל - יום 5 בחודש
+      }))
+    } else {
+      setCurrentLoan(prev => ({
+        ...prev,
+        [field]: value
+      }))
+    }
 
     // אם משנים את הלווה, עדכן גם את הנתונים הקשורים
     if (field === 'borrowerId' && typeof value === 'number') {
@@ -325,14 +361,14 @@ function LoansPage() {
         if (!isAdvancedEditMode) {
           // חפש הלוואות של הלווה הנבחר
           const borrowerLoans = loans.filter(loan => loan.borrowerId === value)
-          
+
           if (borrowerLoans.length > 0) {
             // יש הלוואות קיימות - בחר את האחרונה או זו עם היתרה הגבוהה ביותר
             const activeLoan = borrowerLoans
               .filter(loan => db.getLoanBalance(loan.id) > 0)
               .sort((a, b) => db.getLoanBalance(b.id) - db.getLoanBalance(a.id))[0] ||
               borrowerLoans.sort((a, b) => b.id - a.id)[0] // אם אין פעילות, קח את האחרונה
-            
+
             setSelectedLoanId(activeLoan.id)
             setCurrentLoan(activeLoan)
             setPayments(db.getPaymentsByLoanId(activeLoan.id))
@@ -340,16 +376,12 @@ function LoansPage() {
             // אין הלוואות קיימות - צור הלוואה חדשה
             setSelectedLoanId(null)
             setPayments([])
-            const today = new Date().toISOString().split('T')[0]
-            const settings = db.getSettings()
-            const defaultReturnDate = new Date()
-            defaultReturnDate.setMonth(defaultReturnDate.getMonth() + settings.defaultLoanPeriod)
-
+            const today = getTodayString()
             setCurrentLoan({
               borrowerId: value,
               amount: 0,
               loanDate: today,
-              returnDate: defaultReturnDate.toISOString().split('T')[0],
+              returnDate: calculateDefaultReturnDate(today),
               notes: '',
               guarantor1: '',
               guarantor2: ''
@@ -362,40 +394,41 @@ function LoansPage() {
   }
 
   const saveBorrower = () => {
-    if (currentBorrower.firstName && currentBorrower.lastName) {
-      // בדיקת שם כפול
-      const fullName = `${currentBorrower.firstName.trim()} ${currentBorrower.lastName.trim()}`
-      const existingBorrower = borrowers.find(b =>
-        b.id !== selectedBorrowerId &&
-        `${b.firstName.trim()} ${b.lastName.trim()}`.toLowerCase() === fullName.toLowerCase()
-      )
+    if (!currentBorrower.firstName || !currentBorrower.lastName) {
+      showNotification('⚠️ אנא מלא שם פרטי ושם משפחה', 'error')
+      return
+    }
 
-      if (existingBorrower) {
-        showNotification(`⚠️ לווה בשם "${fullName}" כבר קיים במערכת`, 'error')
-        return
-      }
+    // בדוק מספר זהות רק אם זה חובה
+    if (db.getSettings().requireIdNumber && (!currentBorrower.idNumber || currentBorrower.idNumber.trim() === '')) {
+      showNotification('⚠️ מספר זהות הוא שדה חובה (ניתן לשנות בהגדרות)', 'error')
+      return
+    }
 
-      if (selectedBorrowerId) {
-        db.updateBorrower(selectedBorrowerId, currentBorrower as DatabaseBorrower)
+    if (selectedBorrowerId) {
+      // עדכון לווה קיים
+      const result = db.updateBorrower(selectedBorrowerId, currentBorrower as DatabaseBorrower)
+      if (result.success) {
         showNotification('✅ פרטי הלווה עודכנו בהצלחה!')
+        loadData()
       } else {
-        const newBorrower = db.addBorrower(currentBorrower as Omit<DatabaseBorrower, 'id'>)
-        setSelectedBorrowerId(newBorrower.id)
-        setCurrentLoan(prev => ({ ...prev, borrowerId: newBorrower.id }))
+        showNotification(`❌ ${result.error}`, 'error')
+      }
+    } else {
+      // הוספת לווה חדש
+      const result = db.addBorrower(currentBorrower as Omit<DatabaseBorrower, 'id'>)
+      if ('error' in result) {
+        showNotification(`❌ ${result.error}`, 'error')
+      } else {
+        setSelectedBorrowerId(result.id)
+        setCurrentLoan(prev => ({ ...prev, borrowerId: result.id }))
 
-        // הצג הודעת הצלחה ללא חסימת הממשק
         showNotification('✅ לווה חדש נוסף בהצלחה!')
 
         // עבור אוטומטית לניהול הלוואות
         setTimeout(() => {
           setMode('loan')
           showNotification('🔄 עברת לניהול הלוואות - כעת תוכל להוסיף הלוואה', 'info')
-        }, 1500)
-
-        // עבור אוטומטית לניהול הלוואות
-        setTimeout(() => {
-          setMode('loan')
-          showNotification('🔄 עברת לניהול הלוואות - כעת תוכל להוסיף הלוואה ללווה החדש', 'info')
         }, 1500)
 
         // נקה את הטופס כדי לאפשר הוספת לווה נוסף אם יחזרו למצב לווים
@@ -410,11 +443,9 @@ function LoansPage() {
             idNumber: ''
           })
         }, 50)
-        // לא מנקים את selectedBorrowerId כדי שיישאר זמין בניהול הלוואות
+
+        loadData()
       }
-      loadData()
-    } else {
-      showNotification('⚠️ אנא מלא שם פרטי ושם משפחה', 'error')
     }
   }
 
@@ -424,22 +455,61 @@ function LoansPage() {
       return
     }
 
-    // בדיקת תאריכים לפני שמירה
-    if (currentLoan.returnDate && currentLoan.loanDate) {
-      const returnDate = new Date(currentLoan.returnDate)
-      const loanDate = new Date(currentLoan.loanDate)
+    // בדיקת תאריכים לפני שמירה (נעשה אחרי חישוב התאריך)
+    const validateDates = (loanDate: string) => {
+      if (currentLoan.returnDate && loanDate) {
+        const returnDate = new Date(currentLoan.returnDate)
+        const calculatedLoanDate = new Date(loanDate)
 
-      if (returnDate < loanDate) {
-        showNotification('⚠️ תאריך החזרה לא יכול להיות קודם לתאריך ההלוואה', 'error')
-        return
+        if (returnDate < calculatedLoanDate) {
+          showNotification('⚠️ תאריך החזרה לא יכול להיות קודם לתאריך ההלוואה', 'error')
+          return false
+        }
       }
+
+      // הסרתי את הבדיקה - עכשיו הפרעון יכול להיות בכל יום כי הוא מתייחס לחודש הבא
+
+      return true
     }
 
-    // וודא שיש תאריך הלוואה
-    if (!currentLoan.loanDate) {
+    // חישוב תאריך הלוואה להלוואות מחזוריות
+    let finalLoanDate = currentLoan.loanDate
+
+    if (currentLoan.isRecurring && currentLoan.recurringDay) {
+      const today = new Date()
+      const currentDay = today.getDate()
+      const selectedDay = currentLoan.recurringDay
+
+      console.log('💾 שמירת הלוואה מחזורית:', {
+        today: today.toDateString(),
+        currentDay,
+        selectedDay,
+        willBeNextMonth: selectedDay < currentDay
+      })
+
+      if (selectedDay >= currentDay) {
+        // החודש הנוכחי - רק אם היום שנבחר עדיין לא עבר
+        const calculatedDate = new Date(today.getFullYear(), today.getMonth(), selectedDay)
+        finalLoanDate = formatDateForInput(calculatedDate)
+        console.log('📅 תאריך החודש הנוכחי:', finalLoanDate)
+      } else {
+        // החודש הבא - אם היום שנבחר כבר עבר החודש
+        const calculatedDate = new Date(today.getFullYear(), today.getMonth() + 1, selectedDay)
+        finalLoanDate = formatDateForInput(calculatedDate)
+        console.log('📅 תאריך החודש הבא:', finalLoanDate)
+      }
+
+      // עדכן את ה-state עם התאריך המחושב
       setCurrentLoan(prev => ({
         ...prev,
-        loanDate: new Date().toISOString().split('T')[0]
+        loanDate: finalLoanDate
+      }))
+    } else if (!currentLoan.loanDate) {
+      // הלוואה רגילה ללא תאריך - השתמש בהיום
+      finalLoanDate = getTodayString()
+      setCurrentLoan(prev => ({
+        ...prev,
+        loanDate: finalLoanDate
       }))
     }
 
@@ -449,22 +519,33 @@ function LoansPage() {
       return
     }
 
+    // בדיקת תאריכים עם התאריך המחושב
+    if (!finalLoanDate || !validateDates(finalLoanDate)) {
+      return
+    }
+
     try {
       let savedLoanId: number
-      
+
+      // הכן את נתוני ההלוואה עם התאריך המחושב
+      const loanToSave = {
+        ...currentLoan,
+        loanDate: finalLoanDate
+      } as DatabaseLoan
+
       if (selectedLoanId) {
         // עדכון הלוואה קיימת
-        db.updateLoan(selectedLoanId, currentLoan as DatabaseLoan)
+        db.updateLoan(selectedLoanId, loanToSave)
         savedLoanId = selectedLoanId
       } else {
         // הוספת הלוואה חדשה
-        const newLoan = db.addLoan(currentLoan as Omit<DatabaseLoan, 'id' | 'createdDate' | 'status'>)
+        const newLoan = db.addLoan(loanToSave as Omit<DatabaseLoan, 'id' | 'createdDate' | 'status'>)
         savedLoanId = newLoan.id
-        
+
         // עבור להלוואה החדשה שנשמרה
         setSelectedLoanId(savedLoanId)
       }
-      
+
       loadData()
 
       // אם זו הייתה הלוואה חדשה, טען את הנתונים של ההלוואה שנשמרה
@@ -520,7 +601,7 @@ function LoansPage() {
           db.addPayment({
             loanId: selectedLoanId!,
             amount,
-            date: new Date().toISOString().split('T')[0],
+            date: getTodayString(),
             type: 'payment',
             notes: ''
           })
@@ -572,16 +653,12 @@ function LoansPage() {
     }
 
     // חישוב תאריכים ברירת מחדל
-    const today = new Date().toISOString().split('T')[0]
-    const settings = db.getSettings()
-    const defaultReturnDate = new Date()
-    defaultReturnDate.setMonth(defaultReturnDate.getMonth() + settings.defaultLoanPeriod)
-
+    const today = getTodayString()
     setCurrentLoan({
       borrowerId: selectedBorrowerId,
       amount: 0,
       loanDate: today, // תאריך ההלוואה - היום כברירת מחדל
-      returnDate: defaultReturnDate.toISOString().split('T')[0],
+      returnDate: calculateDefaultReturnDate(today),
       notes: '',
       guarantor1: '',
       guarantor2: ''
@@ -656,7 +733,7 @@ function LoansPage() {
       showNotification('⚠️ לא ניתן להפיק שטר להלוואה חדשה שלא נשמרה עדיין. אנא שמור את ההלוואה תחילה.', 'error')
       return
     }
-    
+
     if (!currentBorrower.firstName) {
       showNotification('⚠️ אנא בחר לווה תחילה', 'error')
       return
@@ -692,16 +769,16 @@ function LoansPage() {
       showNotification('⚠️ אנא בחר הלוואה תחילה', 'error')
       return
     }
-    
+
     const loan = loans.find(l => l.id === loanId)
     if (!loan) return
-    
+
     const borrowerName = `${currentBorrower.firstName} ${currentBorrower.lastName}`
     const balance = db.getLoanBalance(loanId)
-    
+
     // יצירת תוכן השטר
     createPrintContent(loan, borrowerName, balance)
-    
+
     // שימוש ב-Electron API לשמירה כ-PDF
     try {
       const result = await (window as any).electronAPI.printToPDF()
@@ -718,6 +795,7 @@ function LoansPage() {
     const loanAmount = loan.amount.toLocaleString()
     const returnDate = new Date(loan.returnDate).toLocaleDateString('he-IL')
     const loanDate = new Date(loan.createdDate).toLocaleDateString('he-IL')
+    const borrowerIdNumber = currentBorrower.idNumber ? db.formatIdNumber(currentBorrower.idNumber) : ''
 
     const printContent = `
       <div id="print-content" style="display: none;">
@@ -725,6 +803,7 @@ function LoansPage() {
           <div style="max-width: 500px; margin: 0 auto; text-align: right;">
             <h1 style="font-size: 20px; margin-bottom: 20px; text-decoration: underline;">שטר הלוואה</h1>
             <p style="margin: 8px 0;">אני הח"מ <strong>${borrowerName}</strong></p>
+            ${borrowerIdNumber ? `<p style="margin: 8px 0;">ת.ז. <strong>${borrowerIdNumber}</strong></p>` : ''}
             <p style="margin: 8px 0;">מאשר בזה כי לוויתי מגמ"ח "<strong>${gemachName}</strong>"</p>
             <p style="margin: 8px 0;">סכום של: <strong>${loanAmount} ש"ח</strong></p>
             <p style="margin: 8px 0;">בתאריך: <strong>${loanDate}</strong></p>
@@ -759,9 +838,9 @@ function LoansPage() {
     if (existingPrintContent) {
       existingPrintContent.remove()
     }
-    
+
     document.body.insertAdjacentHTML('beforeend', printContent)
-    
+
     // הוספת CSS להדפסה
     const printStyle = document.createElement('style')
     printStyle.id = 'print-style'
@@ -782,12 +861,12 @@ function LoansPage() {
         }
       }
     `
-    
+
     const existingPrintStyle = document.getElementById('print-style')
     if (existingPrintStyle) {
       existingPrintStyle.remove()
     }
-    
+
     document.head.appendChild(printStyle)
   }
 
@@ -796,6 +875,7 @@ function LoansPage() {
     const loanAmount = loan.amount.toLocaleString()
     const returnDate = new Date(loan.returnDate).toLocaleDateString('he-IL')
     const loanDate = new Date(loan.createdDate).toLocaleDateString('he-IL')
+    const borrowerIdNumber = currentBorrower.idNumber ? db.formatIdNumber(currentBorrower.idNumber) : ''
 
     // בדיקה אם זה Electron עם API חדש
     const isElectron = (window as any).electronAPI?.isElectron?.()
@@ -808,10 +888,30 @@ function LoansPage() {
             <div style="max-width: 500px; margin: 0 auto; text-align: right;">
               <h1 style="font-size: 20px; margin-bottom: 20px; text-decoration: underline;">שטר הלוואה</h1>
               <p style="margin: 8px 0;">אני הח"מ <strong>${borrowerName}</strong></p>
+              ${borrowerIdNumber ? `<p style="margin: 8px 0;">ת.ז. <strong>${borrowerIdNumber}</strong></p>` : ''}
               <p style="margin: 8px 0;">מאשר בזה כי לוויתי מגמ"ח "<strong>${gemachName}</strong>"</p>
               <p style="margin: 8px 0;">סכום של: <strong>${loanAmount} ש"ח</strong></p>
               <p style="margin: 8px 0;">בתאריך: <strong>${loanDate}</strong></p>
-              <p style="margin: 8px 0;">אני מתחייב להחזיר את הסכום עד לתאריך: <strong>${returnDate}</strong></p>
+              ${loan.loanType === 'flexible' ?
+          `<p style="margin: 8px 0;">אני מתחייב להחזיר את הסכום <strong>לפי התראה</strong></p>` :
+          `<p style="margin: 8px 0;">אני מתחייב להחזיר את הסכום עד לתאריך: <strong>${returnDate}</strong></p>`
+        }
+              ${loan.isRecurring ? `
+                <div style="background: rgba(52, 152, 219, 0.1); border: 2px solid rgba(52, 152, 219, 0.3); border-radius: 5px; padding: 10px; margin: 10px 0;">
+                  <p style="margin: 4px 0; color: #2c3e50;"><strong>🔄 הלוואה מחזורית:</strong></p>
+                  <p style="margin: 4px 0; color: #2c3e50;">הלוואה חוזרת כל חודש ביום <strong>${loan.recurringDay}</strong></p>
+                  <p style="margin: 4px 0; color: #2c3e50;">סכום כל הלוואה: <strong>${loanAmount} ש"ח</strong></p>
+                  <p style="margin: 4px 0; color: #2c3e50;">משך זמן: <strong>${loan.recurringMonths || 12} חודשים</strong></p>
+                  <p style="margin: 4px 0; color: #2c3e50;">סה"כ צפוי: <strong>${(loan.amount * (loan.recurringMonths || 12)).toLocaleString()} ש"ח</strong></p>
+                </div>
+              ` : ''}
+              ${loan.autoPayment ? `
+                <div style="background: rgba(39, 174, 96, 0.1); border: 2px solid rgba(39, 174, 96, 0.3); border-radius: 5px; padding: 10px; margin: 10px 0;">
+                  <p style="margin: 4px 0; color: #2c3e50;"><strong>💰 פרעון אוטומטי:</strong></p>
+                  <p style="margin: 4px 0; color: #2c3e50;">סכום: <strong>${loan.autoPaymentAmount?.toLocaleString()} ש"ח</strong></p>
+                  <p style="margin: 4px 0; color: #2c3e50;">יום בחודש: <strong>${loan.autoPaymentDay}</strong></p>
+                </div>
+              ` : ''}
               ${loan.guarantor1 ? `<p style="margin: 8px 0;">ערב ראשון: <strong>${loan.guarantor1}</strong></p>` : ''}
               ${loan.guarantor2 ? `<p style="margin: 8px 0;">ערב שני: <strong>${loan.guarantor2}</strong></p>` : ''}
               ${loan.notes ? `<p style="margin: 8px 0;">הערות: <strong>${loan.notes}</strong></p>` : ''}
@@ -983,10 +1083,30 @@ function LoansPage() {
               <div class="content">
                 <h1>שטר הלוואה</h1>
                 <p>אני הח"מ <strong>${borrowerName}</strong></p>
+                ${borrowerIdNumber ? `<p>ת.ז. <strong>${borrowerIdNumber}</strong></p>` : ''}
                 <p>מאשר בזה כי לוויתי מגמ"ח "<strong>${gemachName}</strong>"</p>
                 <p>סכום של: <strong>${loanAmount} ש"ח</strong></p>
                 <p>בתאריך: <strong>${loanDate}</strong></p>
-                <p>אני מתחייב להחזיר את הסכום עד לתאריך: <strong>${returnDate}</strong></p>
+                ${loan.loanType === 'flexible' ?
+            `<p>אני מתחייב להחזיר את הסכום <strong>לפי התראה</strong></p>` :
+            `<p>אני מתחייב להחזיר את הסכום עד לתאריך: <strong>${returnDate}</strong></p>`
+          }
+                ${loan.isRecurring ? `
+                  <div style="background: rgba(52, 152, 219, 0.1); border: 2px solid rgba(52, 152, 219, 0.3); border-radius: 5px; padding: 10px; margin: 10px 0;">
+                    <p style="margin: 4px 0; color: #2c3e50;"><strong>🔄 הלוואה מחזורית:</strong></p>
+                    <p style="margin: 4px 0; color: #2c3e50;">הלוואה חוזרת כל חודש ביום <strong>${loan.recurringDay}</strong></p>
+                    <p style="margin: 4px 0; color: #2c3e50;">סכום כל הלוואה: <strong>${loanAmount} ש"ח</strong></p>
+                    <p style="margin: 4px 0; color: #2c3e50;">משך זמן: <strong>${loan.recurringMonths || 12} חודשים</strong></p>
+                    <p style="margin: 4px 0; color: #2c3e50;">סה"כ צפוי: <strong>${(loan.amount * (loan.recurringMonths || 12)).toLocaleString()} ש"ח</strong></p>
+                  </div>
+                ` : ''}
+                ${loan.autoPayment ? `
+                  <div style="background: rgba(39, 174, 96, 0.1); border: 2px solid rgba(39, 174, 96, 0.3); border-radius: 5px; padding: 10px; margin: 10px 0;">
+                    <p style="margin: 4px 0; color: #2c3e50;"><strong>💰 פרעון אוטומטי:</strong></p>
+                    <p style="margin: 4px 0; color: #2c3e50;">סכום: <strong>${loan.autoPaymentAmount?.toLocaleString()} ש"ח</strong></p>
+                    <p style="margin: 4px 0; color: #2c3e50;">יום בחודש: <strong>${loan.autoPaymentDay}</strong></p>
+                  </div>
+                ` : ''}
                 ${loan.guarantor1 ? `<p>ערב ראשון: <strong>${loan.guarantor1}</strong></p>` : ''}
                 ${loan.guarantor2 ? `<p>ערב שני: <strong>${loan.guarantor2}</strong></p>` : ''}
                 ${loan.notes ? `<p>הערות: <strong>${loan.notes}</strong></p>` : ''}
@@ -1040,7 +1160,7 @@ function LoansPage() {
       db.addPayment({
         loanId: loan.id,
         amount: paymentForThisLoan,
-        date: new Date().toISOString().split('T')[0],
+        date: getTodayString(),
         type: 'payment',
         notes: `פרעון מרובה - חלק מ-₪${amount.toLocaleString()}`
       })
@@ -1146,6 +1266,65 @@ function LoansPage() {
                   value={currentBorrower.lastName || ''}
                   onChange={(e) => handleBorrowerChange('lastName', e.target.value)}
                 />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>
+                  מספר זהות: {db.getSettings().requireIdNumber && <span style={{ color: '#e74c3c' }}>*</span>}
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      color: '#666',
+                      marginRight: '5px',
+                      cursor: 'help'
+                    }}
+                    title={db.getSettings().requireIdNumber ?
+                      "מספר זהות ישראלי תקין עם ספרת ביקורת נכונה (חובה)" :
+                      "מספר זהות ישראלי תקין עם ספרת ביקורת נכונה (אופציונלי)"
+                    }
+                  >
+                    ℹ️
+                  </span>
+                </label>
+                <input
+                  key={`idNumber-${selectedBorrowerId || 'new'}`}
+                  type="text"
+                  value={currentBorrower.idNumber || ''}
+                  onChange={(e) => {
+                    // הסר תווים שאינם ספרות, מקפים או רווחים
+                    const cleanValue = e.target.value.replace(/[^\d\s-]/g, '')
+                    handleBorrowerChange('idNumber', cleanValue)
+                  }}
+                  placeholder={db.getSettings().requireIdNumber ? "דוגמה: 123456782" : "דוגמה: 123456782 (אופציונלי)"}
+                  maxLength={11}
+                  style={{
+                    borderColor: currentBorrower.idNumber && !db.validateIsraeliId(currentBorrower.idNumber) ? '#e74c3c' : undefined
+                  }}
+                />
+                {currentBorrower.idNumber && (
+                  <small style={{
+                    color: db.validateIsraeliId(currentBorrower.idNumber) ? '#27ae60' : '#e74c3c',
+                    fontSize: '12px',
+                    display: 'block',
+                    marginTop: '2px'
+                  }}>
+                    {(() => {
+                      const cleanId = currentBorrower.idNumber.replace(/[\s-]/g, '')
+                      if (cleanId.length !== 9) {
+                        return `נדרשות 9 ספרות (יש ${cleanId.length})`
+                      } else if (db.validateIsraeliId(currentBorrower.idNumber)) {
+                        return '✓ מספר זהות תקין'
+                      } else {
+                        return '❌ מספר זהות לא תקין (ספרת ביקורת שגויה)'
+                      }
+                    })()}
+                  </small>
+                )}
+              </div>
+              <div className="form-group">
+                {/* שדה ריק לאיזון */}
               </div>
             </div>
 
@@ -1284,18 +1463,26 @@ function LoansPage() {
                     .map(loan => {
                       const borrower = borrowers.find(b => b.id === loan.borrowerId)
                       const balance = db.getLoanBalance(loan.id)
-                      const status = balance === 0 ? 'נפרע' : 'פעיל'
 
-                      // בדוק אם באיחור
+                      // בדוק אם ההלוואה עתידית
                       const today = new Date()
-                      const returnDate = new Date(loan.returnDate)
-                      const isOverdue = balance > 0 && returnDate < today
-                      const daysOverdue = isOverdue ? Math.floor((today.getTime() - returnDate.getTime()) / (1000 * 60 * 60 * 24)) : 0
+                      const loanDate = new Date(loan.loanDate)
+                      const isFuture = loanDate > today
 
                       let statusIcon = '✅'
-                      let statusText = status
+                      let statusText = 'נפרע'
 
-                      if (balance > 0) {
+                      if (isFuture) {
+                        // הלוואה עתידית
+                        const daysUntil = Math.ceil((loanDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+                        statusIcon = '🕐'
+                        statusText = `מתוכנן - ${daysUntil === 1 ? 'מחר' : `בעוד ${daysUntil} ימים`}`
+                      } else if (balance > 0) {
+                        // הלוואה פעילה
+                        const returnDate = new Date(loan.returnDate)
+                        const isOverdue = returnDate < today
+                        const daysOverdue = isOverdue ? Math.floor((today.getTime() - returnDate.getTime()) / (1000 * 60 * 60 * 24)) : 0
+
                         if (isOverdue) {
                           statusIcon = '⚠️'
                           statusText = `איחור ${daysOverdue} ימים`
@@ -1369,27 +1556,40 @@ function LoansPage() {
                   type="date"
                   value={currentLoan.loanDate || ''}
                   onChange={(e) => handleLoanChange('loanDate', e.target.value)}
+                  disabled={currentLoan.isRecurring}
+                  style={{
+                    backgroundColor: currentLoan.isRecurring ? '#f5f5f5' : 'white',
+                    cursor: currentLoan.isRecurring ? 'not-allowed' : 'text',
+                    color: currentLoan.isRecurring ? '#999' : 'inherit'
+                  }}
                 />
+                {currentLoan.isRecurring && (
+                  <small style={{
+                    color: '#f39c12',
+                    fontSize: '12px',
+                    display: 'block',
+                    marginTop: '5px'
+                  }}>
+                    🔄 התאריך יחושב אוטומטי לפי היום בחודש שנבחר
+                  </small>
+                )}
                 {(() => {
-                  const today = new Date().toISOString().split('T')[0]
+                  // אל תציג הודעה אם זו הלוואה מחזורית
+                  if (currentLoan.isRecurring) return null
+
+                  const today = getTodayString()
                   const loanDate = currentLoan.loanDate
-                  
+
                   if (loanDate && loanDate > today) {
                     const daysUntil = Math.ceil((new Date(loanDate).getTime() - new Date(today).getTime()) / (1000 * 60 * 60 * 24))
                     return (
-                      <small style={{ 
-                        color: '#3498db', 
-                        fontSize: '12px', 
-                        display: 'block', 
-                        marginTop: '5px',
-                        background: 'rgba(52, 152, 219, 0.1)',
-                        padding: '5px 8px',
-                        borderRadius: '4px',
-                        border: '1px solid rgba(52, 152, 219, 0.3)'
+                      <small style={{
+                        color: '#3498db',
+                        fontSize: '12px',
+                        display: 'block',
+                        marginTop: '5px'
                       }}>
-                        🕐 <strong>הלוואה מתוכננת</strong> - תופעל בעוד {daysUntil === 1 ? 'יום אחד' : `${daysUntil} ימים`}
-                        <br />
-                        💡 לא תוצג בדף הבית עד התאריך הזה
+                        🕐 הלוואה מתוכננת - תופעל בעוד {daysUntil === 1 ? 'יום אחד' : `${daysUntil} ימים`}
                       </small>
                     )
                   }
@@ -1404,10 +1604,26 @@ function LoansPage() {
                 <select
                   value={currentLoan.loanType || 'fixed'}
                   onChange={(e) => handleLoanChange('loanType', e.target.value)}
+                  disabled={currentLoan.autoPayment}
+                  style={{
+                    backgroundColor: currentLoan.autoPayment ? '#f5f5f5' : 'white',
+                    cursor: currentLoan.autoPayment ? 'not-allowed' : 'text',
+                    color: currentLoan.autoPayment ? '#999' : 'inherit'
+                  }}
                 >
                   <option value="fixed">קבועה - עם תאריך פרעון</option>
                   <option value="flexible">גמישה - פרעון לפי התראה</option>
                 </select>
+                {currentLoan.autoPayment && (
+                  <small style={{
+                    color: '#f39c12',
+                    fontSize: '12px',
+                    display: 'block',
+                    marginTop: '5px'
+                  }}>
+                    🔄 פרעון אוטומטי דורש הלוואה קבועה
+                  </small>
+                )}
               </div>
               <div className="form-group">
                 <label>תאריך החזרה מתוכנן:</label>
@@ -1415,115 +1631,199 @@ function LoansPage() {
                   type="date"
                   value={currentLoan.returnDate || ''}
                   onChange={(e) => handleLoanChange('returnDate', e.target.value)}
-                  disabled={currentLoan.loanType === 'flexible'}
+                  disabled={currentLoan.loanType === 'flexible' || currentLoan.autoPayment}
                   style={{
-                    backgroundColor: currentLoan.loanType === 'flexible' ? '#f5f5f5' : 'white',
-                    cursor: currentLoan.loanType === 'flexible' ? 'not-allowed' : 'text'
+                    backgroundColor: (currentLoan.loanType === 'flexible' || currentLoan.autoPayment) ? '#f5f5f5' : 'white',
+                    cursor: (currentLoan.loanType === 'flexible' || currentLoan.autoPayment) ? 'not-allowed' : 'text',
+                    color: (currentLoan.loanType === 'flexible' || currentLoan.autoPayment) ? '#999' : 'inherit'
                   }}
-                  placeholder={currentLoan.loanType === 'flexible' ? 'לא רלוונטי להלוואה גמישה' : ''}
+                  placeholder={
+                    currentLoan.loanType === 'flexible' ? 'לא רלוונטי להלוואה גמישה' :
+                      currentLoan.autoPayment ? 'לא רלוונטי לפרעון אוטומטי' : ''
+                  }
                 />
+                {currentLoan.autoPayment && (
+                  <small style={{
+                    color: '#f39c12',
+                    fontSize: '12px',
+                    display: 'block',
+                    marginTop: '5px'
+                  }}>
+                    🔄 פרעון אוטומטי - התאריך לא רלוונטי
+                  </small>
+                )}
               </div>
             </div>
 
             {settings.enableRecurringLoans && (
-              <div className="form-row">
-                <div className="form-group">
-                  <label>הלוואה מחזורית:</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>הלוואה מחזורית:</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <input
+                        type="checkbox"
+                        checked={currentLoan.isRecurring || false}
+                        onChange={(e) => handleLoanChange('isRecurring', e.target.checked)}
+                      />
+                      <span>הלוואה חוזרת כל חודש</span>
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>מספר חודשים:</label>
                     <input
-                      type="checkbox"
-                      checked={currentLoan.isRecurring || false}
-                      onChange={(e) => handleLoanChange('isRecurring', e.target.checked)}
+                      type="number"
+                      value={currentLoan.recurringMonths || 12}
+                      onChange={(e) => handleLoanChange('recurringMonths', Number(e.target.value))}
+                      min="1"
+                      max="120"
+                      disabled={!currentLoan.isRecurring}
+                      style={{
+                        backgroundColor: !currentLoan.isRecurring ? '#f5f5f5' : 'white',
+                        cursor: !currentLoan.isRecurring ? 'not-allowed' : 'text'
+                      }}
+                      placeholder="12"
                     />
-                    <span>הלוואה חוזרת כל חודש</span>
+                    {currentLoan.isRecurring && (
+                      <small style={{
+                        color: '#3498db',
+                        fontSize: '12px',
+                        display: 'block',
+                        marginTop: '5px'
+                      }}>
+                        ההלוואה תחזור {currentLoan.recurringMonths || 12} פעמים
+                      </small>
+                    )}
                   </div>
                 </div>
-                <div className="form-group">
-                  <label>יום בחודש להלוואה:</label>
-                  <input
-                    type="number"
-                    value={currentLoan.recurringDay || 1}
-                    onChange={(e) => handleLoanChange('recurringDay', Number(e.target.value))}
-                    min="1"
-                    max="31"
-                    disabled={!currentLoan.isRecurring}
-                    style={{
-                      backgroundColor: !currentLoan.isRecurring ? '#f5f5f5' : 'white',
-                      cursor: !currentLoan.isRecurring ? 'not-allowed' : 'text'
-                    }}
-                    placeholder="1-31"
-                  />
-                </div>
-              </div>
+
+                {currentLoan.isRecurring && (
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>יום בחודש להלוואה:</label>
+                      <input
+                        type="number"
+                        value={currentLoan.recurringDay || 1}
+                        onChange={(e) => {
+                          const value = Number(e.target.value)
+                          // הגבל את הערך בין 1 ל-31
+                          if (value >= 1 && value <= 31) {
+                            handleLoanChange('recurringDay', value)
+                          } else if (e.target.value === '') {
+                            handleLoanChange('recurringDay', 1)
+                          } else if (value > 31) {
+                            showNotification('⚠️ יום בחודש חייב להיות בין 1 ל-31', 'error')
+                          }
+                        }}
+                        min="1"
+                        max="31"
+                        placeholder="1-31"
+                      />
+                      <small style={{
+                        color: '#27ae60',
+                        fontSize: '12px',
+                        display: 'block',
+                        marginTop: '5px'
+                      }}>
+                        📅 ההלוואה הראשונה תהיה ביום {currentLoan.recurringDay || 1} בחודש
+                      </small>
+                    </div>
+                    <div className="form-group">
+                      {/* שדה ריק לאיזון */}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             {settings.enableRecurringPayments && (
-              <div className="form-row">
-                <div className="form-group">
-                  <label>פרעון אוטומטי:</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <input
-                      type="checkbox"
-                      checked={currentLoan.autoPayment || false}
-                      onChange={(e) => handleLoanChange('autoPayment', e.target.checked)}
+              <>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>פרעון אוטומטי:</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <input
+                        type="checkbox"
+                        checked={currentLoan.autoPayment || false}
+                        onChange={(e) => handleLoanChange('autoPayment', e.target.checked)}
+                      />
+                      <span>פרעון חודשי אוטומטי</span>
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>סכום פרעון חודשי:</label>
+                    <NumberInput
+                      value={currentLoan.autoPaymentAmount || 0}
+                      onChange={(value) => handleLoanChange('autoPaymentAmount', value)}
+                      placeholder="סכום"
+                      style={{
+                        backgroundColor: !currentLoan.autoPayment ? '#f5f5f5' : 'white',
+                        cursor: !currentLoan.autoPayment ? 'not-allowed' : 'text'
+                      }}
+                      readOnly={!currentLoan.autoPayment}
                     />
-                    <span>פרעון חודשי אוטומטי</span>
                   </div>
                 </div>
-                <div className="form-group">
-                  <label>סכום פרעון חודשי:</label>
-                  <NumberInput
-                    value={currentLoan.autoPaymentAmount || 0}
-                    onChange={(value) => handleLoanChange('autoPaymentAmount', value)}
-                    placeholder="סכום"
-                    style={{
-                      backgroundColor: !currentLoan.autoPayment ? '#f5f5f5' : 'white',
-                      cursor: !currentLoan.autoPayment ? 'not-allowed' : 'text'
-                    }}
-                    readOnly={!currentLoan.autoPayment}
-                  />
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>יום בחודש לפרעון:</label>
+                    <input
+                      type="number"
+                      value={currentLoan.autoPaymentDay || 1}
+                      onChange={(e) => {
+                        const value = Number(e.target.value)
+                        // הגבל את הערך בין 1 ל-31
+                        if (value >= 1 && value <= 31) {
+                          handleLoanChange('autoPaymentDay', value)
+                        } else if (e.target.value === '') {
+                          handleLoanChange('autoPaymentDay', 1)
+                        } else if (value > 31) {
+                          showNotification('⚠️ יום בחודש חייב להיות בין 1 ל-31', 'error')
+                        }
+                      }}
+                      min="1"
+                      max="31"
+                      disabled={!currentLoan.autoPayment}
+                      style={{
+                        backgroundColor: !currentLoan.autoPayment ? '#f5f5f5' : 'white',
+                        cursor: !currentLoan.autoPayment ? 'not-allowed' : 'text'
+                      }}
+                      placeholder="1-31"
+                    />
+                    {currentLoan.autoPayment && (
+                      <small style={{
+                        color: '#666',
+                        fontSize: '12px',
+                        display: 'block',
+                        marginTop: '5px'
+                      }}>
+                        💰 הפרעון יתבצע ביום {currentLoan.autoPaymentDay || 1} בכל חודש
+                      </small>
+                    )}
+
+                  </div>
+                  <div className="form-group">
+                    {/* שדה ריק לאיזון */}
+                  </div>
                 </div>
-              </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>תאריך רישום במערכת:</label>
+                    <input
+                      type="text"
+                      value={currentLoan.createdDate || new Date().toLocaleDateString('he-IL')}
+                      readOnly
+                      style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
+                    />
+                  </div>
+                  <div className="form-group">
+                    {/* שדה ריק לאיזון */}
+                  </div>
+                </div>
+              </>
             )}
-
-            <div className="form-row">
-              <div className="form-group">
-                <label>יום בחודש לפרעון:</label>
-                <input
-                  type="number"
-                  value={currentLoan.autoPaymentDay || 1}
-                  onChange={(e) => handleLoanChange('autoPaymentDay', Number(e.target.value))}
-                  min="1"
-                  max="31"
-                  disabled={!currentLoan.autoPayment}
-                  style={{
-                    backgroundColor: !currentLoan.autoPayment ? '#f5f5f5' : 'white',
-                    cursor: !currentLoan.autoPayment ? 'not-allowed' : 'text'
-                  }}
-                  placeholder="1-31"
-                />
-              </div>
-              <div className="form-group">
-                {/* שדה ריק לאיזון */}
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label>תאריך רישום במערכת:</label>
-                <input
-                  type="text"
-                  value={currentLoan.createdDate || new Date().toLocaleDateString('he-IL')}
-                  readOnly
-                  style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
-                />
-              </div>
-              <div className="form-group">
-                {/* שדה ריק לאיזון */}
-              </div>
-            </div>
-
-
 
             <div className="form-row">
               <div className="form-group">
@@ -1581,14 +1881,14 @@ function LoansPage() {
                 disabled={selectedLoanId ? db.getLoanBalance(selectedLoanId) <= 0 : false}
                 style={{
                   marginRight: '10px',
-                  backgroundColor: selectedLoanId && db.getLoanBalance(selectedLoanId) <= 0 ? '#95a5a6' : 
-                                   !selectedLoanId ? '#f39c12' : undefined
+                  backgroundColor: selectedLoanId && db.getLoanBalance(selectedLoanId) <= 0 ? '#95a5a6' :
+                    !selectedLoanId ? '#f39c12' : undefined
                 }}
                 title={!selectedLoanId ? 'שמור את ההלוואה תחילה כדי לרשום פרעון' :
-                       selectedLoanId && db.getLoanBalance(selectedLoanId) <= 0 ? 'ההלוואה כבר נפרעה במלואה' : 'הוסף פרעון להלוואה'}
+                  selectedLoanId && db.getLoanBalance(selectedLoanId) <= 0 ? 'ההלוואה כבר נפרעה במלואה' : 'הוסף פרעון להלוואה'}
               >
                 {!selectedLoanId ? '⚠️ שמור תחילה' :
-                 selectedLoanId && db.getLoanBalance(selectedLoanId) <= 0 ? '✅ נפרע במלואה' : 'הוסף פרעון'}
+                  selectedLoanId && db.getLoanBalance(selectedLoanId) <= 0 ? '✅ נפרע במלואה' : 'הוסף פרעון'}
               </button>
 
               {selectedBorrowerId && (
@@ -1655,15 +1955,15 @@ function LoansPage() {
                 onClick={generateLoanDocument}
                 style={{
                   backgroundColor: !selectedLoanId ? '#f39c12' :
-                                   selectedLoanId && db.getLoanBalance(selectedLoanId) <= 0 ? '#27ae60' : '#9b59b6',
+                    selectedLoanId && db.getLoanBalance(selectedLoanId) <= 0 ? '#27ae60' : '#9b59b6',
                   color: 'white',
                   marginRight: '10px'
                 }}
-                title={!selectedLoanId ? 'שמור את ההלוואה תחילה כדי להפיק שטר' : 
-                       selectedLoanId && db.getLoanBalance(selectedLoanId) <= 0 ? 'הדפס שטר הלוואה (נפרע)' : 'הדפס שטר הלוואה'}
+                title={!selectedLoanId ? 'שמור את ההלוואה תחילה כדי להפיק שטר' :
+                  selectedLoanId && db.getLoanBalance(selectedLoanId) <= 0 ? 'הדפס שטר הלוואה (נפרע)' : 'הדפס שטר הלוואה'}
               >
                 {!selectedLoanId ? '⚠️ שמור תחילה' :
-                 selectedLoanId && db.getLoanBalance(selectedLoanId) <= 0 ? '📄 שטר (נפרע)' : '📄 הפק שטר הלוואה'}
+                  selectedLoanId && db.getLoanBalance(selectedLoanId) <= 0 ? '📄 שטר (נפרע)' : '📄 הפק שטר הלוואה'}
               </button>
               {(window as any).electronAPI && (
                 <button
@@ -1723,16 +2023,13 @@ function LoansPage() {
 
                               // אפס את טופס ההלוואה לחלוטין
                               if (selectedBorrowerId) {
-                                const today = new Date().toISOString().split('T')[0]
-                                const settings = db.getSettings()
-                                const defaultReturnDate = new Date()
-                                defaultReturnDate.setMonth(defaultReturnDate.getMonth() + settings.defaultLoanPeriod)
+                                const today = getTodayString()
 
                                 setCurrentLoan({
                                   borrowerId: selectedBorrowerId,
                                   amount: 0,
                                   loanDate: today,
-                                  returnDate: defaultReturnDate.toISOString().split('T')[0],
+                                  returnDate: calculateDefaultReturnDate(today),
                                   loanType: 'fixed',
                                   isRecurring: false,
                                   recurringDay: 1,
@@ -1849,8 +2146,8 @@ function LoansPage() {
         {/* הלוואות עתידיות */}
         {db.getFutureLoans().length > 0 && (
           <div style={{ marginTop: '30px' }}>
-            <h4 style={{ 
-              marginBottom: '15px', 
+            <h4 style={{
+              marginBottom: '15px',
               color: '#3498db',
               display: 'flex',
               alignItems: 'center',
@@ -1867,18 +2164,7 @@ function LoansPage() {
                 לא פעילות עדיין
               </span>
             </h4>
-            <div style={{
-              background: 'rgba(52, 152, 219, 0.1)',
-              border: '2px solid rgba(52, 152, 219, 0.3)',
-              borderRadius: '8px',
-              padding: '15px',
-              marginBottom: '15px'
-            }}>
-              <p style={{ margin: '0', fontSize: '14px', color: '#2c3e50' }}>
-                💡 <strong>הלוואות מתוכננות</strong> הן הלוואות עם תאריך עתידי שעדיין לא הופעלו.
-                הן לא מוצגות בדף הבית ולא נחשבות כחובות עד שמגיע התאריך שלהן.
-              </p>
-            </div>
+
             <table className="table">
               <thead>
                 <tr>
@@ -1903,7 +2189,12 @@ function LoansPage() {
                       {db.formatCurrency(loan.amount)}
                     </td>
                     <td>{new Date(loan.loanDate).toLocaleDateString('he-IL')}</td>
-                    <td>{new Date(loan.returnDate).toLocaleDateString('he-IL')}</td>
+                    <td>
+                      {loan.loanType === 'flexible' ?
+                        <span style={{ color: '#f39c12', fontStyle: 'italic' }}>לפי התראה</span> :
+                        new Date(loan.returnDate).toLocaleDateString('he-IL')
+                      }
+                    </td>
                     <td>
                       <span style={{
                         background: loan.daysUntilActive <= 7 ? '#f39c12' : '#3498db',
@@ -1913,9 +2204,9 @@ function LoansPage() {
                         fontSize: '12px',
                         fontWeight: 'bold'
                       }}>
-                        {loan.daysUntilActive === 1 ? 'מחר' : 
-                         loan.daysUntilActive === 0 ? 'היום' :
-                         `${loan.daysUntilActive} ימים`}
+                        {loan.daysUntilActive === 1 ? 'מחר' :
+                          loan.daysUntilActive === 0 ? 'היום' :
+                            `${loan.daysUntilActive} ימים`}
                       </span>
                     </td>
                     <td style={{ fontSize: '12px', maxWidth: '150px' }}>
@@ -1941,7 +2232,7 @@ function LoansPage() {
                         <button
                           onClick={() => {
                             // הפעל את ההלוואה עכשיו
-                            const today = new Date().toISOString().split('T')[0]
+                            const today = getTodayString()
                             db.updateLoan(loan.id, { loanDate: today })
                             loadData()
                             showNotification('✅ ההלוואה הופעלה!', 'success')

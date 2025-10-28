@@ -2254,104 +2254,80 @@ function LoansPage() {
           </div>
         )}
 
-        {/* הלוואות עתידיות */}
-        {db.getFutureLoans().length > 0 && (
-          <div style={{ marginTop: '30px' }}>
-            <h4 style={{
-              marginBottom: '15px',
-              color: '#3498db',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px'
-            }}>
-              🕐 הלוואות מתוכננות ({db.getFutureLoans().length})
-              <span style={{
-                background: '#3498db',
-                color: 'white',
-                padding: '3px 8px',
-                borderRadius: '10px',
-                fontSize: '12px'
+        {/* הלוואות עתידיות של הלווה הנבחר */}
+        {selectedBorrowerId && (() => {
+          const futureLoans = db.getFutureLoansWithBorrowers().filter(loan => loan.borrowerId === selectedBorrowerId)
+          return futureLoans.length > 0 && (
+            <div style={{ marginTop: '30px' }}>
+              <h4 style={{
+                marginBottom: '15px',
+                color: '#3498db',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
               }}>
-                לא פעילות עדיין
-              </span>
-            </h4>
+                🕐 הלוואות מתוכננות של הלווה ({futureLoans.length})
+                <span style={{
+                  background: '#3498db',
+                  color: 'white',
+                  padding: '3px 8px',
+                  borderRadius: '10px',
+                  fontSize: '12px'
+                }}>
+                  לא פעילות עדיין
+                </span>
+              </h4>
 
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>שם הלווה</th>
-                  <th>סכום</th>
-                  <th>תאריך הלוואה</th>
-                  <th>תאריך החזרה</th>
-                  <th>ימים עד הפעלה</th>
-                  <th>הערות</th>
-                  <th>פעולות</th>
-                </tr>
-              </thead>
-              <tbody>
-                {db.getFutureLoansWithBorrowers().map((loan) => (
-                  <tr key={loan.id} style={{
-                    background: 'rgba(52, 152, 219, 0.05)'
-                  }}>
-                    <td style={{ fontWeight: 'bold' }}>
-                      {loan.borrowerName}
-                    </td>
-                    <td style={{ color: '#3498db', fontWeight: 'bold' }}>
-                      {db.formatCurrency(loan.amount)}
-                    </td>
-                    <td>{new Date(loan.loanDate).toLocaleDateString('he-IL')}</td>
-                    <td>
-                      {loan.loanType === 'flexible' ?
-                        <span style={{ color: '#f39c12', fontStyle: 'italic' }}>לפי התראה</span> :
-                        new Date(loan.returnDate).toLocaleDateString('he-IL')
-                      }
-                    </td>
-                    <td>
-                      <span style={{
-                        background: loan.daysUntilActive <= 7 ? '#f39c12' : '#3498db',
-                        color: 'white',
-                        padding: '3px 8px',
-                        borderRadius: '10px',
-                        fontSize: '12px',
-                        fontWeight: 'bold'
-                      }}>
-                        {loan.daysUntilActive === 1 ? 'מחר' :
-                          loan.daysUntilActive === 0 ? 'היום' :
-                            `${loan.daysUntilActive} ימים`}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: '12px', maxWidth: '150px' }}>
-                      {loan.notes || '-'}
-                    </td>
-                    <td>
-                      <button
-                        onClick={() => selectLoan(loan.id)}
-                        style={{
-                          padding: '5px 10px',
-                          fontSize: '12px',
-                          backgroundColor: '#3498db',
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>סכום</th>
+                    <th>תאריך הלוואה</th>
+                    <th>תאריך החזרה</th>
+                    <th>ימים עד הפעלה</th>
+                    <th>הערות</th>
+                    <th>פעולות</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {futureLoans.map((loan) => (
+                    <tr key={loan.id} style={{
+                      background: 'rgba(52, 152, 219, 0.05)'
+                    }}>
+                      <td style={{ color: '#3498db', fontWeight: 'bold' }}>
+                        {db.formatCurrency(loan.amount)}
+                      </td>
+                      <td>{new Date(loan.loanDate).toLocaleDateString('he-IL')}</td>
+                      <td>
+                        {loan.loanType === 'flexible' ?
+                          <span style={{ color: '#f39c12', fontStyle: 'italic' }}>לפי התראה</span> :
+                          new Date(loan.returnDate).toLocaleDateString('he-IL')
+                        }
+                      </td>
+                      <td>
+                        <span style={{
+                          background: loan.daysUntilActive <= 7 ? '#f39c12' : '#3498db',
                           color: 'white',
-                          border: 'none',
-                          borderRadius: '3px',
-                          cursor: 'pointer',
-                          marginLeft: '5px'
-                        }}
-                      >
-                        ערוך
-                      </button>
-                      {loan.daysUntilActive <= 0 && (
+                          padding: '3px 8px',
+                          borderRadius: '10px',
+                          fontSize: '12px',
+                          fontWeight: 'bold'
+                        }}>
+                          {loan.daysUntilActive === 1 ? 'מחר' :
+                            loan.daysUntilActive === 0 ? 'היום' :
+                              `${loan.daysUntilActive} ימים`}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: '12px', maxWidth: '150px' }}>
+                        {loan.notes || '-'}
+                      </td>
+                      <td>
                         <button
-                          onClick={() => {
-                            // הפעל את ההלוואה עכשיו
-                            const today = getTodayString()
-                            db.updateLoan(loan.id, { loanDate: today })
-                            loadData()
-                            showNotification('✅ ההלוואה הופעלה!', 'success')
-                          }}
+                          onClick={() => selectLoan(loan.id)}
                           style={{
                             padding: '5px 10px',
                             fontSize: '12px',
-                            backgroundColor: '#27ae60',
+                            backgroundColor: '#3498db',
                             color: 'white',
                             border: 'none',
                             borderRadius: '3px',
@@ -2359,16 +2335,39 @@ function LoansPage() {
                             marginLeft: '5px'
                           }}
                         >
-                          🚀 הפעל עכשיו
+                          ערוך
                         </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                        {loan.daysUntilActive <= 0 && (
+                          <button
+                            onClick={() => {
+                              // הפעל את ההלוואה עכשיו
+                              const today = getTodayString()
+                              db.updateLoan(loan.id, { loanDate: today })
+                              loadData()
+                              showNotification('✅ ההלוואה הופעלה!', 'success')
+                            }}
+                            style={{
+                              padding: '5px 10px',
+                              fontSize: '12px',
+                              backgroundColor: '#27ae60',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '3px',
+                              cursor: 'pointer',
+                              marginLeft: '5px'
+                            }}
+                          >
+                            🚀 הפעל עכשיו
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        })()}
 
       </div>
 

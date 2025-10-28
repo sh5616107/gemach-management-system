@@ -896,27 +896,44 @@ function HomePage() {
                           {db.formatCurrency(borrower.totalBalance)}
                         </td>
                         <td>
-                          <button
-                            onClick={() => {
-                              if (hasOverdue) {
-                                const borrowerOverdueLoan = borrowerOverdueLoans[0]
-                                navigate(`/loans?loanId=${borrowerOverdueLoan.id}`)
-                              } else {
-                                navigate(`/loans?borrowerId=${borrower.id}`)
-                              }
-                            }}
-                            style={{
-                              padding: '5px 10px',
-                              fontSize: '12px',
-                              backgroundColor: hasOverdue ? '#e74c3c' : '#3498db',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '3px',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            {hasOverdue ? '⚠️ דחוף' : 'פרטים'}
-                          </button>
+                          <div style={{ display: 'flex', gap: '5px' }}>
+                            <button
+                              onClick={() => {
+                                if (hasOverdue) {
+                                  const borrowerOverdueLoan = borrowerOverdueLoans[0]
+                                  navigate(`/loans?loanId=${borrowerOverdueLoan.id}`)
+                                } else {
+                                  navigate(`/loans?borrowerId=${borrower.id}`)
+                                }
+                              }}
+                              style={{
+                                padding: '5px 10px',
+                                fontSize: '12px',
+                                backgroundColor: hasOverdue ? '#e74c3c' : '#3498db',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '3px',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {hasOverdue ? '⚠️ דחוף' : 'פרטים'}
+                            </button>
+                            <button
+                              onClick={() => navigate(`/borrower-report?borrowerId=${borrower.id}`)}
+                              style={{
+                                padding: '5px 8px',
+                                fontSize: '12px',
+                                backgroundColor: '#27ae60',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '3px',
+                                cursor: 'pointer'
+                              }}
+                              title="דו״ח מפורט"
+                            >
+                              📊
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     )
@@ -978,76 +995,13 @@ function HomePage() {
             🔍 חיפוש לווה
           </button>
           <button
-            className="btn"
-            onClick={() => {
-              // בדיקה מהירה של הפונקציות החדשות
-              const featureCheck = db.checkAdvancedFeatures()
-              const debugInfo = db.debugRecurringLoans()
-              const recurringLoans = db.getPendingRecurringLoans()
-              const autoPayments = db.getPendingAutoPayments()
-
-              console.log('🔧 Feature Check:', featureCheck)
-              console.log('🔍 Debug Info:', debugInfo)
-              console.log('📅 Pending Recurring Loans:', recurringLoans)
-              console.log('💰 Pending Auto Payments:', autoPayments)
-
-              let message = `🔍 יום ${debugInfo.currentDay}:\n`
-              message += `⚙️ הלוואות מחזוריות: ${featureCheck.recurringEnabled ? 'מופעל' : 'כבוי'}\n`
-              message += `⚙️ פרעונות אוטומטיים: ${featureCheck.paymentsEnabled ? 'מופעל' : 'כבוי'}\n`
-              message += `📊 ${recurringLoans.length} הלוואות מחזוריות ממתינות\n`
-              message += `💰 ${autoPayments.length} פרעונות אוטומטיים ממתינים\n\n`
-
-              // הוסף פרטים על ההלוואות המחזוריות
-              if (recurringLoans.length > 0) {
-                message += `פרטי הלוואות ממתינות:\n`
-                recurringLoans.forEach((loan, i) => {
-                  message += `${i + 1}. ${loan.borrowerName} - יום ${loan.recurringDay}\n`
-                })
-              }
-
-              showNotification(message, 'info')
-
-              if (recurringLoans.length > 0 || autoPayments.length > 0) {
-                // ההתראה תופיע אוטומטית
-              } else if (!featureCheck.recurringEnabled && !featureCheck.paymentsEnabled) {
-                showNotification('💡 הפונקציות המתקדמות כבויות - עבור להגדרות להפעלה', 'info')
-              }
-            }}
-            style={{ backgroundColor: '#f39c12', color: 'white' }}
+            className="btn btn-primary"
+            onClick={() => navigate('/borrower-report')}
           >
-            🔍 בדוק אוטומציה
+            📊 דו"ח לווה
           </button>
-          <button
-            className="btn"
-            onClick={() => {
-              // הצג את כל ההלוואות המחזוריות בצורה ברורה
-              const allLoans = db.getLoans()
-              const recurringLoans = allLoans.filter(l => l.isRecurring)
-              const today = new Date()
-              const currentDay = today.getDate()
 
-              let message = `📊 דוח הלוואות מחזוריות (היום: ${currentDay}):\n\n`
 
-              if (recurringLoans.length === 0) {
-                message += 'אין הלוואות מחזוריות במערכת'
-              } else {
-                recurringLoans.forEach((loan, index) => {
-                  const borrower = db.getBorrowers().find(b => b.id === loan.borrowerId)
-                  const borrowerName = borrower ? `${borrower.firstName} ${borrower.lastName}` : 'לא ידוע'
-                  message += `${index + 1}. ${borrowerName}\n`
-                  message += `   סכום: ₪${loan.amount.toLocaleString()}\n`
-                  message += `   יום בחודש: ${loan.recurringDay}\n`
-                  message += `   תאריך הלוואה: ${loan.loanDate}\n`
-                  message += `   מתאים להיום? ${loan.recurringDay === currentDay ? 'כן' : 'לא'}\n\n`
-                })
-              }
-
-              alert(message)
-            }}
-            style={{ backgroundColor: '#9b59b6', color: 'white' }}
-          >
-            📊 הצג הלוואות מחזוריות
-          </button>
 
           <button
             className="btn"

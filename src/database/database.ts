@@ -263,7 +263,7 @@ class GemachDatabase {
   validateIsraeliId(id: string): boolean {
     // הסר רווחים ומקפים
     const cleanId = id.replace(/[\s-]/g, '')
-    
+
     // בדוק שהמספר מכיל רק ספרות ואורכו 9
     if (!/^\d{9}$/.test(cleanId)) {
       return false
@@ -288,7 +288,7 @@ class GemachDatabase {
   // פונקציה לבדיקה אם מספר זהות כבר קיים
   private isIdNumberExists(idNumber: string): boolean {
     const cleanId = idNumber.replace(/[\s-]/g, '')
-    return this.dataFile.borrowers.some(borrower => 
+    return this.dataFile.borrowers.some(borrower =>
       borrower.idNumber.replace(/[\s-]/g, '') === cleanId
     )
   }
@@ -296,7 +296,7 @@ class GemachDatabase {
   // לווים
   addBorrower(borrower: Omit<DatabaseBorrower, 'id'>): DatabaseBorrower | { error: string } {
     const settings = this.getSettings()
-    
+
     // בדוק אם מספר זהות חובה
     if (settings.requireIdNumber) {
       // בדוק שמספר הזהות לא ריק
@@ -311,11 +311,11 @@ class GemachDatabase {
 
       // בדוק אם מספר הזהות כבר קיים
       if (this.isIdNumberExists(borrower.idNumber)) {
-        const existingBorrower = this.dataFile.borrowers.find(b => 
+        const existingBorrower = this.dataFile.borrowers.find(b =>
           b.idNumber.replace(/[\s-]/g, '') === borrower.idNumber.replace(/[\s-]/g, '')
         )
-        return { 
-          error: `לווה עם מספר זהות זה כבר קיים במערכת: ${existingBorrower?.firstName} ${existingBorrower?.lastName}` 
+        return {
+          error: `לווה עם מספר זהות זה כבר קיים במערכת: ${existingBorrower?.firstName} ${existingBorrower?.lastName}`
         }
       }
     } else {
@@ -324,13 +324,13 @@ class GemachDatabase {
         if (!this.validateIsraeliId(borrower.idNumber)) {
           return { error: 'מספר זהות לא תקין (או השאר ריק)' }
         }
-        
+
         if (this.isIdNumberExists(borrower.idNumber)) {
-          const existingBorrower = this.dataFile.borrowers.find(b => 
+          const existingBorrower = this.dataFile.borrowers.find(b =>
             b.idNumber.replace(/[\s-]/g, '') === borrower.idNumber.replace(/[\s-]/g, '')
           )
-          return { 
-            error: `לווה עם מספר זהות זה כבר קיים במערכת: ${existingBorrower?.firstName} ${existingBorrower?.lastName}` 
+          return {
+            error: `לווה עם מספר זהות זה כבר קיים במערכת: ${existingBorrower?.firstName} ${existingBorrower?.lastName}`
           }
         }
       } else {
@@ -365,7 +365,7 @@ class GemachDatabase {
   // חיפוש לווה על פי מספר זהות
   getBorrowerByIdNumber(idNumber: string): DatabaseBorrower | null {
     const cleanId = idNumber.replace(/[\s-]/g, '')
-    return this.dataFile.borrowers.find(b => 
+    return this.dataFile.borrowers.find(b =>
       b.idNumber.replace(/[\s-]/g, '') === cleanId
     ) || null
   }
@@ -382,12 +382,12 @@ class GemachDatabase {
   // המרת נתונים ישנים - הוספת מספרי זהות זמניים ללווים ישנים
   private migrateBorrowersIdNumbers(): void {
     let needsSave = false
-    
+
     this.dataFile.borrowers.forEach((borrower, index) => {
       if (!borrower.idNumber || borrower.idNumber.trim() === '') {
         // צור מספר זהות זמני (לא תקין אבל ייחודי)
         const tempId = `000000${(index + 1).toString().padStart(3, '0')}`
-        ;(borrower as any).idNumber = tempId
+          ; (borrower as any).idNumber = tempId
         needsSave = true
         console.log(`הוסף מספר זהות זמני ללווה ${borrower.firstName} ${borrower.lastName}: ${tempId}`)
       }
@@ -402,7 +402,7 @@ class GemachDatabase {
   // המרת הגדרות - הוספת הגדרת requireIdNumber
   private migrateRequireIdNumberSetting(): void {
     if (this.dataFile.settings.requireIdNumber === undefined) {
-      ;(this.dataFile.settings as any).requireIdNumber = false
+      ; (this.dataFile.settings as any).requireIdNumber = false
       this.saveData()
       console.log('הוספה הגדרת requireIdNumber (כבוי כברירת מחדל)')
     }
@@ -411,12 +411,12 @@ class GemachDatabase {
   // המרת נתונים ישנים - הוספת מספרי זהות זמניים להפקדות ישנות
   private migrateDepositsIdNumbers(): void {
     let needsSave = false
-    
+
     this.dataFile.deposits.forEach((deposit, index) => {
       if (!deposit.idNumber || deposit.idNumber.trim() === '') {
         // צור מספר זהות זמני (לא תקין אבל ייחודי)
         const tempId = `000000${(index + 100).toString().padStart(3, '0')}`
-        ;(deposit as any).idNumber = tempId
+          ; (deposit as any).idNumber = tempId
         needsSave = true
         console.log(`הוסף מספר זהות זמני למפקיד ${deposit.depositorName}: ${tempId}`)
       }
@@ -446,14 +446,14 @@ class GemachDatabase {
 
       // בדוק אם מספר הזהות כבר קיים אצל לווה אחר
       const cleanNewId = updates.idNumber.replace(/[\s-]/g, '')
-      const existingBorrower = this.dataFile.borrowers.find(b => 
+      const existingBorrower = this.dataFile.borrowers.find(b =>
         b.id !== id && b.idNumber.replace(/[\s-]/g, '') === cleanNewId
       )
-      
+
       if (existingBorrower) {
-        return { 
-          success: false, 
-          error: `מספר זהות זה כבר קיים אצל: ${existingBorrower.firstName} ${existingBorrower.lastName}` 
+        return {
+          success: false,
+          error: `מספר זהות זה כבר קיים אצל: ${existingBorrower.firstName} ${existingBorrower.lastName}`
         }
       }
 
@@ -654,7 +654,7 @@ class GemachDatabase {
   // פקדונות
   addDeposit(deposit: Omit<DatabaseDeposit, 'id' | 'status'>): DatabaseDeposit | { error: string } {
     const settings = this.getSettings()
-    
+
     // בדוק אם מספר זהות חובה
     if (settings.requireIdNumber) {
       // בדוק שמספר הזהות לא ריק
@@ -668,12 +668,12 @@ class GemachDatabase {
       }
 
       // בדוק אם מספר הזהות כבר קיים בהפקדות
-      const existingDeposit = this.dataFile.deposits.find(d => 
+      const existingDeposit = this.dataFile.deposits.find(d =>
         d.idNumber.replace(/[\s-]/g, '') === deposit.idNumber.replace(/[\s-]/g, '')
       )
       if (existingDeposit) {
-        return { 
-          error: `מפקיד עם מספר זהות זה כבר קיים במערכת: ${existingDeposit.depositorName}` 
+        return {
+          error: `מפקיד עם מספר זהות זה כבר קיים במערכת: ${existingDeposit.depositorName}`
         }
       }
     } else {
@@ -682,13 +682,13 @@ class GemachDatabase {
         if (!this.validateIsraeliId(deposit.idNumber)) {
           return { error: 'מספר זהות לא תקין (או השאר ריק)' }
         }
-        
-        const existingDeposit = this.dataFile.deposits.find(d => 
+
+        const existingDeposit = this.dataFile.deposits.find(d =>
           d.idNumber.replace(/[\s-]/g, '') === deposit.idNumber.replace(/[\s-]/g, '')
         )
         if (existingDeposit) {
-          return { 
-            error: `מפקיד עם מספר זהות זה כבר קיים במערכת: ${existingDeposit.depositorName}` 
+          return {
+            error: `מפקיד עם מספר זהות זה כבר קיים במערכת: ${existingDeposit.depositorName}`
           }
         }
       } else {
@@ -1347,13 +1347,22 @@ class GemachDatabase {
       .filter(loan => loan.autoPayment && loan.autoPaymentAmount && loan.autoPaymentDay)
       .filter(loan => {
         // בדוק אם היום הוא יום הפרעון
-        return loan.autoPaymentDay === currentDay
+        if (loan.autoPaymentDay !== currentDay) return false
+
+        // בדוק שההלוואה כבר התחילה (תאריך ההלוואה עבר)
+        const loanDate = new Date(loan.loanDate)
+        const todayDate = new Date(todayString)
+
+        // אם ההלוואה עדיין לא התחילה, לא לבצע פרעון
+        if (loanDate > todayDate) return false
+
+        return true
       })
       .filter(loan => {
         // בדוק אם כבר בוצע פרעון אוטומטי היום
-        const hasPaymentToday = this.dataFile.payments.some(payment => 
-          payment.loanId === loan.id && 
-          payment.date === todayString && 
+        const hasPaymentToday = this.dataFile.payments.some(payment =>
+          payment.loanId === loan.id &&
+          payment.date === todayString &&
           payment.type === 'payment' &&
           payment.notes.includes('פרעון אוטומטי')
         )
@@ -1444,15 +1453,24 @@ class GemachDatabase {
     const balance = this.getLoanBalance(loanId)
     if (balance <= 0) return false
 
-    // בדוק אם כבר בוצע פרעון אוטומטי היום
+    // בדוק שההלוואה כבר התחילה
     const todayString = new Date().toISOString().split('T')[0]
-    const hasPaymentToday = this.dataFile.payments.some(payment => 
-      payment.loanId === loanId && 
-      payment.date === todayString && 
+    const loanDate = new Date(loan.loanDate)
+    const todayDate = new Date(todayString)
+
+    if (loanDate > todayDate) {
+      console.log('ההלוואה עדיין לא התחילה, לא מבצע פרעון אוטומטי')
+      return false
+    }
+
+    // בדוק אם כבר בוצע פרעון אוטומטי היום
+    const hasPaymentToday = this.dataFile.payments.some(payment =>
+      payment.loanId === loanId &&
+      payment.date === todayString &&
       payment.type === 'payment' &&
       payment.notes.includes('פרעון אוטומטי')
     )
-    
+
     if (hasPaymentToday) {
       console.log('כבר בוצע פרעון אוטומטי היום עבור הלוואה', loanId)
       return false
@@ -1477,6 +1495,35 @@ class GemachDatabase {
     }
 
     return true
+  }
+
+  // חישוב תאריך הפרעון האוטומטי הבא
+  getNextAutoPaymentDate(loanId: number): string | null {
+    const loan = this.dataFile.loans.find(l => l.id === loanId)
+    if (!loan || !loan.autoPayment || !loan.autoPaymentDay) return null
+
+    const today = new Date()
+    const loanDate = new Date(loan.loanDate)
+
+    // אם ההלוואה עדיין לא התחילה, חשב מתאריך ההלוואה
+    const startDate = loanDate > today ? loanDate : today
+
+    // מצא את החודש הבא שבו יום הפרעון מתאים
+    let nextPaymentDate = new Date(startDate)
+    nextPaymentDate.setDate(loan.autoPaymentDay)
+
+    // אם התאריך כבר עבר החודש, עבור לחודש הבא
+    if (nextPaymentDate <= startDate) {
+      nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1)
+      nextPaymentDate.setDate(loan.autoPaymentDay)
+    }
+
+    // טיפול במקרים שבהם החודש לא מכיל את היום (למשל 31 בפברואר)
+    if (nextPaymentDate.getDate() !== loan.autoPaymentDay) {
+      nextPaymentDate.setDate(0) // יום אחרון של החודש הקודם
+    }
+
+    return nextPaymentDate.toISOString().split('T')[0]
   }
 
   // המרת הלוואות ישנות להוסיף שדה תאריך הלוואה

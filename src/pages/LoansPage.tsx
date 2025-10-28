@@ -962,6 +962,10 @@ function LoansPage() {
                   <p style="margin: 4px 0; color: #2c3e50;"><strong>💰 פרעון אוטומטי:</strong></p>
                   <p style="margin: 4px 0; color: #2c3e50;">סכום: <strong>${loan.autoPaymentAmount?.toLocaleString()} ש"ח</strong></p>
                   <p style="margin: 4px 0; color: #2c3e50;">יום בחודש: <strong>${loan.autoPaymentDay}</strong></p>
+                  ${(() => {
+                    const nextPaymentDate = db.getNextAutoPaymentDate(loan.id)
+                    return nextPaymentDate ? `<p style="margin: 4px 0; color: #27ae60; font-weight: bold;">📅 פרעון הבא: <strong>${new Date(nextPaymentDate).toLocaleDateString('he-IL')}</strong></p>` : ''
+                  })()}
                 </div>
               ` : ''}
               ${loan.guarantor1 ? `<p style="margin: 8px 0;">ערב ראשון: <strong>${loan.guarantor1}</strong></p>` : ''}
@@ -1157,6 +1161,10 @@ function LoansPage() {
                     <p style="margin: 4px 0; color: #2c3e50;"><strong>💰 פרעון אוטומטי:</strong></p>
                     <p style="margin: 4px 0; color: #2c3e50;">סכום: <strong>${loan.autoPaymentAmount?.toLocaleString()} ש"ח</strong></p>
                     <p style="margin: 4px 0; color: #2c3e50;">יום בחודש: <strong>${loan.autoPaymentDay}</strong></p>
+                    ${(() => {
+                      const nextPaymentDate = db.getNextAutoPaymentDate(loan.id)
+                      return nextPaymentDate ? `<p style="margin: 4px 0; color: #27ae60; font-weight: bold;">📅 פרעון הבא: <strong>${new Date(nextPaymentDate).toLocaleDateString('he-IL')}</strong></p>` : ''
+                    })()}
                   </div>
                 ` : ''}
                 ${loan.guarantor1 ? `<p>ערב ראשון: <strong>${loan.guarantor1}</strong></p>` : ''}
@@ -1891,6 +1899,17 @@ function LoansPage() {
                         marginTop: '5px'
                       }}>
                         💰 הפרעון יתבצע ביום {currentLoan.autoPaymentDay || 1} בכל חודש
+                        {selectedLoanId && (() => {
+                          const nextPaymentDate = db.getNextAutoPaymentDate(selectedLoanId)
+                          if (nextPaymentDate) {
+                            return (
+                              <span style={{ display: 'block', color: '#27ae60', fontWeight: 'bold' }}>
+                                📅 פרעון הבא: {new Date(nextPaymentDate).toLocaleDateString('he-IL')}
+                              </span>
+                            )
+                          }
+                          return null
+                        })()}
                       </small>
                     )}
 

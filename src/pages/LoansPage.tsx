@@ -307,6 +307,37 @@ function LoansPage() {
   }
 
   const handleLoanChange = (field: keyof DatabaseLoan, value: string | number | boolean) => {
+
+
+
+
+    // בדיקה כשמשנים סכום הלוואה - וודא שהפרעון החודשי לא גבוה יותר
+    if (field === 'amount' && typeof value === 'number') {
+      // אם הסכום 0 או שלילי, כבה פרעון אוטומטי
+      if (value <= 0 && currentLoan.autoPayment) {
+        setCurrentLoan(prev => ({
+          ...prev,
+          amount: value,
+          autoPayment: false,
+          autoPaymentAmount: 0
+        }))
+        showNotification('💡 פרעון אוטומטי בוטל בגלל סכום הלוואה לא תקין', 'info')
+        return
+      }
+
+      const autoPaymentAmount = currentLoan.autoPaymentAmount || 0
+      if (currentLoan.autoPayment && autoPaymentAmount > value) {
+        // תקן אוטומטית את הפרעון החודשי
+        setCurrentLoan(prev => ({
+          ...prev,
+          amount: value,
+          autoPaymentAmount: value
+        }))
+        showNotification(`💡 סכום הפרעון החודשי הותאם ל-₪${value.toLocaleString()} (סכום ההלוואה)`, 'info')
+        return
+      }
+    }
+
     // בדיקת תאריכים לוגיים
     if (field === 'returnDate' && typeof value === 'string' && value) {
       const returnDate = createLocalDate(value)
@@ -336,6 +367,12 @@ function LoansPage() {
 
     // לוגיקה מיוחדת לפרעון אוטומטי
     if (field === 'autoPayment' && value === true) {
+      // בדיקה שיש סכום הלוואה תקין
+      if (!currentLoan.amount || currentLoan.amount <= 0) {
+        showNotification('⚠️ יש להגדיר סכום הלוואה לפני הפעלת פרעון אוטומטי', 'error')
+        return
+      }
+
       // כשמפעילים פרעון אוטומטי, הפוך להלוואה קבועה
       setCurrentLoan(prev => ({
         ...prev,
@@ -450,9 +487,24 @@ function LoansPage() {
   }
 
   const saveLoan = () => {
+
+
     if (!currentLoan.borrowerId || !currentLoan.amount) {
       showNotification('⚠️ אנא בחר לווה והכנס סכום', 'error')
       return
+    }
+
+    // בדיקה שסכום הפרעון החודשי לא עולה על סכום ההלוואה
+    if (currentLoan.autoPayment) {
+      const autoPaymentAmount = currentLoan.autoPaymentAmount || 0
+      if (autoPaymentAmount <= 0) {
+        showNotification('⚠️ יש להגדיר סכום פרעון חודשי כשהפרעון האוטומטי מופעל', 'error')
+        return
+      }
+      if (autoPaymentAmount > currentLoan.amount) {
+        showNotification(`❌ לא ניתן לשמור הלוואה!\n\nסכום הפרעון החודשי (₪${autoPaymentAmount.toLocaleString()}) גבוה יותר מסכום ההלוואה (₪${currentLoan.amount.toLocaleString()}).\n\nאנא תקן את הסכומים לפני השמירה.`, 'error')
+        return
+      }
     }
 
     // בדיקת תאריכים לפני שמירה (נעשה אחרי חישוב התאריך)
@@ -1530,12 +1582,23 @@ function LoansPage() {
                 <NumberInput
                   key={`amount-${selectedLoanId || 'new'}-${isAdvancedEditMode}`}
                   value={currentLoan.amount || 0}
-                  onChange={(value) => handleLoanChange('amount', value)}
+                  onChange={(value) => {
+                    // בדיקה שסכום ההלוואה לא נמוך מהפרעון החודשי
+                    if (currentLoan.autoPayment && currentLoan.autoPaymentAmount && value < currentLoan.autoPaymentAmount) {
+                      showNotification(`⚠️ סכום ההלוואה לא יכול להיות נמוך מסכום הפרעון החודשי (₪${currentLoan.autoPaymentAmount.toLocaleString()})`, 'error')
+                      return
+                    }
+                    handleLoanChange('amount', value)
+                  }}
                   placeholder="הזן סכום"
                   style={{
-                    backgroundColor: selectedLoanId && !isAdvancedEditMode ? '#f5f5f5' : 'white',
+                    backgroundColor: selectedLoanId && !isAdvancedEditMode ? '#f5f5f5' :
+                      (currentLoan.autoPayment && currentLoan.autoPaymentAmount && currentLoan.amount && currentLoan.amount < currentLoan.autoPaymentAmount) ?
+                        '#ffebee' : 'white',
                     cursor: selectedLoanId && !isAdvancedEditMode ? 'not-allowed' : 'text',
-                    border: isAdvancedEditMode && selectedLoanId ? '2px solid #e74c3c' : undefined
+                    border: isAdvancedEditMode && selectedLoanId ? '2px solid #e74c3c' :
+                      (currentLoan.autoPayment && currentLoan.autoPaymentAmount && currentLoan.amount && currentLoan.amount < currentLoan.autoPaymentAmount) ?
+                        '2px solid #f44336' : undefined
                   }}
                   readOnly={!!(selectedLoanId && !isAdvancedEditMode)}
                 />
@@ -1549,6 +1612,7 @@ function LoansPage() {
                     ⚠️ עריכה מתקדמת - שים לב לתשלומים קיימים!
                   </small>
                 )}
+
               </div>
               <div className="form-group">
                 <label>תאריך מתן ההלוואה:</label>
@@ -1745,7 +1809,21 @@ function LoansPage() {
                       <input
                         type="checkbox"
                         checked={currentLoan.autoPayment || false}
-                        onChange={(e) => handleLoanChange('autoPayment', e.target.checked)}
+                        onChange={(e) => {
+                          // בדיקה שיש סכום הלוואה לפני הפעלת פרעון אוטומטי
+                          if (e.target.checked && (!currentLoan.amount || currentLoan.amount <= 0)) {
+                            showNotification('⚠️ יש להגדיר סכום הלוואה לפני הפעלת פרעון אוטומטי', 'error')
+                            return
+                          }
+
+                          handleLoanChange('autoPayment', e.target.checked)
+                          // אם מפעילים פרעון אוטומטי ויש סכום גבוה יותר מההלוואה, תקן אותו
+                          if (e.target.checked && currentLoan.autoPaymentAmount && currentLoan.autoPaymentAmount > (currentLoan.amount || 0)) {
+                            // תקן את הסכום לסכום ההלוואה
+                            handleLoanChange('autoPaymentAmount', currentLoan.amount || 0)
+                            showNotification(`💡 סכום הפרעון החודשי הותאם ל-₪${(currentLoan.amount || 0).toLocaleString()}`, 'info')
+                          }
+                        }}
                       />
                       <span>פרעון חודשי אוטומטי</span>
                     </div>
@@ -1757,11 +1835,25 @@ function LoansPage() {
                       onChange={(value) => handleLoanChange('autoPaymentAmount', value)}
                       placeholder="סכום"
                       style={{
-                        backgroundColor: !currentLoan.autoPayment ? '#f5f5f5' : 'white',
-                        cursor: !currentLoan.autoPayment ? 'not-allowed' : 'text'
+                        backgroundColor: !currentLoan.autoPayment ? '#f5f5f5' :
+                          (currentLoan.autoPaymentAmount && currentLoan.amount && currentLoan.autoPaymentAmount > currentLoan.amount) ?
+                            '#ffebee' : 'white',
+                        cursor: !currentLoan.autoPayment ? 'not-allowed' : 'text',
+                        border: (currentLoan.autoPaymentAmount && currentLoan.amount && currentLoan.autoPaymentAmount > currentLoan.amount) ?
+                          '2px solid #f44336' : undefined
                       }}
                       readOnly={!currentLoan.autoPayment}
                     />
+                    {currentLoan.autoPayment && currentLoan.amount && (
+                      <small style={{
+                        color: '#666',
+                        fontSize: '12px',
+                        display: 'block',
+                        marginTop: '5px'
+                      }}>
+                        💡 מקסימום: ₪{currentLoan.amount.toLocaleString()} (סכום ההלוואה)
+                      </small>
+                    )}
                   </div>
                 </div>
 

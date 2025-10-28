@@ -215,41 +215,43 @@ function BorrowerReportPage() {
                         {reportData.regularActiveLoans.length > 0 && (
                             <div className="info-section">
                                 <h3 className="info-title">הלוואות רגילות פעילות ({reportData.regularActiveLoans.length})</h3>
-                                <table className="table">
-                                    <thead>
-                                        <tr>
-                                            <th>תאריך הלוואה</th>
-                                            <th>סכום</th>
-                                            <th>יתרה</th>
-                                            <th>תאריך החזרה</th>
-                                            <th>סטטוס</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {reportData.regularActiveLoans.map((loan: any) => (
-                                            <tr key={loan.id}>
-                                                <td>{formatDate(loan.loanDate)}</td>
-                                                <td>{formatCurrency(loan.amount)}</td>
-                                                <td style={{ color: '#e74c3c', fontWeight: 'bold' }}>
-                                                    {formatCurrency(loan.balance)}
-                                                </td>
-                                                <td>{formatDate(loan.returnDate)}</td>
-                                                <td>
-                                                    <span style={{
-                                                        padding: '4px 8px',
-                                                        borderRadius: '4px',
-                                                        fontSize: '12px',
-                                                        fontWeight: 'bold',
-                                                        backgroundColor: loan.status === 'active' ? '#d4edda' : '#f8d7da',
-                                                        color: loan.status === 'active' ? '#155724' : '#721c24'
-                                                    }}>
-                                                        {loan.status === 'active' ? 'פעיל' : 'באיחור'}
-                                                    </span>
-                                                </td>
+                                <div className="table-container">
+                                    <table className="table">
+                                        <thead>
+                                            <tr>
+                                                <th>תאריך הלוואה</th>
+                                                <th>סכום</th>
+                                                <th>יתרה</th>
+                                                <th>תאריך החזרה</th>
+                                                <th>סטטוס</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            {reportData.regularActiveLoans.map((loan: any) => (
+                                                <tr key={loan.id}>
+                                                    <td>{formatDate(loan.loanDate)}</td>
+                                                    <td>{formatCurrency(loan.amount)}</td>
+                                                    <td style={{ color: '#e74c3c', fontWeight: 'bold' }}>
+                                                        {formatCurrency(loan.balance)}
+                                                    </td>
+                                                    <td>{formatDate(loan.returnDate)}</td>
+                                                    <td>
+                                                        <span style={{
+                                                            padding: '4px 8px',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: 'bold',
+                                                            backgroundColor: loan.status === 'active' ? '#d4edda' : '#f8d7da',
+                                                            color: loan.status === 'active' ? '#155724' : '#721c24'
+                                                        }}>
+                                                            {loan.status === 'active' ? 'פעיל' : 'באיחור'}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         )}
 
@@ -257,26 +259,28 @@ function BorrowerReportPage() {
                         {reportData.regularFutureLoans.length > 0 && (
                             <div className="info-section">
                                 <h3 className="info-title">הלוואות רגילות עתידיות ({reportData.regularFutureLoans.length})</h3>
-                                <table className="table">
-                                    <thead>
-                                        <tr>
-                                            <th>תאריך הלוואה</th>
-                                            <th>סכום</th>
-                                            <th>תאריך החזרה</th>
-                                            <th>הערות</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {reportData.regularFutureLoans.map((loan: DatabaseLoan) => (
-                                            <tr key={loan.id}>
-                                                <td>{formatDate(loan.loanDate)}</td>
-                                                <td>{formatCurrency(loan.amount)}</td>
-                                                <td>{formatDate(loan.returnDate)}</td>
-                                                <td>{loan.notes || '-'}</td>
+                                <div className="table-container">
+                                    <table className="table">
+                                        <thead>
+                                            <tr>
+                                                <th>תאריך הלוואה</th>
+                                                <th>סכום</th>
+                                                <th>תאריך החזרה</th>
+                                                <th>הערות</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            {reportData.regularFutureLoans.map((loan: DatabaseLoan) => (
+                                                <tr key={loan.id}>
+                                                    <td>{formatDate(loan.loanDate)}</td>
+                                                    <td>{formatCurrency(loan.amount)}</td>
+                                                    <td>{formatDate(loan.returnDate)}</td>
+                                                    <td>{loan.notes || '-'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         )}
 
@@ -302,42 +306,44 @@ function BorrowerReportPage() {
                                                 ({group.actualLoans}/{group.totalMonths} הלוואות)
                                             </small>
                                         </h4>
-                                        <table className="table">
-                                            <thead>
-                                                <tr>
-                                                    <th>תאריך</th>
-                                                    <th>סכום</th>
-                                                    <th>יתרה</th>
-                                                    <th>סטטוס</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {group.loans.map((loan: any) => (
-                                                    <tr key={loan.id}>
-                                                        <td>{formatDate(loan.loanDate)}</td>
-                                                        <td>{formatCurrency(loan.amount)}</td>
-                                                        <td>{formatCurrency(loan.balance)}</td>
-                                                        <td>
-                                                            <span style={{
-                                                                padding: '4px 8px',
-                                                                borderRadius: '4px',
-                                                                fontSize: '12px',
-                                                                fontWeight: 'bold',
-                                                                backgroundColor:
-                                                                    loan.status === 'active' ? '#d4edda' :
-                                                                        loan.status === 'overdue' ? '#f8d7da' : '#d1ecf1',
-                                                                color:
-                                                                    loan.status === 'active' ? '#155724' :
-                                                                        loan.status === 'overdue' ? '#721c24' : '#0c5460'
-                                                            }}>
-                                                                {loan.status === 'active' ? 'פעיל' :
-                                                                    loan.status === 'overdue' ? 'באיחור' : 'הושלם'}
-                                                            </span>
-                                                        </td>
+                                        <div className="table-container">
+                                            <table className="table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>תאריך</th>
+                                                        <th>סכום</th>
+                                                        <th>יתרה</th>
+                                                        <th>סטטוס</th>
                                                     </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
+                                                </thead>
+                                                <tbody>
+                                                    {group.loans.map((loan: any) => (
+                                                        <tr key={loan.id}>
+                                                            <td>{formatDate(loan.loanDate)}</td>
+                                                            <td>{formatCurrency(loan.amount)}</td>
+                                                            <td>{formatCurrency(loan.balance)}</td>
+                                                            <td>
+                                                                <span style={{
+                                                                    padding: '4px 8px',
+                                                                    borderRadius: '4px',
+                                                                    fontSize: '12px',
+                                                                    fontWeight: 'bold',
+                                                                    backgroundColor:
+                                                                        loan.status === 'active' ? '#d4edda' :
+                                                                            loan.status === 'overdue' ? '#f8d7da' : '#d1ecf1',
+                                                                    color:
+                                                                        loan.status === 'active' ? '#155724' :
+                                                                            loan.status === 'overdue' ? '#721c24' : '#0c5460'
+                                                                }}>
+                                                                    {loan.status === 'active' ? 'פעיל' :
+                                                                        loan.status === 'overdue' ? 'באיחור' : 'הושלם'}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
@@ -347,48 +353,50 @@ function BorrowerReportPage() {
                         {reportData.autoPaymentLoans.length > 0 && (
                             <div className="info-section">
                                 <h3 className="info-title">הלוואות עם פרעון אוטומטי ({reportData.autoPaymentLoans.length})</h3>
-                                <table className="table">
-                                    <thead>
-                                        <tr>
-                                            <th>תאריך הלוואה</th>
-                                            <th>סכום הלוואה</th>
-                                            <th>יתרה נוכחית</th>
-                                            <th>יום פירעון</th>
-                                            <th>סכום פירעון</th>
-                                            <th>סטטוס</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {reportData.autoPaymentLoans.map((loan: any) => (
-                                            <tr key={loan.id}>
-                                                <td>{formatDate(loan.loanDate)}</td>
-                                                <td>{formatCurrency(loan.amount)}</td>
-                                                <td style={{ color: '#e74c3c', fontWeight: 'bold' }}>
-                                                    {formatCurrency(loan.balance)}
-                                                </td>
-                                                <td>כל {loan.autoPaymentDay} לחודש</td>
-                                                <td>{formatCurrency(loan.autoPaymentAmount || 0)}</td>
-                                                <td>
-                                                    <span style={{
-                                                        padding: '4px 8px',
-                                                        borderRadius: '4px',
-                                                        fontSize: '12px',
-                                                        fontWeight: 'bold',
-                                                        backgroundColor:
-                                                            loan.status === 'active' ? '#d4edda' :
-                                                                loan.status === 'overdue' ? '#f8d7da' : '#d1ecf1',
-                                                        color:
-                                                            loan.status === 'active' ? '#155724' :
-                                                                loan.status === 'overdue' ? '#721c24' : '#0c5460'
-                                                    }}>
-                                                        {loan.status === 'active' ? 'פעיל' :
-                                                            loan.status === 'overdue' ? 'באיחור' : 'הושלם'}
-                                                    </span>
-                                                </td>
+                                <div className="table-container">
+                                    <table className="table">
+                                        <thead>
+                                            <tr>
+                                                <th>תאריך הלוואה</th>
+                                                <th>סכום הלוואה</th>
+                                                <th>יתרה נוכחית</th>
+                                                <th>יום פירעון</th>
+                                                <th>סכום פירעון</th>
+                                                <th>סטטוס</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            {reportData.autoPaymentLoans.map((loan: any) => (
+                                                <tr key={loan.id}>
+                                                    <td>{formatDate(loan.loanDate)}</td>
+                                                    <td>{formatCurrency(loan.amount)}</td>
+                                                    <td style={{ color: '#e74c3c', fontWeight: 'bold' }}>
+                                                        {formatCurrency(loan.balance)}
+                                                    </td>
+                                                    <td>כל {loan.autoPaymentDay} לחודש</td>
+                                                    <td>{formatCurrency(loan.autoPaymentAmount || 0)}</td>
+                                                    <td>
+                                                        <span style={{
+                                                            padding: '4px 8px',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: 'bold',
+                                                            backgroundColor:
+                                                                loan.status === 'active' ? '#d4edda' :
+                                                                    loan.status === 'overdue' ? '#f8d7da' : '#d1ecf1',
+                                                            color:
+                                                                loan.status === 'active' ? '#155724' :
+                                                                    loan.status === 'overdue' ? '#721c24' : '#0c5460'
+                                                        }}>
+                                                            {loan.status === 'active' ? 'פעיל' :
+                                                                loan.status === 'overdue' ? 'באיחור' : 'הושלם'}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         )}
 

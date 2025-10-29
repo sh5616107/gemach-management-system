@@ -21,6 +21,7 @@
   "build": {
     "appId": "com.gemach.management",
     "productName": "מערכת ניהול גמ\"ח",
+    "artifactName": "Gemach.Management.System.Setup.${version}.${ext}",
     "directories": {
       "output": "dist-electron"
     },
@@ -61,7 +62,8 @@
       "menuCategory": "כלים עסקיים",
       "displayLanguageSelector": false,
       "installerLanguages": ["he"],
-      "language": "1037"
+      "language": "1037",
+      "artifactName": "Gemach.Management.System.Setup.${version}.exe"
     },
     "mac": {
       "target": "dmg",

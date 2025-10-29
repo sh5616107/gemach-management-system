@@ -2013,7 +2013,7 @@ function LoansPage() {
                     }
 
                     const borrowerLoans = db.getLoansWithBorrowers().filter(loan =>
-                      loan.borrowerId === selectedBorrowerId && loan.balance > 0
+                      loan.borrowerId === selectedBorrowerId && loan.balance > 0 && loan.isActive
                     )
 
                     if (borrowerLoans.length === 0) {

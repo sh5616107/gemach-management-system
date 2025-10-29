@@ -586,7 +586,7 @@ class GemachDatabase {
   // פרעון כולל ללווה - מחלק את הסכום בין ההלוואות
   addBorrowerPayment(borrowerId: number, totalAmount: number): boolean {
     const activeLoans = this.dataFile.loans.filter(loan =>
-      loan.borrowerId === borrowerId && loan.status === 'active'
+      loan.borrowerId === borrowerId && this.isLoanActive(loan)
     )
 
     if (activeLoans.length === 0) return false

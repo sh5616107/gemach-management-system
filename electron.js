@@ -20,7 +20,11 @@ function createWindow() {
     },
     icon: path.join(__dirname, 'assets/icon.png'), // אייקון האפליקציה
     title: 'מערכת ניהול גמ"ח',
-    show: false // לא להציג עד שמוכן
+    show: false, // לא להציג עד שמוכן
+    backgroundColor: '#87CEEB', // צבע רקע זהה לאפליקציה
+    titleBarStyle: 'default',
+    frame: true,
+    transparent: false
   })
 
   // טעינת האפליקציה
@@ -54,11 +58,21 @@ function createWindow() {
 
   // הצגת החלון כשמוכן
   mainWindow.once('ready-to-show', () => {
-    mainWindow.show()
+    // המתן קצת יותר כדי לוודא שהתוכן נטען
+    setTimeout(() => {
+      mainWindow.show()
+      
+      // פתיחת DevTools רק במצב פיתוח
+      if (isDev) {
+        mainWindow.webContents.openDevTools()
+      }
+    }, 100)
+  })
 
-    // פתיחת DevTools רק במצב פיתוח
-    if (isDev) {
-      mainWindow.webContents.openDevTools()
+  // גם נוסיף אירוע נוסף לוודא שהתוכן נטען
+  mainWindow.webContents.once('did-finish-load', () => {
+    if (!mainWindow.isVisible()) {
+      mainWindow.show()
     }
   })
 

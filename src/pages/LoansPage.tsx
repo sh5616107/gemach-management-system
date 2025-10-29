@@ -150,8 +150,7 @@ function LoansPage() {
       const borrower = borrowers.find(b => b.id === Number(borrowerId))
       if (borrower) {
         // בחר את הלווה ועבור למצב הלוואות
-        setSelectedBorrowerId(Number(borrowerId))
-        setCurrentBorrower(borrower)
+        selectBorrower(Number(borrowerId))
         setMode('loan')
 
         // הצג הודעה שנטען לווה ספציפי
@@ -237,9 +236,15 @@ function LoansPage() {
           amount: 0,
           loanDate: today,
           returnDate: calculateDefaultReturnDate(today),
+          loanType: 'fixed',
+          isRecurring: false,
+          recurringDay: 1,
+          autoPayment: false,
+          autoPaymentAmount: 0,
+          autoPaymentDay: 1,
+          notes: '',
           guarantor1: '',
-          guarantor2: '',
-          notes: ''
+          guarantor2: ''
         })
         setSelectedLoanId(null)
         setPayments([])
@@ -487,9 +492,18 @@ function LoansPage() {
   }
 
   const saveLoan = () => {
-
+    console.log('💾 saveLoan called:', {
+      borrowerId: currentLoan.borrowerId,
+      selectedBorrowerId,
+      amount: currentLoan.amount,
+      currentLoan
+    })
 
     if (!currentLoan.borrowerId || !currentLoan.amount) {
+      console.log('❌ Validation failed:', {
+        borrowerId: currentLoan.borrowerId,
+        amount: currentLoan.amount
+      })
       showNotification('⚠️ אנא בחר לווה והכנס סכום', 'error')
       return
     }
@@ -963,9 +977,9 @@ function LoansPage() {
                   <p style="margin: 4px 0; color: #2c3e50;">סכום: <strong>${loan.autoPaymentAmount?.toLocaleString()} ש"ח</strong></p>
                   <p style="margin: 4px 0; color: #2c3e50;">יום בחודש: <strong>${loan.autoPaymentDay}</strong></p>
                   ${(() => {
-                    const nextPaymentDate = db.getNextAutoPaymentDate(loan.id)
-                    return nextPaymentDate ? `<p style="margin: 4px 0; color: #27ae60; font-weight: bold;">📅 פרעון הבא: <strong>${new Date(nextPaymentDate).toLocaleDateString('he-IL')}</strong></p>` : ''
-                  })()}
+            const nextPaymentDate = db.getNextAutoPaymentDate(loan.id)
+            return nextPaymentDate ? `<p style="margin: 4px 0; color: #27ae60; font-weight: bold;">📅 פרעון הבא: <strong>${new Date(nextPaymentDate).toLocaleDateString('he-IL')}</strong></p>` : ''
+          })()}
                 </div>
               ` : ''}
               ${loan.guarantor1 ? `<p style="margin: 8px 0;">ערב ראשון: <strong>${loan.guarantor1}</strong></p>` : ''}
@@ -1162,9 +1176,9 @@ function LoansPage() {
                     <p style="margin: 4px 0; color: #2c3e50;">סכום: <strong>${loan.autoPaymentAmount?.toLocaleString()} ש"ח</strong></p>
                     <p style="margin: 4px 0; color: #2c3e50;">יום בחודש: <strong>${loan.autoPaymentDay}</strong></p>
                     ${(() => {
-                      const nextPaymentDate = db.getNextAutoPaymentDate(loan.id)
-                      return nextPaymentDate ? `<p style="margin: 4px 0; color: #27ae60; font-weight: bold;">📅 פרעון הבא: <strong>${new Date(nextPaymentDate).toLocaleDateString('he-IL')}</strong></p>` : ''
-                    })()}
+              const nextPaymentDate = db.getNextAutoPaymentDate(loan.id)
+              return nextPaymentDate ? `<p style="margin: 4px 0; color: #27ae60; font-weight: bold;">📅 פרעון הבא: <strong>${new Date(nextPaymentDate).toLocaleDateString('he-IL')}</strong></p>` : ''
+            })()}
                   </div>
                 ` : ''}
                 ${loan.guarantor1 ? `<p>ערב ראשון: <strong>${loan.guarantor1}</strong></p>` : ''}
@@ -2257,26 +2271,33 @@ function LoansPage() {
         {/* הלוואות עתידיות של הלווה הנבחר */}
         {selectedBorrowerId && (() => {
           const futureLoans = db.getFutureLoansWithBorrowers().filter(loan => loan.borrowerId === selectedBorrowerId)
+
+
+
           return futureLoans.length > 0 && (
             <div style={{ marginTop: '30px' }}>
-              <h4 style={{
-                marginBottom: '15px',
-                color: '#3498db',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
-              }}>
-                🕐 הלוואות מתוכננות של הלווה ({futureLoans.length})
-                <span style={{
-                  background: '#3498db',
-                  color: 'white',
-                  padding: '3px 8px',
-                  borderRadius: '10px',
-                  fontSize: '12px'
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                <h4 style={{
+                  color: '#3498db',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  margin: 0
                 }}>
-                  לא פעילות עדיין
-                </span>
-              </h4>
+                  🕐 הלוואות מתוכננות של הלווה ({futureLoans.length})
+                  <span style={{
+                    background: '#3498db',
+                    color: 'white',
+                    padding: '3px 8px',
+                    borderRadius: '10px',
+                    fontSize: '12px'
+                  }}>
+                    לא פעילות עדיין
+                  </span>
+                </h4>
+
+
+              </div>
 
               <table className="table">
                 <thead>
@@ -2286,14 +2307,19 @@ function LoansPage() {
                     <th>תאריך החזרה</th>
                     <th>ימים עד הפעלה</th>
                     <th>הערות</th>
-                    <th>פעולות</th>
+
                   </tr>
                 </thead>
                 <tbody>
                   {futureLoans.map((loan) => (
-                    <tr key={loan.id} style={{
-                      background: 'rgba(52, 152, 219, 0.05)'
-                    }}>
+                    <tr
+                      key={loan.id}
+                      style={{
+                        background: 'rgba(52, 152, 219, 0.05)',
+                        cursor: 'pointer'
+                      }}
+
+                    >
                       <td style={{ color: '#3498db', fontWeight: 'bold' }}>
                         {db.formatCurrency(loan.amount)}
                       </td>
@@ -2321,46 +2347,7 @@ function LoansPage() {
                       <td style={{ fontSize: '12px', maxWidth: '150px' }}>
                         {loan.notes || '-'}
                       </td>
-                      <td>
-                        <button
-                          onClick={() => selectLoan(loan.id)}
-                          style={{
-                            padding: '5px 10px',
-                            fontSize: '12px',
-                            backgroundColor: '#3498db',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '3px',
-                            cursor: 'pointer',
-                            marginLeft: '5px'
-                          }}
-                        >
-                          ערוך
-                        </button>
-                        {loan.daysUntilActive <= 0 && (
-                          <button
-                            onClick={() => {
-                              // הפעל את ההלוואה עכשיו
-                              const today = getTodayString()
-                              db.updateLoan(loan.id, { loanDate: today })
-                              loadData()
-                              showNotification('✅ ההלוואה הופעלה!', 'success')
-                            }}
-                            style={{
-                              padding: '5px 10px',
-                              fontSize: '12px',
-                              backgroundColor: '#27ae60',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '3px',
-                              cursor: 'pointer',
-                              marginLeft: '5px'
-                            }}
-                          >
-                            🚀 הפעל עכשיו
-                          </button>
-                        )}
-                      </td>
+
                     </tr>
                   ))}
                 </tbody>
@@ -2376,118 +2363,120 @@ function LoansPage() {
       </button>
 
       {/* מודל אישור */}
-      {modalConfig && modalConfig.isOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 10000
-          }}
-          onClick={closeModal}
-        >
+      {
+        modalConfig && modalConfig.isOpen && (
           <div
             style={{
-              backgroundColor: 'white',
-              borderRadius: '10px',
-              padding: '30px',
-              maxWidth: '400px',
-              width: '90%',
-              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
-              textAlign: 'center',
-              direction: 'rtl'
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10000
             }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={closeModal}
           >
-            <h3 style={{
-              marginBottom: '20px',
-              color: modalConfig.type === 'danger' ? '#e74c3c' :
-                modalConfig.type === 'warning' ? '#f39c12' : '#3498db',
-              fontSize: '20px'
-            }}>
-              {modalConfig.title}
-            </h3>
+            <div
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '10px',
+                padding: '30px',
+                maxWidth: '400px',
+                width: '90%',
+                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+                textAlign: 'center',
+                direction: 'rtl'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 style={{
+                marginBottom: '20px',
+                color: modalConfig.type === 'danger' ? '#e74c3c' :
+                  modalConfig.type === 'warning' ? '#f39c12' : '#3498db',
+                fontSize: '20px'
+              }}>
+                {modalConfig.title}
+              </h3>
 
-            <p style={{
-              marginBottom: modalConfig.hasInput ? '20px' : '30px',
-              lineHeight: '1.5',
-              fontSize: '16px',
-              color: '#2c3e50',
-              whiteSpace: 'pre-line'
-            }}>
-              {modalConfig.message}
-            </p>
+              <p style={{
+                marginBottom: modalConfig.hasInput ? '20px' : '30px',
+                lineHeight: '1.5',
+                fontSize: '16px',
+                color: '#2c3e50',
+                whiteSpace: 'pre-line'
+              }}>
+                {modalConfig.message}
+              </p>
 
-            {modalConfig.hasInput && (
-              <div style={{ marginBottom: '20px' }}>
-                <input
-                  type="number"
-                  value={modalInputValue}
-                  onChange={(e) => setModalInputValue(e.target.value)}
-                  placeholder={modalConfig.inputPlaceholder || 'הכנס סכום'}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    fontSize: '16px',
-                    border: '2px solid #ddd',
-                    borderRadius: '5px',
-                    textAlign: 'center',
-                    direction: 'ltr'
+              {modalConfig.hasInput && (
+                <div style={{ marginBottom: '20px' }}>
+                  <input
+                    type="number"
+                    value={modalInputValue}
+                    onChange={(e) => setModalInputValue(e.target.value)}
+                    placeholder={modalConfig.inputPlaceholder || 'הכנס סכום'}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      fontSize: '16px',
+                      border: '2px solid #ddd',
+                      borderRadius: '5px',
+                      textAlign: 'center',
+                      direction: 'ltr'
+                    }}
+                    autoFocus
+                  />
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+                <button
+                  onClick={() => {
+                    modalConfig.onConfirm(modalInputValue)
+                    closeModal()
                   }}
-                  autoFocus
-                />
+                  style={{
+                    backgroundColor: modalConfig.type === 'danger' ? '#e74c3c' :
+                      modalConfig.type === 'warning' ? '#f39c12' : '#3498db',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '5px',
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  {modalConfig.confirmText}
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (modalConfig.onCancel) modalConfig.onCancel()
+                    closeModal()
+                  }}
+                  style={{
+                    backgroundColor: '#95a5a6',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '5px',
+                    fontSize: '16px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {modalConfig.cancelText}
+                </button>
               </div>
-            )}
-
-            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
-              <button
-                onClick={() => {
-                  modalConfig.onConfirm(modalInputValue)
-                  closeModal()
-                }}
-                style={{
-                  backgroundColor: modalConfig.type === 'danger' ? '#e74c3c' :
-                    modalConfig.type === 'warning' ? '#f39c12' : '#3498db',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '5px',
-                  fontSize: '16px',
-                  cursor: 'pointer',
-                  fontWeight: 'bold'
-                }}
-              >
-                {modalConfig.confirmText}
-              </button>
-
-              <button
-                onClick={() => {
-                  if (modalConfig.onCancel) modalConfig.onCancel()
-                  closeModal()
-                }}
-                style={{
-                  backgroundColor: '#95a5a6',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '5px',
-                  fontSize: '16px',
-                  cursor: 'pointer'
-                }}
-              >
-                {modalConfig.cancelText}
-              </button>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   )
 }
 

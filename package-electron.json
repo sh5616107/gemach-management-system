@@ -1,5 +1,5 @@
 {
-  "name": "מערכת-ניהול-גמח",
+  "name": "gemach-management-system",
   "version": "2.4.0",
   "description": "מערכת ניהול גמ\"ח מקיפה לניהול הלוואות, פקדונות ותרומות",
   "main": "electron.js",

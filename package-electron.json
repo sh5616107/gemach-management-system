@@ -1,7 +1,7 @@
 {
   "name": "gemach-management-system",
   "version": "2.4.0",
-  "description": "מערכת ניהול גמ\"ח מקיפה לניהול הלוואות, פקדונות ותרומות",
+  "description": "Comprehensive Gemach Management System for loans, deposits and donations",
   "main": "electron.js",
   "homepage": "./",
   "author": {
@@ -20,7 +20,7 @@
   },
   "build": {
     "appId": "com.gemach.management",
-    "productName": "מערכת ניהול גמ\"ח",
+    "productName": "Gemach Management System",
     "artifactName": "Gemach.Management.System.Setup.${version}.${ext}",
     "directories": {
       "output": "dist-electron"
@@ -53,7 +53,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "מערכת ניהול גמ\"ח",
+      "shortcutName": "Gemach Management System",
       "installerIcon": "assets/icon.ico",
       "uninstallerIcon": "assets/icon.ico",
       "installerHeaderIcon": "assets/icon.ico",

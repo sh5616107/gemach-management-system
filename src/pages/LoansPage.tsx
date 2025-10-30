@@ -1212,7 +1212,7 @@ function LoansPage() {
                     <p style="margin: 4px 0; color: #2c3e50;">סכום: <strong>${loan.autoPaymentAmount?.toLocaleString()} ש"ח</strong></p>
                     <p style="margin: 4px 0; color: #2c3e50;">יום בחודש: <strong>${loan.autoPaymentDay}</strong></p>
                     <p style="margin: 4px 0; color: #2c3e50;">תדירות: <strong>${
-                      loan.autoPaymentFrequency === 1 ? 'כל חודש' : 
+                      (loan.autoPaymentFrequency || 1) === 1 ? 'כל חודש' : 
                       loan.autoPaymentFrequency === 2 ? 'כל חודשיים' :
                       loan.autoPaymentFrequency === 3 ? 'כל 3 חודשים' :
                       loan.autoPaymentFrequency === 6 ? 'כל 6 חודשים' :
@@ -1957,7 +1957,7 @@ function LoansPage() {
                         marginTop: '5px'
                       }}>
                         💰 הפרעון יתבצע ביום {currentLoan.autoPaymentDay || 1} {
-                          currentLoan.autoPaymentFrequency === 1 ? 'בכל חודש' : 
+                          (currentLoan.autoPaymentFrequency || 1) === 1 ? 'בכל חודש' : 
                           currentLoan.autoPaymentFrequency === 2 ? 'כל חודשיים' :
                           currentLoan.autoPaymentFrequency === 3 ? 'כל 3 חודשים' :
                           currentLoan.autoPaymentFrequency === 6 ? 'כל 6 חודשים' :
@@ -2027,7 +2027,7 @@ function LoansPage() {
                         display: 'block',
                         marginTop: '5px'
                       }}>
-                        🔄 {currentLoan.autoPaymentFrequency === 1 ? 'פרעון חודשי' : 
+                        🔄 {(currentLoan.autoPaymentFrequency || 1) === 1 ? 'פרעון חודשי' : 
                             currentLoan.autoPaymentFrequency === 2 ? 'פרעון דו-חודשי' :
                             currentLoan.autoPaymentFrequency === 3 ? 'פרעון רבעוני' :
                             currentLoan.autoPaymentFrequency === 6 ? 'פרעון חצי-שנתי' :

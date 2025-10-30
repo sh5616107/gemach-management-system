@@ -33,8 +33,8 @@ jobs:
     - name: Clear npm cache
       run: |
         npm cache clean --force
-        rm -rf node_modules
-        rm -f package-lock.json
+        if (Test-Path node_modules) { Remove-Item -Recurse -Force node_modules }
+        if (Test-Path package-lock.json) { Remove-Item -Force package-lock.json }
         
     - name: Install dependencies
       run: npm install --no-audit --no-fund

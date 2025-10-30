@@ -26,6 +26,8 @@ export interface DatabaseLoan {
   autoPayment?: boolean // פרעון אוטומטי
   autoPaymentAmount?: number // סכום פרעון אוטומטי
   autoPaymentDay?: number // יום בחודש לפרעון אוטומטי
+  autoPaymentStartDate?: string // תאריך תחילת פרעון אוטומטי
+  autoPaymentFrequency?: number // תדירות פרעון בחודשים (1=כל חודש, 2=כל חודשיים וכו')
   notes: string
   guarantor1: string
   guarantor2: string
@@ -1503,18 +1505,40 @@ class GemachDatabase {
     if (!loan || !loan.autoPayment || !loan.autoPaymentDay) return null
 
     const today = new Date()
-    const loanDate = new Date(loan.loanDate)
+    const frequency = loan.autoPaymentFrequency || 1 // ברירת מחדל - כל חודש
+    
+    // תאריך התחלת פרעון - אם לא הוגדר, השתמש בתאריך ההלוואה
+    const startPaymentDate = loan.autoPaymentStartDate 
+      ? new Date(loan.autoPaymentStartDate) 
+      : new Date(loan.loanDate)
 
-    // אם ההלוואה עדיין לא התחילה, חשב מתאריך ההלוואה
-    const startDate = loanDate > today ? loanDate : today
+    // אם תאריך התחלת הפרעון עדיין לא הגיע
+    if (startPaymentDate > today) {
+      // חשב את הפרעון הראשון - יום הפרעון בחודש של תאריך התחלה או בחודש הבא
+      let firstPaymentDate = new Date(startPaymentDate)
+      firstPaymentDate.setDate(loan.autoPaymentDay)
+      
+      // אם יום הפרעון כבר עבר בחודש של תאריך התחלה, עבור לחודש הבא
+      if (firstPaymentDate < startPaymentDate) {
+        firstPaymentDate.setMonth(firstPaymentDate.getMonth() + 1)
+        firstPaymentDate.setDate(loan.autoPaymentDay)
+      }
+      
+      // טיפול במקרים שבהם החודש לא מכיל את היום
+      if (firstPaymentDate.getDate() !== loan.autoPaymentDay) {
+        firstPaymentDate.setDate(0) // יום אחרון של החודש הקודם
+      }
+      
+      return firstPaymentDate.toISOString().split('T')[0]
+    }
 
-    // מצא את החודש הבא שבו יום הפרעון מתאים
-    let nextPaymentDate = new Date(startDate)
+    // מצא את הפרעון הבא לפי התדירות
+    let nextPaymentDate = new Date(startPaymentDate)
     nextPaymentDate.setDate(loan.autoPaymentDay)
 
-    // אם התאריך כבר עבר החודש, עבור לחודש הבא
-    if (nextPaymentDate <= startDate) {
-      nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1)
+    // הוסף חודשים לפי התדירות עד שנגיע לתאריך עתידי
+    while (nextPaymentDate <= today) {
+      nextPaymentDate.setMonth(nextPaymentDate.getMonth() + frequency)
       nextPaymentDate.setDate(loan.autoPaymentDay)
     }
 

@@ -14,40 +14,80 @@
     <canvas id="canvas" width="512" height="512"></canvas>
     <br>
     <button onclick="downloadIcon()">הורד אייקון PNG</button>
+    <button onclick="downloadICO()">הורד אייקון ICO</button>
+    <p style="color: #666; font-size: 14px;">
+        💡 טיפ: לאחר הורדת ה-PNG, תוכל להמיר ל-ICO באתר: 
+        <a href="https://convertio.co/png-ico/" target="_blank">convertio.co/png-ico</a>
+    </p>
     
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         
-        // רקע כחול
-        ctx.fillStyle = '#3498db';
+        // רקע ירוק כהה (צבע כסף/עסקים)
+        ctx.fillStyle = '#27ae60';
         ctx.fillRect(0, 0, 512, 512);
         
-        // מעגל לבן
+        // מעגל לבן כרקע לסמל עם צל
+        ctx.shadowColor = 'rgba(0,0,0,0.2)';
+        ctx.shadowBlur = 15;
+        ctx.shadowOffsetX = 3;
+        ctx.shadowOffsetY = 3;
+        
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(256, 256, 200, 0, 2 * Math.PI);
+        ctx.arc(256, 256, 220, 0, 2 * Math.PI);
         ctx.fill();
         
-        // טקסט גמ"ח
-        ctx.fillStyle = '#2c3e50';
-        ctx.font = 'bold 80px Arial';
+        // איפוס הצל
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        
+        // מסגרת ירוקה דקה למעגל
+        ctx.strokeStyle = '#229954';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(256, 256, 220, 0, 2 * Math.PI);
+        ctx.stroke();
+        
+        // סמל כסף גדול וברור במרכז
+        ctx.font = '240px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('ניהול', 256, 200);
-        
-        // סמל כסף
-        ctx.font = '60px Arial';
-        ctx.fillText('💰', 256, 300);
-        
-        // טקסט ניהול
-        ctx.font = 'bold 40px Arial';
-        ctx.fillText('גמ"ח', 256, 360);
+        ctx.textBaseline = 'middle';
+        ctx.fillText('💰', 256, 256);
         
         function downloadIcon() {
             const link = document.createElement('a');
             link.download = 'icon.png';
             link.href = canvas.toDataURL();
             link.click();
+        }
+        
+        function downloadICO() {
+            // יצירת גדלים שונים לקובץ ICO
+            const sizes = [16, 32, 48, 64, 128, 256];
+            const canvases = [];
+            
+            sizes.forEach(size => {
+                const smallCanvas = document.createElement('canvas');
+                smallCanvas.width = size;
+                smallCanvas.height = size;
+                const smallCtx = smallCanvas.getContext('2d');
+                
+                // העתקת התמונה בגודל מוקטן
+                smallCtx.drawImage(canvas, 0, 0, size, size);
+                canvases.push(smallCanvas);
+            });
+            
+            // הורדת הגודל הגדול ביותר כ-PNG
+            const link = document.createElement('a');
+            link.download = 'icon-256.png';
+            link.href = canvases[canvases.length - 1].toDataURL();
+            link.click();
+            
+            alert('הורד את הקובץ PNG והמר אותו ל-ICO באתר convertio.co/png-ico\n\nאו השתמש בכלי המרה מקומי כמו ImageMagick');
         }
     </script>
 </body>

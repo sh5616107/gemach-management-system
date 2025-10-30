@@ -82,6 +82,8 @@ function LoansPage() {
     autoPayment: false,
     autoPaymentAmount: 0,
     autoPaymentDay: 1,
+    autoPaymentStartDate: '',
+    autoPaymentFrequency: 1,
     notes: '',
     guarantor1: '',
     guarantor2: ''
@@ -242,6 +244,8 @@ function LoansPage() {
           autoPayment: false,
           autoPaymentAmount: 0,
           autoPaymentDay: 1,
+          autoPaymentStartDate: '',
+          autoPaymentFrequency: 1,
           notes: '',
           guarantor1: '',
           guarantor2: ''
@@ -383,7 +387,26 @@ function LoansPage() {
         ...prev,
         [field]: value,
         loanType: 'fixed',
-        autoPaymentDay: prev.autoPaymentDay || 5 // ברירת מחדל - יום 5 בחודש
+        autoPaymentDay: prev.autoPaymentDay || 5, // ברירת מחדל - יום 5 בחודש
+        autoPaymentStartDate: prev.autoPaymentStartDate || prev.loanDate || getTodayString(), // ברירת מחדל - תאריך ההלוואה
+        autoPaymentFrequency: prev.autoPaymentFrequency || 1 // ברירת מחדל - כל חודש
+      }))
+    } else if (field === 'autoPaymentStartDate' && typeof value === 'string' && value) {
+      // ולידציה לתאריך התחלת פרעון
+      const startDate = createLocalDate(value)
+      const loanDateStr = currentLoan.loanDate || getTodayString()
+      const loanDate = createLocalDate(loanDateStr)
+
+      if (startDate < loanDate) {
+        showNotification(
+          `⚠️ תאריך תחילת פרעון (${startDate.toLocaleDateString('he-IL')}) לא יכול להיות לפני תאריך ההלוואה (${loanDate.toLocaleDateString('he-IL')})`, 'error'
+        )
+        return
+      }
+
+      setCurrentLoan(prev => ({
+        ...prev,
+        [field]: value
       }))
     } else {
       setCurrentLoan(prev => ({
@@ -725,6 +748,11 @@ function LoansPage() {
       amount: 0,
       loanDate: today, // תאריך ההלוואה - היום כברירת מחדל
       returnDate: calculateDefaultReturnDate(today),
+      autoPayment: false,
+      autoPaymentAmount: 0,
+      autoPaymentDay: 1,
+      autoPaymentStartDate: today, // ברירת מחדל - התחלת פרעון מהיום
+      autoPaymentFrequency: 1, // ברירת מחדל - כל חודש
       notes: '',
       guarantor1: '',
       guarantor2: ''
@@ -976,6 +1004,14 @@ function LoansPage() {
                   <p style="margin: 4px 0; color: #2c3e50;"><strong>💰 פרעון אוטומטי:</strong></p>
                   <p style="margin: 4px 0; color: #2c3e50;">סכום: <strong>${loan.autoPaymentAmount?.toLocaleString()} ש"ח</strong></p>
                   <p style="margin: 4px 0; color: #2c3e50;">יום בחודש: <strong>${loan.autoPaymentDay}</strong></p>
+                  <p style="margin: 4px 0; color: #2c3e50;">תדירות: <strong>${
+                    loan.autoPaymentFrequency === 1 ? 'כל חודש' : 
+                    loan.autoPaymentFrequency === 2 ? 'כל חודשיים' :
+                    loan.autoPaymentFrequency === 3 ? 'כל 3 חודשים' :
+                    loan.autoPaymentFrequency === 6 ? 'כל 6 חודשים' :
+                    `כל ${loan.autoPaymentFrequency} חודשים`
+                  }</strong></p>
+                  ${loan.autoPaymentStartDate ? `<p style="margin: 4px 0; color: #2c3e50;">תחילת פרעון: <strong>${new Date(loan.autoPaymentStartDate).toLocaleDateString('he-IL')}</strong></p>` : ''}
                   ${(() => {
             const nextPaymentDate = db.getNextAutoPaymentDate(loan.id)
             return nextPaymentDate ? `<p style="margin: 4px 0; color: #27ae60; font-weight: bold;">📅 פרעון הבא: <strong>${new Date(nextPaymentDate).toLocaleDateString('he-IL')}</strong></p>` : ''
@@ -1175,6 +1211,14 @@ function LoansPage() {
                     <p style="margin: 4px 0; color: #2c3e50;"><strong>💰 פרעון אוטומטי:</strong></p>
                     <p style="margin: 4px 0; color: #2c3e50;">סכום: <strong>${loan.autoPaymentAmount?.toLocaleString()} ש"ח</strong></p>
                     <p style="margin: 4px 0; color: #2c3e50;">יום בחודש: <strong>${loan.autoPaymentDay}</strong></p>
+                    <p style="margin: 4px 0; color: #2c3e50;">תדירות: <strong>${
+                      loan.autoPaymentFrequency === 1 ? 'כל חודש' : 
+                      loan.autoPaymentFrequency === 2 ? 'כל חודשיים' :
+                      loan.autoPaymentFrequency === 3 ? 'כל 3 חודשים' :
+                      loan.autoPaymentFrequency === 6 ? 'כל 6 חודשים' :
+                      `כל ${loan.autoPaymentFrequency} חודשים`
+                    }</strong></p>
+                    ${loan.autoPaymentStartDate ? `<p style="margin: 4px 0; color: #2c3e50;">תחילת פרעון: <strong>${new Date(loan.autoPaymentStartDate).toLocaleDateString('he-IL')}</strong></p>` : ''}
                     ${(() => {
               const nextPaymentDate = db.getNextAutoPaymentDate(loan.id)
               return nextPaymentDate ? `<p style="margin: 4px 0; color: #27ae60; font-weight: bold;">📅 פרעון הבא: <strong>${new Date(nextPaymentDate).toLocaleDateString('he-IL')}</strong></p>` : ''
@@ -1912,7 +1956,13 @@ function LoansPage() {
                         display: 'block',
                         marginTop: '5px'
                       }}>
-                        💰 הפרעון יתבצע ביום {currentLoan.autoPaymentDay || 1} בכל חודש
+                        💰 הפרעון יתבצע ביום {currentLoan.autoPaymentDay || 1} {
+                          currentLoan.autoPaymentFrequency === 1 ? 'בכל חודש' : 
+                          currentLoan.autoPaymentFrequency === 2 ? 'כל חודשיים' :
+                          currentLoan.autoPaymentFrequency === 3 ? 'כל 3 חודשים' :
+                          currentLoan.autoPaymentFrequency === 6 ? 'כל 6 חודשים' :
+                          `כל ${currentLoan.autoPaymentFrequency} חודשים`
+                        }
                         {selectedLoanId && (() => {
                           const nextPaymentDate = db.getNextAutoPaymentDate(selectedLoanId)
                           if (nextPaymentDate) {
@@ -1927,6 +1977,63 @@ function LoansPage() {
                       </small>
                     )}
 
+                  </div>
+                  <div className="form-group">
+                    <label>תאריך תחילת פרעון:</label>
+                    <input
+                      type="date"
+                      value={currentLoan.autoPaymentStartDate || currentLoan.loanDate || getTodayString()}
+                      onChange={(e) => handleLoanChange('autoPaymentStartDate', e.target.value)}
+                      disabled={!currentLoan.autoPayment}
+                      style={{
+                        backgroundColor: !currentLoan.autoPayment ? '#f5f5f5' : 'white',
+                        cursor: !currentLoan.autoPayment ? 'not-allowed' : 'text'
+                      }}
+                    />
+                    {currentLoan.autoPayment && (
+                      <small style={{
+                        color: '#666',
+                        fontSize: '12px',
+                        display: 'block',
+                        marginTop: '5px'
+                      }}>
+                        📅 הפרעון הראשון יתבצע החל מתאריך זה
+                      </small>
+                    )}
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>תדירות פרעון:</label>
+                    <select
+                      value={currentLoan.autoPaymentFrequency || 1}
+                      onChange={(e) => handleLoanChange('autoPaymentFrequency', Number(e.target.value))}
+                      disabled={!currentLoan.autoPayment}
+                      style={{
+                        backgroundColor: !currentLoan.autoPayment ? '#f5f5f5' : 'white',
+                        cursor: !currentLoan.autoPayment ? 'not-allowed' : 'text'
+                      }}
+                    >
+                      <option value={1}>כל חודש</option>
+                      <option value={2}>כל חודשיים</option>
+                      <option value={3}>כל 3 חודשים</option>
+                      <option value={6}>כל 6 חודשים</option>
+                    </select>
+                    {currentLoan.autoPayment && (
+                      <small style={{
+                        color: '#666',
+                        fontSize: '12px',
+                        display: 'block',
+                        marginTop: '5px'
+                      }}>
+                        🔄 {currentLoan.autoPaymentFrequency === 1 ? 'פרעון חודשי' : 
+                            currentLoan.autoPaymentFrequency === 2 ? 'פרעון דו-חודשי' :
+                            currentLoan.autoPaymentFrequency === 3 ? 'פרעון רבעוני' :
+                            currentLoan.autoPaymentFrequency === 6 ? 'פרעון חצי-שנתי' :
+                            `פרעון כל ${currentLoan.autoPaymentFrequency} חודשים`}
+                      </small>
+                    )}
                   </div>
                   <div className="form-group">
                     {/* שדה ריק לאיזון */}

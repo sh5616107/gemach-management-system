@@ -21,6 +21,7 @@ function HelpPage() {
                                 <li><strong>ולידציה למספר זהות</strong> - בדיקת תקינות מספר זהות ישראלי</li>
                                 <li><strong>הגדרות גמישות</strong> - מספר זהות חובה או אופציונלי</li>
                                 <li><strong>דוח לווה משופר</strong> - תצוגה מפורטת יותר של פעילות הלווה</li>
+                                <li><strong>פרעון אוטומטי מתקדם</strong> - תאריך התחלה גמיש ותדירות מותאמת</li>
                                 <li><strong>תיקוני באגים רבים</strong> - שיפור יציבות ותקינות המערכת</li>
                             </ul>
                         </div>
@@ -140,15 +141,36 @@ function HelpPage() {
                                 <h4>💳 פרעון אוטומטי:</h4>
                                 <div style={{ background: '#e8f4fd', padding: '10px', borderRadius: '5px', margin: '10px 0' }}>
                                     <p><strong>מהו פרעון אוטומטי?</strong></p>
-                                    <p>פרעון חודשי קבוע שמתבצע אוטומטית ביום מסוים בחודש.</p>
+                                    <p>פרעון קבוע שמתבצע אוטומטית לפי לוח זמנים שהגדרתם.</p>
 
-                                    <p><strong>איך זה מחושב?</strong></p>
+                                    <p><strong>🆕 הגדרות מתקדמות:</strong></p>
                                     <ul>
                                         <li>סמן "פרעון חודשי אוטומטי" בטופס ההלוואה</li>
-                                        <li>הזן סכום פרעון חודשי</li>
+                                        <li>הזן סכום פרעון</li>
                                         <li>בחר יום בחודש (1-31) לפרעון</li>
+                                        <li><strong>🆕 תאריך תחילת פרעון:</strong> קבע מתי יתחיל הפרעון הראשון
+                                            <ul style={{ marginTop: '5px' }}>
+                                                <li>יכול להיות מיד או בעוד מספר חודשים</li>
+                                                <li>דוגמה: הלוואה היום, פרעון מתחיל בעוד 3 חודשים</li>
+                                            </ul>
+                                        </li>
+                                        <li><strong>🆕 תדירות פרעון:</strong> כמה פעמים בשנה
+                                            <ul style={{ marginTop: '5px' }}>
+                                                <li>כל חודש (ברירת מחדל)</li>
+                                                <li>כל חודשיים</li>
+                                                <li>כל 3 חודשים (רבעוני)</li>
+                                                <li>כל 6 חודשים (חצי שנתי)</li>
+                                            </ul>
+                                        </li>
                                         <li>המערכת תזכיר ותרשום פרעונים אוטומטית</li>
                                         <li>הפרעון יופיע ברשימת התשלומים עם הערה "פרעון אוטומטי"</li>
+                                    </ul>
+
+                                    <p><strong>💡 דוגמאות שימוש:</strong></p>
+                                    <ul>
+                                        <li><strong>לווה עם חופשה ללא תשלום:</strong> הלוואה היום, פרעון מתחיל בעוד 3 חודשים, כל חודש</li>
+                                        <li><strong>לווה עם הכנסה דו-חודשית:</strong> הלוואה היום, פרעון מתחיל בחודש הבא, כל חודשיים</li>
+                                        <li><strong>לווה עם בונוס רבעוני:</strong> הלוואה היום, פרעון מתחיל בחודש הבא, כל 3 חודשים</li>
                                     </ul>
                                 </div>
                             </div>

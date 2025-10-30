@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { db, DatabaseLoan, DatabasePayment, DatabaseBorrower } from '../database/database'
 import NumberInput from '../components/NumberInput'
+import { formatCombinedDate, formatHebrewDateOnly } from '../utils/hebrewDate'
 
 function LoansPage() {
   const navigate = useNavigate()
@@ -9,6 +10,7 @@ function LoansPage() {
 
   // קבלת הגדרות המערכת
   const settings = db.getSettings()
+  console.log('🔧 הגדרות תאריכים עבריים:', settings.showHebrewDates)
 
   // פונקציה להצגת הודעות ויזואליות שלא חוסמות
   const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -887,8 +889,12 @@ function LoansPage() {
   const createPrintContent = (loan: any, borrowerName: string, balance: number) => {
     const gemachName = db.getGemachName()
     const loanAmount = loan.amount.toLocaleString()
-    const returnDate = new Date(loan.returnDate).toLocaleDateString('he-IL')
-    const loanDate = new Date(loan.createdDate).toLocaleDateString('he-IL')
+    const returnDate = db.getSettings().showHebrewDates ? 
+      formatCombinedDate(loan.returnDate) : 
+      new Date(loan.returnDate).toLocaleDateString('he-IL')
+    const loanDate = db.getSettings().showHebrewDates ? 
+      formatCombinedDate(loan.loanDate) : 
+      new Date(loan.loanDate).toLocaleDateString('he-IL')
     const borrowerIdNumber = currentBorrower.idNumber ? db.formatIdNumber(currentBorrower.idNumber) : ''
 
     const printContent = `
@@ -908,10 +914,10 @@ function LoansPage() {
             ${balance <= 0 ? `
               <div style="background: #27ae60; color: white; padding: 10px; border-radius: 5px; margin: 15px 0; text-align: center;">
                 <strong>✅ ההלוואה נפרעה במלואה ✅</strong><br>
-                <small>תאריך פרעון מלא: ${new Date().toLocaleDateString('he-IL')}</small>
+                <small>תאריך פרעון מלא: ${db.getSettings().showHebrewDates ? formatCombinedDate(new Date()) : new Date().toLocaleDateString('he-IL')}</small>
               </div>
             ` : ''}
-            <p style="margin: 8px 0;">תאריך הפקת השטר: <strong>${new Date().toLocaleDateString('he-IL')}</strong></p>
+            <p style="margin: 8px 0;">תאריך הפקת השטר: <strong>${db.getSettings().showHebrewDates ? formatCombinedDate(new Date()) : new Date().toLocaleDateString('he-IL')}</strong></p>
             <div style="display: flex; justify-content: space-between; margin-top: 40px;">
               <div>
                 <p>חתימת הלווה:</p>
@@ -967,8 +973,12 @@ function LoansPage() {
   const printLoanDocument = (loan: any, borrowerName: string, balance: number) => {
     const gemachName = db.getGemachName()
     const loanAmount = loan.amount.toLocaleString()
-    const returnDate = new Date(loan.returnDate).toLocaleDateString('he-IL')
-    const loanDate = new Date(loan.createdDate).toLocaleDateString('he-IL')
+    const returnDate = db.getSettings().showHebrewDates ? 
+      formatCombinedDate(loan.returnDate) : 
+      new Date(loan.returnDate).toLocaleDateString('he-IL')
+    const loanDate = db.getSettings().showHebrewDates ? 
+      formatCombinedDate(loan.loanDate) : 
+      new Date(loan.loanDate).toLocaleDateString('he-IL')
     const borrowerIdNumber = currentBorrower.idNumber ? db.formatIdNumber(currentBorrower.idNumber) : ''
 
     // בדיקה אם זה Electron עם API חדש
@@ -1004,17 +1014,16 @@ function LoansPage() {
                   <p style="margin: 4px 0; color: #2c3e50;"><strong>💰 פרעון אוטומטי:</strong></p>
                   <p style="margin: 4px 0; color: #2c3e50;">סכום: <strong>${loan.autoPaymentAmount?.toLocaleString()} ש"ח</strong></p>
                   <p style="margin: 4px 0; color: #2c3e50;">יום בחודש: <strong>${loan.autoPaymentDay}</strong></p>
-                  <p style="margin: 4px 0; color: #2c3e50;">תדירות: <strong>${
-                    loan.autoPaymentFrequency === 1 ? 'כל חודש' : 
-                    loan.autoPaymentFrequency === 2 ? 'כל חודשיים' :
-                    loan.autoPaymentFrequency === 3 ? 'כל 3 חודשים' :
-                    loan.autoPaymentFrequency === 6 ? 'כל 6 חודשים' :
-                    `כל ${loan.autoPaymentFrequency} חודשים`
-                  }</strong></p>
-                  ${loan.autoPaymentStartDate ? `<p style="margin: 4px 0; color: #2c3e50;">תחילת פרעון: <strong>${new Date(loan.autoPaymentStartDate).toLocaleDateString('he-IL')}</strong></p>` : ''}
+                  <p style="margin: 4px 0; color: #2c3e50;">תדירות: <strong>${loan.autoPaymentFrequency === 1 ? 'כל חודש' :
+            loan.autoPaymentFrequency === 2 ? 'כל חודשיים' :
+              loan.autoPaymentFrequency === 3 ? 'כל 3 חודשים' :
+                loan.autoPaymentFrequency === 6 ? 'כל 6 חודשים' :
+                  `כל ${loan.autoPaymentFrequency} חודשים`
+          }</strong></p>
+                  ${loan.autoPaymentStartDate ? `<p style="margin: 4px 0; color: #2c3e50;">תחילת פרעון: <strong>${db.getSettings().showHebrewDates ? formatCombinedDate(loan.autoPaymentStartDate) : new Date(loan.autoPaymentStartDate).toLocaleDateString('he-IL')}</strong></p>` : ''}
                   ${(() => {
             const nextPaymentDate = db.getNextAutoPaymentDate(loan.id)
-            return nextPaymentDate ? `<p style="margin: 4px 0; color: #27ae60; font-weight: bold;">📅 פרעון הבא: <strong>${new Date(nextPaymentDate).toLocaleDateString('he-IL')}</strong></p>` : ''
+            return nextPaymentDate ? `<p style="margin: 4px 0; color: #27ae60; font-weight: bold;">📅 פרעון הבא: <strong>${db.getSettings().showHebrewDates ? formatCombinedDate(nextPaymentDate) : new Date(nextPaymentDate).toLocaleDateString('he-IL')}</strong></p>` : ''
           })()}
                 </div>
               ` : ''}
@@ -1024,10 +1033,10 @@ function LoansPage() {
               ${balance <= 0 ? `
                 <div style="background: #27ae60; color: white; padding: 10px; border-radius: 5px; margin: 15px 0; text-align: center;">
                   <strong>✅ ההלוואה נפרעה במלואה ✅</strong><br>
-                  <small>תאריך פרעון מלא: ${new Date().toLocaleDateString('he-IL')}</small>
+                  <small>תאריך פרעון מלא: ${db.getSettings().showHebrewDates ? formatCombinedDate(new Date()) : new Date().toLocaleDateString('he-IL')}</small>
                 </div>
               ` : ''}
-              <p style="margin: 8px 0;">תאריך הפקת השטר: <strong>${new Date().toLocaleDateString('he-IL')}</strong></p>
+              <p style="margin: 8px 0;">תאריך הפקת השטר: <strong>${db.getSettings().showHebrewDates ? formatCombinedDate(new Date()) : new Date().toLocaleDateString('he-IL')}</strong></p>
               <div style="display: flex; justify-content: space-between; margin-top: 40px; flex-wrap: wrap; gap: 20px;">
                 <div>
                   <p>חתימת הלווה:</p>
@@ -1211,17 +1220,16 @@ function LoansPage() {
                     <p style="margin: 4px 0; color: #2c3e50;"><strong>💰 פרעון אוטומטי:</strong></p>
                     <p style="margin: 4px 0; color: #2c3e50;">סכום: <strong>${loan.autoPaymentAmount?.toLocaleString()} ש"ח</strong></p>
                     <p style="margin: 4px 0; color: #2c3e50;">יום בחודש: <strong>${loan.autoPaymentDay}</strong></p>
-                    <p style="margin: 4px 0; color: #2c3e50;">תדירות: <strong>${
-                      (loan.autoPaymentFrequency || 1) === 1 ? 'כל חודש' : 
-                      loan.autoPaymentFrequency === 2 ? 'כל חודשיים' :
-                      loan.autoPaymentFrequency === 3 ? 'כל 3 חודשים' :
-                      loan.autoPaymentFrequency === 6 ? 'כל 6 חודשים' :
-                      `כל ${loan.autoPaymentFrequency} חודשים`
-                    }</strong></p>
-                    ${loan.autoPaymentStartDate ? `<p style="margin: 4px 0; color: #2c3e50;">תחילת פרעון: <strong>${new Date(loan.autoPaymentStartDate).toLocaleDateString('he-IL')}</strong></p>` : ''}
+                    <p style="margin: 4px 0; color: #2c3e50;">תדירות: <strong>${(loan.autoPaymentFrequency || 1) === 1 ? 'כל חודש' :
+              loan.autoPaymentFrequency === 2 ? 'כל חודשיים' :
+                loan.autoPaymentFrequency === 3 ? 'כל 3 חודשים' :
+                  loan.autoPaymentFrequency === 6 ? 'כל 6 חודשים' :
+                    `כל ${loan.autoPaymentFrequency} חודשים`
+            }</strong></p>
+                    ${loan.autoPaymentStartDate ? `<p style="margin: 4px 0; color: #2c3e50;">תחילת פרעון: <strong>${db.getSettings().showHebrewDates ? formatCombinedDate(loan.autoPaymentStartDate) : new Date(loan.autoPaymentStartDate).toLocaleDateString('he-IL')}</strong></p>` : ''}
                     ${(() => {
               const nextPaymentDate = db.getNextAutoPaymentDate(loan.id)
-              return nextPaymentDate ? `<p style="margin: 4px 0; color: #27ae60; font-weight: bold;">📅 פרעון הבא: <strong>${new Date(nextPaymentDate).toLocaleDateString('he-IL')}</strong></p>` : ''
+              return nextPaymentDate ? `<p style="margin: 4px 0; color: #27ae60; font-weight: bold;">📅 פרעון הבא: <strong>${db.getSettings().showHebrewDates ? formatCombinedDate(nextPaymentDate) : new Date(nextPaymentDate).toLocaleDateString('he-IL')}</strong></p>` : ''
             })()}
                   </div>
                 ` : ''}
@@ -1231,10 +1239,10 @@ function LoansPage() {
                 ${balance <= 0 ? `
                   <div style="background: #27ae60; color: white; padding: 10px; border-radius: 5px; margin: 15px 0; text-align: center;">
                     <strong>✅ ההלוואה נפרעה במלואה ✅</strong><br>
-                    <small>תאריך פרעון מלא: ${new Date().toLocaleDateString('he-IL')}</small>
+                    <small>תאריך פרעון מלא: ${db.getSettings().showHebrewDates ? formatCombinedDate(new Date()) : new Date().toLocaleDateString('he-IL')}</small>
                   </div>
                 ` : ''}
-                <p>תאריך הפקת השטר: <strong>${new Date().toLocaleDateString('he-IL')}</strong></p>
+                <p>תאריך הפקת השטר: <strong>${db.getSettings().showHebrewDates ? formatCombinedDate(new Date()) : new Date().toLocaleDateString('he-IL')}</strong></p>
                 <div class="signature-section">
                   <div>
                     <p>חתימת הלווה:</p>
@@ -1703,6 +1711,16 @@ function LoansPage() {
                     🔄 התאריך יחושב אוטומטי לפי היום בחודש שנבחר
                   </small>
                 )}
+                {currentLoan.loanDate && db.getSettings().showHebrewDates && (
+                  <div style={{ 
+                    fontSize: '12px', 
+                    color: '#666', 
+                    marginTop: '3px',
+                    fontStyle: 'italic'
+                  }}>
+                    📅 {formatHebrewDateOnly(currentLoan.loanDate)}
+                  </div>
+                )}
                 {(() => {
                   // אל תציג הודעה אם זו הלוואה מחזורית
                   if (currentLoan.isRecurring) return null
@@ -1772,6 +1790,16 @@ function LoansPage() {
                       currentLoan.autoPayment ? 'לא רלוונטי לפרעון אוטומטי' : ''
                   }
                 />
+                {currentLoan.returnDate && db.getSettings().showHebrewDates && currentLoan.loanType !== 'flexible' && !currentLoan.autoPayment && (
+                  <div style={{ 
+                    fontSize: '12px', 
+                    color: '#666', 
+                    marginTop: '3px',
+                    fontStyle: 'italic'
+                  }}>
+                    📅 {formatHebrewDateOnly(currentLoan.returnDate)}
+                  </div>
+                )}
                 {currentLoan.autoPayment && (
                   <small style={{
                     color: '#f39c12',
@@ -1957,18 +1985,18 @@ function LoansPage() {
                         marginTop: '5px'
                       }}>
                         💰 הפרעון יתבצע ביום {currentLoan.autoPaymentDay || 1} {
-                          (currentLoan.autoPaymentFrequency || 1) === 1 ? 'בכל חודש' : 
-                          currentLoan.autoPaymentFrequency === 2 ? 'כל חודשיים' :
-                          currentLoan.autoPaymentFrequency === 3 ? 'כל 3 חודשים' :
-                          currentLoan.autoPaymentFrequency === 6 ? 'כל 6 חודשים' :
-                          `כל ${currentLoan.autoPaymentFrequency} חודשים`
+                          (currentLoan.autoPaymentFrequency || 1) === 1 ? 'בכל חודש' :
+                            currentLoan.autoPaymentFrequency === 2 ? 'כל חודשיים' :
+                              currentLoan.autoPaymentFrequency === 3 ? 'כל 3 חודשים' :
+                                currentLoan.autoPaymentFrequency === 6 ? 'כל 6 חודשים' :
+                                  `כל ${currentLoan.autoPaymentFrequency} חודשים`
                         }
                         {selectedLoanId && (() => {
                           const nextPaymentDate = db.getNextAutoPaymentDate(selectedLoanId)
                           if (nextPaymentDate) {
                             return (
                               <span style={{ display: 'block', color: '#27ae60', fontWeight: 'bold' }}>
-                                📅 פרעון הבא: {new Date(nextPaymentDate).toLocaleDateString('he-IL')}
+                                📅 פרעון הבא: {db.getSettings().showHebrewDates ? formatCombinedDate(nextPaymentDate) : new Date(nextPaymentDate).toLocaleDateString('he-IL')}
                               </span>
                             )
                           }
@@ -2027,11 +2055,11 @@ function LoansPage() {
                         display: 'block',
                         marginTop: '5px'
                       }}>
-                        🔄 {(currentLoan.autoPaymentFrequency || 1) === 1 ? 'פרעון חודשי' : 
-                            currentLoan.autoPaymentFrequency === 2 ? 'פרעון דו-חודשי' :
+                        🔄 {(currentLoan.autoPaymentFrequency || 1) === 1 ? 'פרעון חודשי' :
+                          currentLoan.autoPaymentFrequency === 2 ? 'פרעון דו-חודשי' :
                             currentLoan.autoPaymentFrequency === 3 ? 'פרעון רבעוני' :
-                            currentLoan.autoPaymentFrequency === 6 ? 'פרעון חצי-שנתי' :
-                            `פרעון כל ${currentLoan.autoPaymentFrequency} חודשים`}
+                              currentLoan.autoPaymentFrequency === 6 ? 'פרעון חצי-שנתי' :
+                                `פרעון כל ${currentLoan.autoPaymentFrequency} חודשים`}
                       </small>
                     )}
                   </div>
@@ -2346,7 +2374,12 @@ function LoansPage() {
               <tbody>
                 {payments.map((payment) => (
                   <tr key={payment.id}>
-                    <td>{new Date(payment.date).toLocaleDateString('he-IL')}</td>
+                    <td>
+                      {db.getSettings().showHebrewDates ?
+                        formatCombinedDate(payment.date) :
+                        new Date(payment.date).toLocaleDateString('he-IL')
+                      }
+                    </td>
                     <td>{payment.type === 'loan' ? 'הלוואה' : 'פרעון'}</td>
                     <td></td>
                     <td>₪{payment.amount.toLocaleString()}</td>
@@ -2374,6 +2407,86 @@ function LoansPage() {
             </table>
           </div>
         )}
+
+        {/* הלוואות פעילות של הלווה הנבחר */}
+        {selectedBorrowerId && (() => {
+          const activeLoans = loans.filter(loan =>
+            loan.borrowerId === selectedBorrowerId &&
+            loan.status === 'active' &&
+            new Date(loan.loanDate) <= new Date()
+          )
+
+          return activeLoans.length > 0 && (
+            <div style={{ marginTop: '30px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                <h4 style={{
+                  color: '#27ae60',
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  margin: 0
+                }}>
+                  💰 הלוואות פעילות של הלווה ({activeLoans.length})
+                </h4>
+              </div>
+
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>סכום</th>
+                    <th>תאריך הלוואה</th>
+                    <th>תאריך החזרה</th>
+                    <th>יתרה</th>
+                    <th>סטטוס</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activeLoans.map((loan) => {
+                    const balance = db.getLoanBalance(loan.id)
+                    const returnDate = new Date(loan.returnDate)
+                    const today = new Date()
+                    const isOverdue = returnDate < today
+                    const daysOverdue = isOverdue ? Math.floor((today.getTime() - returnDate.getTime()) / (1000 * 60 * 60 * 24)) : 0
+
+                    return (
+                      <tr key={loan.id}>
+                        <td style={{ color: '#27ae60', fontWeight: 'bold' }}>
+                          {db.formatCurrency(loan.amount)}
+                        </td>
+                        <td>
+                          {db.getSettings().showHebrewDates ?
+                            formatCombinedDate(loan.loanDate) :
+                            new Date(loan.loanDate).toLocaleDateString('he-IL')
+                          }
+                        </td>
+                        <td>
+                          {loan.loanType === 'flexible' ?
+                            <span style={{ color: '#f39c12', fontStyle: 'italic' }}>לפי התראה</span> :
+                            (db.getSettings().showHebrewDates ?
+                              formatCombinedDate(loan.returnDate) :
+                              new Date(loan.returnDate).toLocaleDateString('he-IL')
+                            )
+                          }
+                        </td>
+                        <td style={{ color: balance > 0 ? '#e74c3c' : '#27ae60', fontWeight: 'bold' }}>
+                          {db.formatCurrency(balance)}
+                        </td>
+                        <td>
+                          {isOverdue ? (
+                            <span style={{ color: '#e74c3c', fontWeight: 'bold' }}>
+                              ⚠️ איחור {daysOverdue} ימים
+                            </span>
+                          ) : (
+                            <span style={{ color: '#27ae60' }}>🔴 פעיל</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )
+        })()}
 
         {/* הלוואות עתידיות של הלווה הנבחר */}
         {selectedBorrowerId && (() => {
@@ -2430,11 +2543,22 @@ function LoansPage() {
                       <td style={{ color: '#3498db', fontWeight: 'bold' }}>
                         {db.formatCurrency(loan.amount)}
                       </td>
-                      <td>{new Date(loan.loanDate).toLocaleDateString('he-IL')}</td>
+                      <td>
+                        {(() => {
+                          const showHebrew = db.getSettings().showHebrewDates
+                          console.log('💰 LoansPage - תאריך הלוואה:', { showHebrew, loanDate: loan.loanDate })
+                          return showHebrew ?
+                            formatCombinedDate(loan.loanDate) :
+                            new Date(loan.loanDate).toLocaleDateString('he-IL')
+                        })()}
+                      </td>
                       <td>
                         {loan.loanType === 'flexible' ?
                           <span style={{ color: '#f39c12', fontStyle: 'italic' }}>לפי התראה</span> :
-                          new Date(loan.returnDate).toLocaleDateString('he-IL')
+                          (db.getSettings().showHebrewDates ?
+                            formatCombinedDate(loan.returnDate) :
+                            new Date(loan.returnDate).toLocaleDateString('he-IL')
+                          )
                         }
                       </td>
                       <td>

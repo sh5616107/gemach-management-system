@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { db, DatabaseDeposit } from '../database/database'
 import NumberInput from '../components/NumberInput'
+import { formatCombinedDate } from '../utils/hebrewDate'
 
 function DepositsPage() {
   const navigate = useNavigate()
@@ -108,7 +109,9 @@ function DepositsPage() {
     const gemachName = db.getGemachName()
     const depositorName = deposit.depositorName
     const amount = deposit.amount.toLocaleString()
-    const depositDate = new Date(deposit.depositDate).toLocaleDateString('he-IL')
+    const depositDate = db.getSettings().showHebrewDates ? 
+      formatCombinedDate(deposit.depositDate) : 
+      new Date(deposit.depositDate).toLocaleDateString('he-IL')
     const depositNumber = deposit.id
     
     // בדוק מצב הפקדון
@@ -162,7 +165,7 @@ function DepositsPage() {
               ${isFullyWithdrawn ? `
                 <div style="background: #27ae60; color: white; padding: 10px; border-radius: 5px; margin: 15px 0; text-align: center;">
                   <strong>✅ הפקדון נמשך במלואו ✅</strong><br>
-                  <small>תאריך משיכה מלאה: ${new Date().toLocaleDateString('he-IL')}</small>
+                  <small>תאריך משיכה מלאה: ${db.getSettings().showHebrewDates ? formatCombinedDate(new Date()) : new Date().toLocaleDateString('he-IL')}</small>
                 </div>
               ` : (withdrawnAmount > 0 && remainingAmount > 0) ? `
                 <div style="background: #f39c12; color: white; padding: 10px; border-radius: 5px; margin: 15px 0; text-align: center;">
@@ -170,7 +173,7 @@ function DepositsPage() {
                   <small>נמשך: ${withdrawnAmount.toLocaleString()} ש"ח | נותר: ${remainingAmount.toLocaleString()} ש"ח</small>
                 </div>
               ` : ''}
-              <p style="margin: 8px 0;">תאריך הפקה: <strong>${new Date().toLocaleDateString('he-IL')}</strong></p>
+              <p style="margin: 8px 0;">תאריך הפקה: <strong>${db.getSettings().showHebrewDates ? formatCombinedDate(new Date()) : new Date().toLocaleDateString('he-IL')}</strong></p>
               <div style="display: flex; justify-content: space-between; margin-top: 40px;">
                 <div>
                   <p>חתימת המפקיד:</p>
@@ -334,7 +337,7 @@ function DepositsPage() {
                 ${isFullyWithdrawn ? `
                   <div style="background: #27ae60; color: white; padding: 10px; border-radius: 5px; margin: 15px 0; text-align: center;">
                     <strong>✅ הפקדון נמשך במלואו ✅</strong><br>
-                    <small>תאריך משיכה מלאה: ${new Date().toLocaleDateString('he-IL')}</small>
+                    <small>תאריך משיכה מלאה: ${db.getSettings().showHebrewDates ? formatCombinedDate(new Date()) : new Date().toLocaleDateString('he-IL')}</small>
                   </div>
                 ` : (withdrawnAmount > 0 && remainingAmount > 0) ? `
                   <div style="background: #f39c12; color: white; padding: 10px; border-radius: 5px; margin: 15px 0; text-align: center;">
@@ -658,7 +661,12 @@ function DepositsPage() {
                       <td>₪{deposit.amount.toLocaleString()}</td>
                       <td>₪{withdrawnAmount.toLocaleString()}</td>
                       <td>₪{remainingAmount.toLocaleString()}</td>
-                      <td>{new Date(deposit.depositDate).toLocaleDateString('he-IL')}</td>
+                      <td>
+                        {db.getSettings().showHebrewDates ? 
+                          formatCombinedDate(deposit.depositDate) : 
+                          new Date(deposit.depositDate).toLocaleDateString('he-IL')
+                        }
+                      </td>
                       <td>{deposit.phone}</td>
                       <td>{deposit.status === 'active' ? 'פעיל' : 'נמשך במלואו'}</td>
                       <td>

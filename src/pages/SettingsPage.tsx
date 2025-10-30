@@ -4,15 +4,15 @@ import { db, DatabaseSettings } from '../database/database'
 
 function SettingsPage() {
   const navigate = useNavigate()
-  
+
   // פונקציה להצגת הודעות ויזואליות שלא חוסמות
   const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
     const colors = {
       success: '#27ae60',
-      error: '#e74c3c', 
+      error: '#e74c3c',
       info: '#3498db'
     }
-    
+
     const notification = document.createElement('div')
     notification.innerHTML = message
     notification.style.cssText = `
@@ -63,7 +63,7 @@ function SettingsPage() {
   const closeModal = () => {
     setModalConfig(null)
   }
-  
+
   const [settings, setSettings] = useState<DatabaseSettings>({
     currency: 'ILS',
     currencySymbol: '₪',
@@ -78,7 +78,9 @@ function SettingsPage() {
     contactText: 'ניתן להפצה לזיכוי הרבים\n⭐ עולם חסד יבנה',
     enableRecurringLoans: false,
     enableRecurringPayments: false,
-    requireIdNumber: false
+    requireIdNumber: false,
+    showHebrewDates: false,
+    showDateWarnings: true
   })
 
   useEffect(() => {
@@ -154,7 +156,9 @@ function SettingsPage() {
           contactText: 'ניתן להפצה לזיכוי הרבים\n⭐ עולם חסד יבנה',
           enableRecurringLoans: false,
           enableRecurringPayments: false,
-          requireIdNumber: false
+          requireIdNumber: false,
+          showHebrewDates: false,
+          showDateWarnings: true
         }
         setSettings(defaultSettings)
         db.updateSettings(defaultSettings)
@@ -280,6 +284,38 @@ function SettingsPage() {
                 <small style={{ display: 'block', color: '#666', marginTop: '5px' }}>
                   האם לדרוש מספר זהות לכל לווה כדי למנוע כפילויות
                 </small>
+              </div>
+              <div className="form-group">
+                <label>תאריכים עבריים:</label>
+                <select
+                  value={settings.showHebrewDates ? 'true' : 'false'}
+                  onChange={(e) => handleSettingChange('showHebrewDates', e.target.value === 'true')}
+                >
+                  <option value="false">כבוי</option>
+                  <option value="true">מופעל</option>
+                </select>
+                <small style={{ display: 'block', color: '#666', marginTop: '5px' }}>
+                  הצגת תאריכים עבריים לצד התאריכים הגרגוריאניים
+                </small>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>אזהרות חגים ושבתות:</label>
+                <select
+                  value={settings.showDateWarnings ? 'true' : 'false'}
+                  onChange={(e) => handleSettingChange('showDateWarnings', e.target.value === 'true')}
+                >
+                  <option value="false">כבוי</option>
+                  <option value="true">מופעל</option>
+                </select>
+                <small style={{ display: 'block', color: '#666', marginTop: '5px' }}>
+                  התראות כשתאריך חל בשבת או בחג (לא מומלץ לשלוח תזכורות)
+                </small>
+              </div>
+              <div className="form-group">
+                {/* שדה ריק לאיזון */}
               </div>
             </div>
           </div>
@@ -420,7 +456,7 @@ function SettingsPage() {
 
       {/* מודל אישור */}
       {modalConfig && modalConfig.isOpen && (
-        <div 
+        <div
           style={{
             position: 'fixed',
             top: 0,
@@ -435,7 +471,7 @@ function SettingsPage() {
           }}
           onClick={closeModal}
         >
-          <div 
+          <div
             style={{
               backgroundColor: 'white',
               borderRadius: '10px',
@@ -448,15 +484,15 @@ function SettingsPage() {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ 
-              marginBottom: '20px', 
-              color: modalConfig.type === 'danger' ? '#e74c3c' : 
-                     modalConfig.type === 'warning' ? '#f39c12' : '#3498db',
+            <h3 style={{
+              marginBottom: '20px',
+              color: modalConfig.type === 'danger' ? '#e74c3c' :
+                modalConfig.type === 'warning' ? '#f39c12' : '#3498db',
               fontSize: '20px'
             }}>
               {modalConfig.title}
             </h3>
-            
+
             <p style={{
               marginBottom: '30px',
               lineHeight: '1.5',
@@ -466,7 +502,7 @@ function SettingsPage() {
             }}>
               {modalConfig.message}
             </p>
-            
+
             <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
               <button
                 onClick={() => {
@@ -487,7 +523,7 @@ function SettingsPage() {
               >
                 {modalConfig.confirmText}
               </button>
-              
+
               <button
                 onClick={() => {
                   if (modalConfig.onCancel) modalConfig.onCancel()

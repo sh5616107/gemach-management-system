@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { db } from '../database/database'
+import { formatCombinedDate, getDateWarnings } from '../utils/hebrewDate'
 
 function HomePage() {
   const navigate = useNavigate()
@@ -146,7 +147,7 @@ function HomePage() {
 
       const searchTerm = term.trim().toLowerCase()
       const borrowers = db.getBorrowers()
-      
+
       if (!borrowers || borrowers.length === 0) {
         setSearchResults([])
         setShowSearchResults(false)
@@ -155,28 +156,28 @@ function HomePage() {
 
       const foundBorrowers = borrowers.filter(b => {
         if (!b) return false
-        
+
         // חיפוש לפי שם מלא
         const fullName = `${b.firstName || ''} ${b.lastName || ''}`.toLowerCase()
         if (fullName.includes(searchTerm)) return true
-        
+
         // חיפוש לפי שם פרטי או משפחה בנפרד
         if (b.firstName && b.firstName.toLowerCase().includes(searchTerm)) return true
         if (b.lastName && b.lastName.toLowerCase().includes(searchTerm)) return true
-        
+
         // חיפוש לפי מספר זהות (עם או בלי מקפים/רווחים)
         if (b.idNumber) {
           const cleanId = b.idNumber.replace(/[\s-]/g, '')
           const cleanSearchTerm = searchTerm.replace(/[\s-]/g, '')
           if (cleanId.includes(cleanSearchTerm)) return true
         }
-        
+
         // חיפוש לפי טלפון
         if (b.phone && b.phone.toLowerCase().includes(searchTerm)) return true
-        
+
         // חיפוש לפי עיר
         if (b.city && b.city.toLowerCase().includes(searchTerm)) return true
-        
+
         return false
       })
 
@@ -907,7 +908,23 @@ function HomePage() {
                       <td style={{ color: '#e74c3c', fontWeight: 'bold' }}>
                         {db.formatCurrency(loan.balance)}
                       </td>
-                      <td>{new Date(loan.returnDate).toLocaleDateString('he-IL')}</td>
+                      <td>
+                        {(() => {
+                          const showHebrew = db.getSettings().showHebrewDates
+                          console.log('🏠 HomePage - showHebrewDates:', showHebrew, 'returnDate:', loan.returnDate)
+                          return showHebrew ?
+                            formatCombinedDate(loan.returnDate) :
+                            new Date(loan.returnDate).toLocaleDateString('he-IL')
+                        })()}
+                        {db.getSettings().showDateWarnings && (() => {
+                          const warnings = getDateWarnings(loan.returnDate)
+                          return warnings.length > 0 ? (
+                            <div style={{ fontSize: '11px', color: '#e74c3c', marginTop: '2px' }}>
+                              {warnings[0]}
+                            </div>
+                          ) : null
+                        })()}
+                      </td>
                       <td style={{ fontWeight: 'bold' }}>{loan.daysOverdue}</td>
                       <td>
                         <span style={{
@@ -1149,7 +1166,7 @@ function HomePage() {
                 </button>
               </div>
             )}
-            
+
             {/* תוצאות חיפוש */}
             {showSearchBox && showSearchResults && searchResults.length > 0 && (
               <div style={{

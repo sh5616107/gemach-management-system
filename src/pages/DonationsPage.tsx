@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { db, DatabaseDonation } from '../database/database'
 import NumberInput from '../components/NumberInput'
+import { formatCombinedDate } from '../utils/hebrewDate'
 
 function DonationsPage() {
   const navigate = useNavigate()
@@ -98,7 +99,9 @@ function DonationsPage() {
     const gemachName = db.getGemachName()
     const donorName = `${donation.donorName} ${donation.donorLastName}`
     const amount = donation.amount.toLocaleString()
-    const donationDate = new Date(donation.donationDate).toLocaleDateString('he-IL')
+    const donationDate = db.getSettings().showHebrewDates ? 
+      formatCombinedDate(donation.donationDate) : 
+      new Date(donation.donationDate).toLocaleDateString('he-IL')
     const receiptNumber = donation.id
 
     // בדיקה אם זה Electron עם API חדש
@@ -120,7 +123,7 @@ function DonationsPage() {
               <br>
               <p style="margin: 8px 0;">תודה על תרומתכם לגמ"ח "${gemachName}"</p>
               <br>
-              <p style="margin: 8px 0;">תאריך הפקה: <strong>${new Date().toLocaleDateString('he-IL')}</strong></p>
+              <p style="margin: 8px 0;">תאריך הפקה: <strong>${db.getSettings().showHebrewDates ? formatCombinedDate(new Date()) : new Date().toLocaleDateString('he-IL')}</strong></p>
             </div>
           </div>
         </div>
@@ -275,7 +278,7 @@ function DonationsPage() {
                 <br>
                 <p>תודה על תרומתכם לגמ"ח "${gemachName}"</p>
                 <br>
-                <p>תאריך הפקה: <strong>${new Date().toLocaleDateString('he-IL')}</strong></p>
+                <p>תאריך הפקה: <strong>${db.getSettings().showHebrewDates ? formatCombinedDate(new Date()) : new Date().toLocaleDateString('he-IL')}</strong></p>
               </div>
             </body>
           </html>
@@ -485,7 +488,12 @@ function DonationsPage() {
                     <td>{donation.id}</td>
                     <td>{donation.donorName} {donation.donorLastName}</td>
                     <td>₪{donation.amount.toLocaleString()}</td>
-                    <td>{new Date(donation.donationDate).toLocaleDateString('he-IL')}</td>
+                    <td>
+                      {db.getSettings().showHebrewDates ? 
+                        formatCombinedDate(donation.donationDate) : 
+                        new Date(donation.donationDate).toLocaleDateString('he-IL')
+                      }
+                    </td>
                     <td>
                       {donation.method === 'cash' ? 'מזומן' :
                         donation.method === 'transfer' ? 'העברה' :

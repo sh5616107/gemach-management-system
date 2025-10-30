@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { db, DatabaseLoan, DatabaseBorrower } from '../database/database'
+import { formatCombinedDate } from '../utils/hebrewDate'
 
 function BorrowerReportPage() {
     const navigate = useNavigate()
@@ -120,7 +121,9 @@ function BorrowerReportPage() {
     }
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('he-IL')
+        return db.getSettings().showHebrewDates ? 
+            formatCombinedDate(dateString) : 
+            new Date(dateString).toLocaleDateString('he-IL')
     }
 
     const printReport = () => {
@@ -389,7 +392,7 @@ function BorrowerReportPage() {
                     ` : ''}
 
                     <div class="footer">
-                        <p>דו"ח נוצר בתאריך: ${new Date().toLocaleDateString('he-IL')}</p>
+                        <p>דו"ח נוצר בתאריך: ${db.getSettings().showHebrewDates ? formatCombinedDate(new Date()) : new Date().toLocaleDateString('he-IL')}</p>
                     </div>
                 </div>
             </body>

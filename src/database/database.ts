@@ -87,6 +87,9 @@ export interface DatabaseSettings {
   enableRecurringLoans: boolean // הפעלת הלוואות מחזוריות
   enableRecurringPayments: boolean // הפעלת פרעונות מחזוריים
   requireIdNumber: boolean // האם מספר זהות חובה לכל לווה
+  // הגדרות תאריכים עבריים
+  showHebrewDates: boolean // הצגת תאריכים עבריים
+  showDateWarnings: boolean // הצגת אזהרות חגים ושבתות
 }
 
 interface DatabaseFile {
@@ -124,7 +127,9 @@ class GemachDatabase {
       // פונקציות מתקדמות - מופעלות כברירת מחדל
       enableRecurringLoans: true,
       enableRecurringPayments: true,
-      requireIdNumber: false // כברירת מחדל לא חובה - מתאים לשימוש אישי
+      requireIdNumber: false, // כברירת מחדל לא חובה - מתאים לשימוש אישי
+      showHebrewDates: false,
+      showDateWarnings: true
     }
   }
 
@@ -134,6 +139,7 @@ class GemachDatabase {
     this.migrateLoanDates()
     this.migrateBorrowersIdNumbers()
     this.migrateDepositsIdNumbers()
+    this.cleanupTemporaryIdNumbers() // נקה מספרי זהות זמניים אם לא חובה
     this.migrateRequireIdNumberSetting()
     this.updateTextsToNewDefaults() // עדכון טקסטים לברירות מחדל חדשות
   }
@@ -171,7 +177,10 @@ class GemachDatabase {
           footerText: 'אמר רבי אבא אמר רבי שמעון בן לקיש גדול המלוה יותר מן העושה צדקה (שבת סג.)',
           contactText: 'ניתן להפצה לזיכוי הרבים\n⭐ עולם חסד יבנה',
           enableRecurringLoans: false,
-          enableRecurringPayments: false
+          enableRecurringPayments: false,
+          requireIdNumber: false,
+          showHebrewDates: false,
+          showDateWarnings: true
         }
       }
 
@@ -250,7 +259,10 @@ class GemachDatabase {
           footerText: 'אמר רבי אבא אמר רבי שמעון בן לקיש גדול המלוה יותר מן העושה צדקה (שבת סג.)',
           contactText: 'ניתן להפצה לזיכוי הרבים\n⭐ עולם חסד יבנה',
           enableRecurringLoans: false,
-          enableRecurringPayments: false
+          enableRecurringPayments: false,
+          requireIdNumber: false,
+          showHebrewDates: false,
+          showDateWarnings: true
         }
       }
       this.saveData()
@@ -381,8 +393,13 @@ class GemachDatabase {
     return cleanId
   }
 
-  // המרת נתונים ישנים - הוספת מספרי זהות זמניים ללווים ישנים
+  // המרת נתונים ישנים - הוספת מספרי זהות זמניים ללווים ישנים (רק אם מספר זהות חובה)
   private migrateBorrowersIdNumbers(): void {
+    // אל תוסיף מספרי זהות זמניים אם מספר זהות לא חובה
+    if (!this.dataFile.settings.requireIdNumber) {
+      return
+    }
+
     let needsSave = false
 
     this.dataFile.borrowers.forEach((borrower, index) => {
@@ -410,8 +427,46 @@ class GemachDatabase {
     }
   }
 
-  // המרת נתונים ישנים - הוספת מספרי זהות זמניים להפקדות ישנות
+  // ניקוי מספרי זהות זמניים אם מספר זהות לא חובה
+  private cleanupTemporaryIdNumbers(): void {
+    // אם מספר זהות חובה, אל תנקה
+    if (this.dataFile.settings.requireIdNumber) {
+      return
+    }
+
+    let needsSave = false
+
+    // נקה מספרי זהות זמניים מלווים
+    this.dataFile.borrowers.forEach(borrower => {
+      if (borrower.idNumber && borrower.idNumber.match(/^000000\d{3}$/)) {
+        borrower.idNumber = ''
+        needsSave = true
+        console.log(`נוקה מספר זהות זמני מלווה ${borrower.firstName} ${borrower.lastName}`)
+      }
+    })
+
+    // נקה מספרי זהות זמניים מהפקדות
+    this.dataFile.deposits.forEach(deposit => {
+      if (deposit.idNumber && deposit.idNumber.match(/^000000\d{3}$/)) {
+        deposit.idNumber = ''
+        needsSave = true
+        console.log(`נוקה מספר זהות זמני מהפקדה של ${deposit.depositorName}`)
+      }
+    })
+
+    if (needsSave) {
+      this.saveData()
+      console.log('הושלם ניקוי מספרי זהות זמניים')
+    }
+  }
+
+  // המרת נתונים ישנים - הוספת מספרי זהות זמניים להפקדות ישנות (רק אם מספר זהות חובה)
   private migrateDepositsIdNumbers(): void {
+    // אל תוסיף מספרי זהות זמניים אם מספר זהות לא חובה
+    if (!this.dataFile.settings.requireIdNumber) {
+      return
+    }
+
     let needsSave = false
 
     this.dataFile.deposits.forEach((deposit, index) => {
@@ -992,7 +1047,9 @@ class GemachDatabase {
         contactText: 'ניתן להפצה לזיכוי הרבים\n⭐ עולם חסד יבנה',
         enableRecurringLoans: false,
         enableRecurringPayments: false,
-        requireIdNumber: false
+        requireIdNumber: false,
+        showHebrewDates: false,
+        showDateWarnings: true
       }
     }
     this.saveData()

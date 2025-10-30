@@ -91,12 +91,104 @@ function HomePage() {
   const [pendingRecurringLoans, setPendingRecurringLoans] = useState<any[]>([])
   const [pendingAutoPayments, setPendingAutoPayments] = useState<any[]>([])
   const [automationAlertDismissed, setAutomationAlertDismissed] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [showSearchBox, setShowSearchBox] = useState(false)
+  const [showSearchResults, setShowSearchResults] = useState(false)
+  const [searchResults, setSearchResults] = useState<any[]>([])
 
 
 
   useEffect(() => {
     loadStats()
   }, [])
+
+  // סגירת חיפוש כשלוחצים מחוץ לאזור
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      try {
+        const target = event.target as HTMLElement
+        if (target && !target.closest('[data-search-container]')) {
+          setShowSearchBox(false)
+          setShowSearchResults(false)
+          setSearchTerm('')
+        }
+      } catch (error) {
+        console.log('Error in click outside handler:', error)
+      }
+    }
+
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowSearchBox(false)
+        setShowSearchResults(false)
+        setSearchTerm('')
+      }
+    }
+
+    if (showSearchBox) {
+      document.addEventListener('mousedown', handleClickOutside)
+      document.addEventListener('keydown', handleEscapeKey)
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+        document.removeEventListener('keydown', handleEscapeKey)
+      }
+    }
+  }, [showSearchBox])
+
+  // פונקציית חיפוש מתקדמת
+  const performSearch = (term: string) => {
+    try {
+      if (!term || !term.trim()) {
+        setSearchResults([])
+        setShowSearchResults(false)
+        return
+      }
+
+      const searchTerm = term.trim().toLowerCase()
+      const borrowers = db.getBorrowers()
+      
+      if (!borrowers || borrowers.length === 0) {
+        setSearchResults([])
+        setShowSearchResults(false)
+        return
+      }
+
+      const foundBorrowers = borrowers.filter(b => {
+        if (!b) return false
+        
+        // חיפוש לפי שם מלא
+        const fullName = `${b.firstName || ''} ${b.lastName || ''}`.toLowerCase()
+        if (fullName.includes(searchTerm)) return true
+        
+        // חיפוש לפי שם פרטי או משפחה בנפרד
+        if (b.firstName && b.firstName.toLowerCase().includes(searchTerm)) return true
+        if (b.lastName && b.lastName.toLowerCase().includes(searchTerm)) return true
+        
+        // חיפוש לפי מספר זהות (עם או בלי מקפים/רווחים)
+        if (b.idNumber) {
+          const cleanId = b.idNumber.replace(/[\s-]/g, '')
+          const cleanSearchTerm = searchTerm.replace(/[\s-]/g, '')
+          if (cleanId.includes(cleanSearchTerm)) return true
+        }
+        
+        // חיפוש לפי טלפון
+        if (b.phone && b.phone.toLowerCase().includes(searchTerm)) return true
+        
+        // חיפוש לפי עיר
+        if (b.city && b.city.toLowerCase().includes(searchTerm)) return true
+        
+        return false
+      })
+
+      setSearchResults(foundBorrowers)
+      setShowSearchResults(foundBorrowers.length > 0)
+    } catch (error) {
+      console.error('Error in search:', error)
+      setSearchResults([])
+      setShowSearchResults(false)
+      showNotification('❌ שגיאה בחיפוש', 'error')
+    }
+  }
 
   const loadStats = () => {
     setStats(db.getStats())
@@ -973,27 +1065,147 @@ function HomePage() {
           <button className="btn btn-primary" onClick={importData}>
             📥 ייבוא נתונים
           </button>
-          <button
-            className="btn btn-primary"
-            onClick={() => {
-              const name = prompt('הכנס שם לווה לחיפוש:')
-              if (name) {
-                const foundBorrowers = db.getBorrowers().filter(b =>
-                  `${b.firstName} ${b.lastName}`.toLowerCase().includes(name.toLowerCase())
-                )
-                if (foundBorrowers.length === 1) {
-                  navigate(`/loans?borrowerId=${foundBorrowers[0].id}`)
-                } else if (foundBorrowers.length > 1) {
-                  const names = foundBorrowers.map(b => `${b.firstName} ${b.lastName}`).join('\n')
-                  showNotification(`נמצאו ${foundBorrowers.length} לווים:\n${names}\nאנא חפש בצורה יותר ספציפית`, 'info')
-                } else {
-                  showNotification('❌ לא נמצא לווה עם שם זה', 'error')
-                }
-              }
-            }}
-          >
-            🔍 חיפוש לווה
-          </button>
+          <div data-search-container style={{ position: 'relative' }}>
+            {!showSearchBox ? (
+              // כפתור פתיחת חיפוש
+              <button
+                className="btn btn-primary"
+                onClick={() => setShowSearchBox(true)}
+              >
+                🔍 חיפוש לווה
+              </button>
+            ) : (
+              // תיבת חיפוש פתוחה
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  placeholder="חיפוש לווה (שם, ת.ז, טלפון, עיר)..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value)
+                    performSearch(e.target.value)
+                  }}
+                  onKeyPress={(e) => {
+                    try {
+                      if (e.key === 'Enter') {
+                        if (searchResults.length === 1) {
+                          navigate(`/loans?borrowerId=${searchResults[0].id}`)
+                          setSearchTerm('')
+                          setShowSearchBox(false)
+                          setShowSearchResults(false)
+                        } else if (searchResults.length > 1) {
+                          setShowSearchResults(true)
+                        } else if (searchTerm.trim()) {
+                          showNotification('❌ לא נמצא לווה התואם לחיפוש', 'error')
+                        }
+                      }
+                    } catch (error) {
+                      console.error('Error in Enter key handler:', error)
+                      showNotification('❌ שגיאה בחיפוש', 'error')
+                    }
+                  }}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '5px',
+                    border: '1px solid #ddd',
+                    minWidth: '250px',
+                    fontSize: '14px'
+                  }}
+                  autoFocus
+                />
+                <button
+                  className="btn btn-success"
+                  onClick={() => {
+                    try {
+                      if (searchResults.length === 1) {
+                        navigate(`/loans?borrowerId=${searchResults[0].id}`)
+                        setSearchTerm('')
+                        setShowSearchBox(false)
+                        setShowSearchResults(false)
+                      } else if (searchResults.length > 1) {
+                        setShowSearchResults(true)
+                      } else if (searchTerm.trim()) {
+                        showNotification('❌ לא נמצא לווה התואם לחיפוש', 'error')
+                      }
+                    } catch (error) {
+                      console.error('Error in search action:', error)
+                      showNotification('❌ שגיאה בחיפוש', 'error')
+                    }
+                  }}
+                  disabled={!searchTerm.trim()}
+                >
+                  ✓
+                </button>
+                <button
+                  className="btn"
+                  onClick={() => {
+                    setSearchTerm('')
+                    setShowSearchBox(false)
+                    setShowSearchResults(false)
+                  }}
+                  style={{ backgroundColor: '#e74c3c', color: 'white' }}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+            
+            {/* תוצאות חיפוש */}
+            {showSearchBox && showSearchResults && searchResults.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: '0',
+                right: '0',
+                backgroundColor: 'white',
+                border: '1px solid #ddd',
+                borderRadius: '5px',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+                zIndex: 1000,
+                maxHeight: '300px',
+                overflowY: 'auto',
+                marginTop: '5px'
+              }}>
+                <div style={{ padding: '10px', borderBottom: '1px solid #eee', backgroundColor: '#f8f9fa', fontWeight: 'bold' }}>
+                  נמצאו {searchResults.length} תוצאות:
+                </div>
+                {searchResults.map((borrower, index) => (
+                  <div
+                    key={borrower.id}
+                    onClick={() => {
+                      try {
+                        if (borrower && borrower.id) {
+                          navigate(`/loans?borrowerId=${borrower.id}`)
+                          setSearchTerm('')
+                          setShowSearchBox(false)
+                          setShowSearchResults(false)
+                        }
+                      } catch (error) {
+                        console.error('Error navigating to borrower:', error)
+                        showNotification('❌ שגיאה במעבר ללווה', 'error')
+                      }
+                    }}
+                    style={{
+                      padding: '10px',
+                      borderBottom: index < searchResults.length - 1 ? '1px solid #eee' : 'none',
+                      cursor: 'pointer'
+                    }}
+                    onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = '#f5f5f5'}
+                    onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = 'white'}
+                  >
+                    <div style={{ fontWeight: 'bold' }}>
+                      {borrower.firstName} {borrower.lastName}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>
+                      {borrower.idNumber && `ת.ז: ${borrower.idNumber}`}
+                      {borrower.phone && ` • טל: ${borrower.phone}`}
+                      {borrower.city && ` • ${borrower.city}`}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <button
             className="btn btn-primary"
             onClick={() => navigate('/borrower-report')}

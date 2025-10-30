@@ -193,7 +193,7 @@ function createWindow() {
               type: 'info',
               title: 'אודות',
               message: 'מערכת ניהול גמ"ח',
-              detail: 'גרסה 2.1.0\nמערכת מקיפה לניהול גמילות חסדים\nכולל: הלוואות, פקדונות, תרומות ודוחות\nפותח עבור קהילת הגמ"חים בישראל 🇮🇱'
+              detail: 'גרסה 2.4.0\nמערכת מקיפה לניהול גמילות חסדים\nכולל: הלוואות, פקדונות, תרומות ודוחות\nעם תמיכה מלאה בתאריכים עבריים\nפותח עבור קהילת הגמ"חים בישראל 🇮🇱'
             })
           }
         }

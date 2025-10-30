@@ -55,7 +55,7 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: gemach-management-system-windows
+        name: מערכת-ניהול-גמח-windows
         path: |
           dist-electron/*.exe
           dist-electron/*.exe.blockmap

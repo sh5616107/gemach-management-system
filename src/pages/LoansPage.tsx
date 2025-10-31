@@ -548,6 +548,18 @@ function LoansPage() {
 
     // בדיקת תאריכים לפני שמירה (נעשה אחרי חישוב התאריך)
     const validateDates = (loanDate: string) => {
+      // בדיקה שתאריך ההלוואה לא בעתיד (אלא אם זו הלוואה מחזורית)
+      if (loanDate && !currentLoan.isRecurring) {
+        const loanDateObj = new Date(loanDate)
+        const today = new Date()
+        today.setHours(23, 59, 59, 999) // סוף היום
+
+        if (loanDateObj > today) {
+          showNotification('⚠️ תאריך מתן ההלוואה לא יכול להיות בעתיד', 'error')
+          return false
+        }
+      }
+
       if (currentLoan.returnDate && loanDate) {
         const returnDate = new Date(currentLoan.returnDate)
         const calculatedLoanDate = new Date(loanDate)
@@ -557,8 +569,6 @@ function LoansPage() {
           return false
         }
       }
-
-      // הסרתי את הבדיקה - עכשיו הפרעון יכול להיות בכל יום כי הוא מתייחס לחודש הבא
 
       return true
     }
@@ -774,6 +784,25 @@ function LoansPage() {
           return
         }
 
+        // בדיקת תאריך העברה בנקאית - לא יכול להיות בעתיד
+        if (paymentMethod === 'transfer' && paymentDetails) {
+          try {
+            const details = JSON.parse(paymentDetails)
+            if (details.transferDate) {
+              const transferDateObj = new Date(details.transferDate)
+              const today = new Date()
+              today.setHours(23, 59, 59, 999) // סוף היום
+
+              if (transferDateObj > today) {
+                showNotification('⚠️ תאריך ההעברה לא יכול להיות בעתיד', 'error')
+                return
+              }
+            }
+          } catch (error) {
+            // אם יש שגיאה בפענוח, המשך בלי בדיקה
+          }
+        }
+
         if (db.canAddPayment(selectedLoanId!, amount)) {
           db.addPayment({
             loanId: selectedLoanId!,
@@ -891,7 +920,7 @@ function LoansPage() {
             </div>
             <div>
               <label style="display: block; margin-bottom: 3px; font-size: 12px;">תאריך העברה:</label>
-              <input type="date" id="transferDate" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+              <input type="date" id="transferDate" max="${new Date().toISOString().split('T')[0]}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
             </div>
           `
         case 'credit':
@@ -1935,6 +1964,7 @@ function LoansPage() {
                 <label>תאריך מתן ההלוואה:</label>
                 <input
                   type="date"
+                  max={new Date().toISOString().split('T')[0]}
                   value={currentLoan.loanDate || ''}
                   onChange={(e) => handleLoanChange('loanDate', e.target.value)}
                   disabled={currentLoan.isRecurring}
@@ -2528,6 +2558,7 @@ function LoansPage() {
                         <label>תאריך העברה:</label>
                         <input
                           type="date"
+                          max={new Date().toISOString().split('T')[0]}
                           onChange={(e) => {
                             const details = db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails) || {}
                             details.transferDate = e.target.value
@@ -2908,7 +2939,7 @@ function LoansPage() {
                             </div>
                             <div>
                               <label style="display: block; margin-bottom: 3px; font-size: 12px;">תאריך העברה:</label>
-                              <input type="date" id="transferDate" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                              <input type="date" id="transferDate" max="${new Date().toISOString().split('T')[0]}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
                             </div>
                           `
                         case 'credit':
@@ -3105,47 +3136,119 @@ function LoansPage() {
             <table className="table">
               <thead>
                 <tr>
-                  <th>תאריך פעולה</th>
-                  <th>תאור הפעולה</th>
-                  <th>תאריך פרע</th>
+                  <th>תאריך</th>
+                  <th>סוג</th>
                   <th>סכום</th>
-                  <th>ערב 1</th>
-                  <th>ערב 2</th>
+                  <th>אמצעי תשלום</th>
+                  <th>הערות</th>
                   <th>פעולות</th>
                 </tr>
               </thead>
               <tbody>
-                {payments.map((payment) => (
-                  <tr key={payment.id}>
-                    <td>
-                      {db.getSettings().showHebrewDates ?
-                        formatCombinedDate(payment.date) :
-                        new Date(payment.date).toLocaleDateString('he-IL')
-                      }
-                    </td>
-                    <td>{payment.type === 'loan' ? 'הלוואה' : 'פרעון'}</td>
-                    <td></td>
-                    <td>₪{payment.amount.toLocaleString()}</td>
-                    <td>{currentLoan.guarantor1 || ''}</td>
-                    <td>{currentLoan.guarantor2 || ''}</td>
-                    <td>
-                      {payment.type === 'payment' && (
-                        <button
-                          className="btn"
-                          onClick={() => deletePayment(payment.id)}
-                          style={{
-                            padding: '5px 10px',
-                            fontSize: '12px',
-                            backgroundColor: '#e74c3c',
-                            color: 'white'
-                          }}
-                        >
-                          מחק
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
+                {payments.map((payment) => {
+                  const paymentMethodIcon = payment.paymentMethod ? 
+                    (payment.paymentMethod === 'cash' ? '💵' :
+                     payment.paymentMethod === 'transfer' ? '🏦' :
+                     payment.paymentMethod === 'check' ? '📝' :
+                     payment.paymentMethod === 'credit' ? '💳' : '❓') : ''
+                  
+                  const paymentMethodName = payment.paymentMethod ? 
+                    (payment.paymentMethod === 'cash' ? 'מזומן' :
+                     payment.paymentMethod === 'transfer' ? 'העברה' :
+                     payment.paymentMethod === 'check' ? 'צ\'ק' :
+                     payment.paymentMethod === 'credit' ? 'אשראי' : 'אחר') : ''
+
+                  const paymentDetails = payment.paymentDetails ? 
+                    db.getPaymentDetailsDisplay(payment.paymentMethod || '', payment.paymentDetails) : ''
+
+                  return (
+                    <tr key={payment.id}>
+                      <td>
+                        {db.getSettings().showHebrewDates ?
+                          formatCombinedDate(payment.date) :
+                          new Date(payment.date).toLocaleDateString('he-IL')
+                        }
+                      </td>
+                      <td>
+                        <span style={{ 
+                          background: payment.type === 'loan' ? '#e74c3c' : '#27ae60',
+                          color: 'white',
+                          padding: '3px 8px',
+                          borderRadius: '10px',
+                          fontSize: '12px'
+                        }}>
+                          {payment.type === 'loan' ? '💸 הלוואה' : '💰 פרעון'}
+                        </span>
+                      </td>
+                      <td style={{ 
+                        color: payment.type === 'loan' ? '#e74c3c' : '#27ae60',
+                        fontWeight: 'bold'
+                      }}>
+                        ₪{payment.amount.toLocaleString()}
+                      </td>
+                      <td>
+                        {paymentMethodIcon && paymentMethodName ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '14px' }}>
+                              {paymentMethodIcon} {paymentMethodName}
+                            </span>
+                            {paymentDetails && (
+                              <button
+                                style={{
+                                  background: '#3498db',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '50%',
+                                  width: '20px',
+                                  height: '20px',
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                                title={paymentDetails}
+                                onClick={() => {
+                                  // הצגת מודל גדול עם פרטי התשלום
+                                  showConfirmModal({
+                                    title: `פרטי תשלום - ${paymentMethodName}`,
+                                    message: `תאריך: ${db.getSettings().showHebrewDates ? formatCombinedDate(payment.date) : new Date(payment.date).toLocaleDateString('he-IL')}\n\nסכום: ₪${payment.amount.toLocaleString()}\n\nאמצעי תשלום: ${paymentMethodIcon} ${paymentMethodName}\n\n${paymentDetails}\n\n${payment.notes ? `הערות: ${payment.notes}` : ''}`,
+                                    confirmText: 'סגור',
+                                    type: 'info',
+                                    onConfirm: () => {}
+                                  })
+                                }}
+                              >
+                                ℹ️
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <span style={{ color: '#999', fontSize: '12px' }}>לא צוין</span>
+                        )}
+                      </td>
+                      <td style={{ fontSize: '12px', maxWidth: '150px' }}>
+                        {payment.notes || '-'}
+                      </td>
+                      <td>
+                        {payment.type === 'payment' && (
+                          <button
+                            className="btn"
+                            onClick={() => deletePayment(payment.id)}
+                            style={{
+                              padding: '5px 10px',
+                              fontSize: '12px',
+                              backgroundColor: '#e74c3c',
+                              color: 'white'
+                            }}
+                          >
+                            מחק
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
@@ -3359,10 +3462,10 @@ function LoansPage() {
                 backgroundColor: 'white',
                 borderRadius: '10px',
                 padding: '30px',
-                maxWidth: '400px',
+                maxWidth: modalConfig.type === 'info' ? '600px' : '400px',
                 width: '90%',
                 boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
-                textAlign: 'center',
+                textAlign: modalConfig.type === 'info' ? 'right' : 'center',
                 direction: 'rtl'
               }}
               onClick={(e) => e.stopPropagation()}
@@ -3376,15 +3479,49 @@ function LoansPage() {
                 {modalConfig.title}
               </h3>
 
-              <p style={{
+              <div style={{
                 marginBottom: modalConfig.hasInput ? '20px' : '30px',
-                lineHeight: '1.5',
-                fontSize: '16px',
+                lineHeight: '1.6',
+                fontSize: modalConfig.type === 'info' ? '15px' : '16px',
                 color: '#2c3e50',
-                whiteSpace: 'pre-line'
+                whiteSpace: 'pre-line',
+                textAlign: modalConfig.type === 'info' ? 'right' : 'center'
               }}>
-                {modalConfig.message}
-              </p>
+                {modalConfig.type === 'info' && modalConfig.message.includes('אמצעי תשלום:') ? (
+                  // תצוגה מיוחדת לפרטי תשלום
+                  <div style={{ 
+                    background: '#f8f9fa', 
+                    padding: '20px', 
+                    borderRadius: '8px',
+                    border: '1px solid #e9ecef'
+                  }}>
+                    {modalConfig.message.split('\n').map((line, index) => {
+                      // דלג על שורות ריקות
+                      if (!line.trim()) return null
+                      
+                      return (
+                        <div key={index} style={{ marginBottom: '8px' }}>
+                          {line.includes(':') && !line.includes('תאריך:') && !line.includes('סכום:') ? (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <strong style={{ color: '#495057' }}>{line.split(':')[0]}:</strong>
+                              <span style={{ color: '#6c757d', fontWeight: 'normal' }}>{line.split(':').slice(1).join(':').trim()}</span>
+                            </div>
+                          ) : (
+                            <div style={{ 
+                              color: line.includes('תאריך:') || line.includes('סכום:') ? '#2c3e50' : '#6c757d',
+                              fontWeight: line.includes('תאריך:') || line.includes('סכום:') ? 'bold' : 'normal'
+                            }}>
+                              {line}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    }).filter(Boolean)}
+                  </div>
+                ) : (
+                  modalConfig.message
+                )}
+              </div>
 
               {modalConfig.hasInput && (
                 <div style={{ marginBottom: '20px' }}>
@@ -3428,23 +3565,25 @@ function LoansPage() {
                   {modalConfig.confirmText}
                 </button>
 
-                <button
-                  onClick={() => {
-                    if (modalConfig.onCancel) modalConfig.onCancel()
-                    closeModal()
-                  }}
-                  style={{
-                    backgroundColor: '#95a5a6',
-                    color: 'white',
-                    border: 'none',
-                    padding: '12px 24px',
-                    borderRadius: '5px',
-                    fontSize: '16px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {modalConfig.cancelText}
-                </button>
+                {modalConfig.type !== 'info' && (
+                  <button
+                    onClick={() => {
+                      if (modalConfig.onCancel) modalConfig.onCancel()
+                      closeModal()
+                    }}
+                    style={{
+                      backgroundColor: '#95a5a6',
+                      color: 'white',
+                      border: 'none',
+                      padding: '12px 24px',
+                      borderRadius: '5px',
+                      fontSize: '16px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {modalConfig.cancelText}
+                  </button>
+                )}
               </div>
             </div>
           </div>

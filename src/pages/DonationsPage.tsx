@@ -302,6 +302,37 @@ function DonationsPage() {
 
   const saveDonation = () => {
     if (newDonation.donorName && newDonation.amount) {
+      // בדיקת תאריך תרומה - לא יכול להיות בעתיד
+      if (newDonation.donationDate) {
+        const donationDateObj = new Date(newDonation.donationDate)
+        const today = new Date()
+        today.setHours(23, 59, 59, 999) // סוף היום
+
+        if (donationDateObj > today) {
+          showNotification('⚠️ תאריך התרומה לא יכול להיות בעתיד', 'error')
+          return
+        }
+      }
+
+      // בדיקת תאריך העברה בנקאית - לא יכול להיות בעתיד
+      if (newDonation.method === 'transfer' && newDonation.paymentDetails) {
+        try {
+          const details = JSON.parse(newDonation.paymentDetails)
+          if (details.transferDate) {
+            const transferDateObj = new Date(details.transferDate)
+            const today = new Date()
+            today.setHours(23, 59, 59, 999) // סוף היום
+
+            if (transferDateObj > today) {
+              showNotification('⚠️ תאריך ההעברה לא יכול להיות בעתיד', 'error')
+              return
+            }
+          }
+        } catch (error) {
+          // אם יש שגיאה בפענוח, המשך בלי בדיקה
+        }
+      }
+
       if (editingId) {
         // עדכון תרומה קיימת
         db.updateDonation(editingId, newDonation as DatabaseDonation)
@@ -380,6 +411,7 @@ function DonationsPage() {
                 <label>תאריך התרומה:</label>
                 <input
                   type="date"
+                  max={new Date().toISOString().split('T')[0]}
                   value={newDonation.donationDate}
                   onChange={(e) => handleInputChange('donationDate', e.target.value)}
                 />
@@ -578,6 +610,7 @@ function DonationsPage() {
                         <label>תאריך העברה:</label>
                         <input
                           type="date"
+                          max={new Date().toISOString().split('T')[0]}
                           onChange={(e) => {
                             const details = db.parsePaymentDetails('transfer', newDonation.paymentDetails) || {}
                             details.transferDate = e.target.value
@@ -724,31 +757,80 @@ function DonationsPage() {
                   <th>שם התורם</th>
                   <th>סכום</th>
                   <th>תאריך</th>
-                  <th>אופן תרומה</th>
-                  <th>טלפון</th>
+                  <th>אמצעי תרומה</th>
                   <th>קבלה</th>
                   <th>פעולות</th>
                 </tr>
               </thead>
               <tbody>
-                {donations.map((donation) => (
-                  <tr key={donation.id}>
-                    <td>{donation.id}</td>
-                    <td>{donation.donorName} {donation.donorLastName}</td>
-                    <td>₪{donation.amount.toLocaleString()}</td>
-                    <td>
-                      {db.getSettings().showHebrewDates ? 
-                        formatCombinedDate(donation.donationDate) : 
-                        new Date(donation.donationDate).toLocaleDateString('he-IL')
-                      }
-                    </td>
-                    <td>
-                      {donation.method === 'cash' ? 'מזומן' :
-                        donation.method === 'transfer' ? 'העברה' :
-                          donation.method === 'check' ? 'צ\'ק' : 'אחר'}
-                    </td>
-                    <td>{donation.phone}</td>
-                    <td>{donation.needsReceipt ? 'כן' : 'לא'}</td>
+                {donations.map((donation) => {
+                  const methodIcon = donation.method === 'cash' ? '💵' :
+                    donation.method === 'transfer' ? '🏦' :
+                    donation.method === 'check' ? '📝' :
+                    donation.method === 'credit' ? '💳' : '❓'
+                  
+                  const methodName = donation.method === 'cash' ? 'מזומן' :
+                    donation.method === 'transfer' ? 'העברה בנקאית' :
+                    donation.method === 'check' ? 'צ\'ק' :
+                    donation.method === 'credit' ? 'אשראי' : 'אחר'
+
+                  const paymentDetails = donation.paymentDetails ? 
+                    db.getPaymentDetailsDisplay(donation.method, donation.paymentDetails) : ''
+
+                  return (
+                    <tr key={donation.id}>
+                      <td>{donation.id}</td>
+                      <td>
+                        <div>{donation.donorName} {donation.donorLastName}</div>
+                        <div style={{ fontSize: '11px', color: '#666' }}>
+                          {donation.phone}
+                        </div>
+                      </td>
+                      <td style={{ color: '#9b59b6', fontWeight: 'bold' }}>
+                        ₪{donation.amount.toLocaleString()}
+                      </td>
+                      <td style={{ fontSize: '12px' }}>
+                        {db.getSettings().showHebrewDates ? 
+                          formatCombinedDate(donation.donationDate) : 
+                          new Date(donation.donationDate).toLocaleDateString('he-IL')
+                        }
+                      </td>
+                      <td style={{ fontSize: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>{methodIcon} {methodName}</span>
+                          {paymentDetails && (
+                            <button
+                              style={{
+                                background: '#9b59b6',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: '18px',
+                                height: '18px',
+                                fontSize: '11px',
+                                cursor: 'pointer'
+                              }}
+                              title="פרטי תרומה"
+                              onClick={() => {
+                                showNotification(`פרטי תרומה:<br>${paymentDetails}`, 'info')
+                              }}
+                            >
+                              ℹ️
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{
+                          background: donation.needsReceipt ? '#e67e22' : '#95a5a6',
+                          color: 'white',
+                          padding: '3px 8px',
+                          borderRadius: '10px',
+                          fontSize: '11px'
+                        }}>
+                          {donation.needsReceipt ? '📄 כן' : '❌ לא'}
+                        </span>
+                      </td>
                     <td>
                       <button
                         onClick={() => {
@@ -816,7 +898,8 @@ function DonationsPage() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           )}

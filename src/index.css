@@ -398,4 +398,68 @@ body.dark-theme .table tbody tr:nth-child(even) {
 
 body.dark-theme .table tbody tr:nth-child(even):hover {
   background: rgba(44, 62, 80, 0.7);
+}/* י
+ישור טבלאות */
+.table th, .table td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.table th:first-child, .table td:first-child {
+  text-align: center;
+}
+
+.table th:last-child, .table td:last-child {
+  text-align: center;
+}
+
+/* יישור מיוחד לעמודות מספריות */
+.table .amount-column {
+  text-align: left;
+  direction: ltr;
+  font-family: 'Courier New', monospace;
+}
+
+/* יישור לעמודות תאריכים */
+.table .date-column {
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* יישור לעמודות שמות */
+.table .name-column {
+  text-align: right;
+}
+
+/* כפתורי פרטים */
+.details-button {
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.details-button:hover {
+  background: #2980b9;
+  transform: scale(1.1);
+}
+
+.details-button.deposit {
+  background: #3498db;
+}
+
+.details-button.withdrawal {
+  background: #e67e22;
+}
+
+.details-button.donation {
+  background: #9b59b6;
 }

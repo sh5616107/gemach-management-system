@@ -839,7 +839,7 @@ class GemachDatabase {
       if (withdrawnAmount <= deposit.amount) {
         deposit.withdrawnAmount = withdrawnAmount
         deposit.withdrawnDate = new Date().toISOString().split('T')[0]
-        
+
         // הוספת אמצעי תשלום למשיכה
         if (withdrawalMethod) {
           deposit.withdrawalPaymentMethod = withdrawalMethod as 'cash' | 'transfer' | 'check' | 'credit' | 'other'
@@ -847,7 +847,7 @@ class GemachDatabase {
         if (withdrawalDetails) {
           deposit.withdrawalPaymentDetails = withdrawalDetails
         }
-        
+
         if (withdrawnAmount === deposit.amount) {
           deposit.status = 'withdrawn'
         }
@@ -1409,7 +1409,7 @@ class GemachDatabase {
   // פונקציות לטיפול בפרטי אמצעי תשלום
   parsePaymentDetails(method?: string, detailsJson?: string): any {
     if (!detailsJson || !method) return null
-    
+
     try {
       return JSON.parse(detailsJson)
     } catch {
@@ -1419,24 +1419,39 @@ class GemachDatabase {
 
   formatPaymentDetails(method?: string, details?: any): string {
     if (!method || !details) return ''
-    
+
     switch (method) {
       case 'check':
         const checkDetails = details as CheckDetails
-        return `צ'ק ${checkDetails.checkNumber} | ${checkDetails.bank} סניף ${checkDetails.branch}`
-      
+        const checkParts = []
+        if (checkDetails.checkNumber) checkParts.push(`מספר צ'ק: ${checkDetails.checkNumber}`)
+        if (checkDetails.bank) checkParts.push(`בנק: ${checkDetails.bank}`)
+        if (checkDetails.branch) checkParts.push(`סניף: ${checkDetails.branch}`)
+        if (checkDetails.dueDate) checkParts.push(`תאריך פדיון: ${new Date(checkDetails.dueDate).toLocaleDateString('he-IL')}`)
+        return checkParts.join('\n')
+
       case 'transfer':
         const transferDetails = details as TransferDetails
-        return `אסמכתא ${transferDetails.referenceNumber} | ${transferDetails.bankName || transferDetails.bankCode}`
-      
+        const transferParts = []
+        if (transferDetails.referenceNumber) transferParts.push(`אסמכתא: ${transferDetails.referenceNumber}`)
+        if (transferDetails.bankName) transferParts.push(`בנק: ${transferDetails.bankName}`)
+        if (transferDetails.bankCode) transferParts.push(`מספר בנק: ${transferDetails.bankCode}`)
+        if (transferDetails.branchNumber) transferParts.push(`מספר סניף: ${transferDetails.branchNumber}`)
+        if (transferDetails.accountNumber) transferParts.push(`מספר חשבון: ${transferDetails.accountNumber}`)
+        if (transferDetails.transferDate) transferParts.push(`תאריך ביצוע: ${new Date(transferDetails.transferDate).toLocaleDateString('he-IL')}`)
+        return transferParts.join('\n')
+
       case 'credit':
         const creditDetails = details as CreditDetails
-        return `כרטיס ****${creditDetails.lastFourDigits} | עסקה ${creditDetails.transactionNumber}`
-      
+        const creditParts = []
+        if (creditDetails.lastFourDigits) creditParts.push(`4 ספרות אחרונות: ${creditDetails.lastFourDigits}`)
+        if (creditDetails.transactionNumber) creditParts.push(`מספר עסקה: ${creditDetails.transactionNumber}`)
+        return creditParts.join('\n')
+
       case 'other':
         const otherDetails = details as OtherDetails
-        return otherDetails.description
-      
+        return otherDetails.description || ''
+
       default:
         return ''
     }
@@ -1451,7 +1466,7 @@ class GemachDatabase {
   getPaymentMethodStats() {
     const payments = this.dataFile.payments.filter(p => p.type === 'payment')
     const loans = this.dataFile.loans
-    
+
     const stats = {
       payments: {
         cash: 0,
@@ -1740,10 +1755,10 @@ class GemachDatabase {
 
     const today = new Date()
     const frequency = loan.autoPaymentFrequency || 1 // ברירת מחדל - כל חודש
-    
+
     // תאריך התחלת פרעון - אם לא הוגדר, השתמש בתאריך ההלוואה
-    const startPaymentDate = loan.autoPaymentStartDate 
-      ? new Date(loan.autoPaymentStartDate) 
+    const startPaymentDate = loan.autoPaymentStartDate
+      ? new Date(loan.autoPaymentStartDate)
       : new Date(loan.loanDate)
 
     // אם תאריך התחלת הפרעון עדיין לא הגיע
@@ -1751,18 +1766,18 @@ class GemachDatabase {
       // חשב את הפרעון הראשון - יום הפרעון בחודש של תאריך התחלה או בחודש הבא
       let firstPaymentDate = new Date(startPaymentDate)
       firstPaymentDate.setDate(loan.autoPaymentDay)
-      
+
       // אם יום הפרעון כבר עבר בחודש של תאריך התחלה, עבור לחודש הבא
       if (firstPaymentDate < startPaymentDate) {
         firstPaymentDate.setMonth(firstPaymentDate.getMonth() + 1)
         firstPaymentDate.setDate(loan.autoPaymentDay)
       }
-      
+
       // טיפול במקרים שבהם החודש לא מכיל את היום
       if (firstPaymentDate.getDate() !== loan.autoPaymentDay) {
         firstPaymentDate.setDate(0) // יום אחרון של החודש הקודם
       }
-      
+
       return firstPaymentDate.toISOString().split('T')[0]
     }
 
@@ -1924,16 +1939,16 @@ class GemachDatabase {
     // כספים שנכנסו (פרעונות + הפקדות + תרומות)
     Object.keys(summary).forEach(method => {
       const key = method as keyof typeof summary
-      summary[key].in = 
-        stats.payments[key].amount + 
-        stats.deposits[key].amount + 
+      summary[key].in =
+        stats.payments[key].amount +
+        stats.deposits[key].amount +
         stats.donations[key].amount
-      
+
       // כספים שיצאו (הלוואות + משיכות הפקדות)
-      summary[key].out = 
-        stats.loans[key].amount + 
+      summary[key].out =
+        stats.loans[key].amount +
         stats.withdrawals[key].amount
-      
+
       // נטו
       summary[key].net = summary[key].in - summary[key].out
     })
@@ -1944,7 +1959,7 @@ class GemachDatabase {
   // פרטי אמצעי תשלום מפורטים
   getDetailedPaymentMethodReport() {
     const stats = this.getPaymentMethodStatistics()
-    
+
     return {
       summary: this.getPaymentMethodSummary(),
       detailed: stats,
@@ -1955,6 +1970,8 @@ class GemachDatabase {
       }
     }
   }
+
+
 }
 
 export const db = new GemachDatabase()

@@ -397,6 +397,68 @@ function DepositsPage() {
       return
     }
 
+    // בדיקת תאריך הפקדה - לא יכול להיות בעתיד
+    if (newDeposit.depositDate) {
+      const depositDateObj = new Date(newDeposit.depositDate)
+      const today = new Date()
+      today.setHours(23, 59, 59, 999) // סוף היום
+
+      if (depositDateObj > today) {
+        showNotification('⚠️ תאריך ההפקדה לא יכול להיות בעתיד', 'error')
+        return
+      }
+    }
+
+    // בדיקת תאריך משיכה - לא יכול להיות בעתיד
+    if (newDeposit.withdrawnDate) {
+      const withdrawnDateObj = new Date(newDeposit.withdrawnDate)
+      const today = new Date()
+      today.setHours(23, 59, 59, 999) // סוף היום
+
+      if (withdrawnDateObj > today) {
+        showNotification('⚠️ תאריך המשיכה לא יכול להיות בעתיד', 'error')
+        return
+      }
+    }
+
+    // בדיקת תאריך העברה בהפקדה - לא יכול להיות בעתיד
+    if (newDeposit.depositPaymentMethod === 'transfer' && newDeposit.depositPaymentDetails) {
+      try {
+        const details = JSON.parse(newDeposit.depositPaymentDetails)
+        if (details.transferDate) {
+          const transferDateObj = new Date(details.transferDate)
+          const today = new Date()
+          today.setHours(23, 59, 59, 999) // סוף היום
+
+          if (transferDateObj > today) {
+            showNotification('⚠️ תאריך ההעברה לא יכול להיות בעתיד', 'error')
+            return
+          }
+        }
+      } catch (error) {
+        // אם יש שגיאה בפענוח, המשך בלי בדיקה
+      }
+    }
+
+    // בדיקת תאריך העברה במשיכה - לא יכול להיות בעתיד
+    if (newDeposit.withdrawalPaymentMethod === 'transfer' && newDeposit.withdrawalPaymentDetails) {
+      try {
+        const details = JSON.parse(newDeposit.withdrawalPaymentDetails)
+        if (details.transferDate) {
+          const transferDateObj = new Date(details.transferDate)
+          const today = new Date()
+          today.setHours(23, 59, 59, 999) // סוף היום
+
+          if (transferDateObj > today) {
+            showNotification('⚠️ תאריך ההעברה במשיכה לא יכול להיות בעתיד', 'error')
+            return
+          }
+        }
+      } catch (error) {
+        // אם יש שגיאה בפענוח, המשך בלי בדיקה
+      }
+    }
+
     if (editingId) {
       // עדכון הפקדה קיימת
       const updatedDeposit = {
@@ -548,7 +610,26 @@ function DepositsPage() {
           return
         }
 
-        if (db.withdrawDeposit(depositId, amount, withdrawalMethod || undefined, withdrawalDetails || undefined)) {
+        // בדיקת תאריך משיכה - לא יכול להיות בעתיד (אם יש תאריך העברה)
+        if (withdrawalMethod === 'transfer' && withdrawalDetails) {
+          try {
+            const details = JSON.parse(withdrawalDetails)
+            if (details.transferDate) {
+              const transferDateObj = new Date(details.transferDate)
+              const today = new Date()
+              today.setHours(23, 59, 59, 999) // סוף היום
+
+              if (transferDateObj > today) {
+                showNotification('⚠️ תאריך ההעברה לא יכול להיות בעתיד', 'error')
+                return
+              }
+            }
+          } catch (error) {
+            // אם יש שגיאה בפענוח, המשך בלי בדיקה
+          }
+        }
+
+        if (db.withdrawDeposit && db.withdrawDeposit(depositId, amount, withdrawalMethod || undefined, withdrawalDetails || undefined)) {
           loadDeposits()
           showNotification(`✅ נמשכו ₪${amount.toLocaleString()} בהצלחה!`)
           document.body.removeChild(modalContent)
@@ -637,7 +718,7 @@ function DepositsPage() {
             </div>
             <div>
               <label style="display: block; margin-bottom: 3px; font-size: 12px;">תאריך העברה:</label>
-              <input type="date" id="transferDate" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+              <input type="date" id="transferDate" max="${new Date().toISOString().split('T')[0]}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
             </div>
           `
         case 'credit':
@@ -808,6 +889,7 @@ function DepositsPage() {
                 <label>תאריך הפקדה:</label>
                 <input 
                   type="date" 
+                  max={new Date().toISOString().split('T')[0]}
                   value={newDeposit.depositDate}
                   onChange={(e) => handleInputChange('depositDate', e.target.value)}
                 />
@@ -1030,6 +1112,7 @@ function DepositsPage() {
                         <label>תאריך העברה:</label>
                         <input
                           type="date"
+                          max={new Date().toISOString().split('T')[0]}
                           onChange={(e) => {
                             const details = db.parsePaymentDetails('transfer', newDeposit.depositPaymentDetails) || {}
                             details.transferDate = e.target.value
@@ -1122,6 +1205,7 @@ function DepositsPage() {
                   <label>תאריך משיכה:</label>
                   <input 
                     type="date" 
+                    max={new Date().toISOString().split('T')[0]}
                     value={newDeposit.withdrawnDate || ''}
                     onChange={(e) => handleInputChange('withdrawnDate', e.target.value)}
                   />
@@ -1169,12 +1253,10 @@ function DepositsPage() {
                 <tr>
                   <th>מספר</th>
                   <th>שם המפקיד</th>
-                  <th>מספר זהות</th>
                   <th>סכום מקורי</th>
-                  <th>נמשך</th>
                   <th>יתרה</th>
                   <th>תאריך הפקדה</th>
-                  <th>טלפון</th>
+                  <th>אמצעי תשלום</th>
                   <th>סטטוס</th>
                   <th>פעולות</th>
                 </tr>
@@ -1183,24 +1265,139 @@ function DepositsPage() {
                 {deposits.map((deposit) => {
                   const withdrawnAmount = deposit.withdrawnAmount || 0
                   const remainingAmount = deposit.amount - withdrawnAmount
+                  
+                  // פרטי אמצעי הפקדה
+                  const depositMethodIcon = deposit.depositPaymentMethod ? 
+                    (deposit.depositPaymentMethod === 'cash' ? '💵' :
+                     deposit.depositPaymentMethod === 'transfer' ? '🏦' :
+                     deposit.depositPaymentMethod === 'check' ? '📝' :
+                     deposit.depositPaymentMethod === 'credit' ? '💳' : '❓') : ''
+                  
+                  const depositMethodName = deposit.depositPaymentMethod ? 
+                    (deposit.depositPaymentMethod === 'cash' ? 'מזומן' :
+                     deposit.depositPaymentMethod === 'transfer' ? 'העברה' :
+                     deposit.depositPaymentMethod === 'check' ? 'צ\'ק' :
+                     deposit.depositPaymentMethod === 'credit' ? 'אשראי' : 'אחר') : ''
+
+                  // פרטי אמצעי משיכה
+                  const withdrawalMethodIcon = deposit.withdrawalPaymentMethod ? 
+                    (deposit.withdrawalPaymentMethod === 'cash' ? '💵' :
+                     deposit.withdrawalPaymentMethod === 'transfer' ? '🏦' :
+                     deposit.withdrawalPaymentMethod === 'check' ? '📝' :
+                     deposit.withdrawalPaymentMethod === 'credit' ? '💳' : '❓') : ''
+                  
+                  const withdrawalMethodName = deposit.withdrawalPaymentMethod ? 
+                    (deposit.withdrawalPaymentMethod === 'cash' ? 'מזומן' :
+                     deposit.withdrawalPaymentMethod === 'transfer' ? 'העברה' :
+                     deposit.withdrawalPaymentMethod === 'check' ? 'צ\'ק' :
+                     deposit.withdrawalPaymentMethod === 'credit' ? 'אשראי' : 'אחר') : ''
+
                   return (
                     <tr key={deposit.id}>
                       <td>{deposit.id}</td>
-                      <td>{deposit.depositorName}</td>
-                      <td style={{ fontSize: '12px', color: '#666' }}>
-                        {db.formatIdNumber(deposit.idNumber || '')}
-                      </td>
-                      <td>₪{deposit.amount.toLocaleString()}</td>
-                      <td>₪{withdrawnAmount.toLocaleString()}</td>
-                      <td>₪{remainingAmount.toLocaleString()}</td>
                       <td>
+                        <div>{deposit.depositorName}</div>
+                        <div style={{ fontSize: '11px', color: '#666' }}>
+                          {db.formatIdNumber(deposit.idNumber || '')}
+                        </div>
+                      </td>
+                      <td style={{ color: '#3498db', fontWeight: 'bold' }}>
+                        ₪{deposit.amount.toLocaleString()}
+                      </td>
+                      <td>
+                        <div style={{ color: remainingAmount > 0 ? '#27ae60' : '#999', fontWeight: 'bold' }}>
+                          ₪{remainingAmount.toLocaleString()}
+                        </div>
+                        {withdrawnAmount > 0 && (
+                          <div style={{ fontSize: '11px', color: '#e74c3c' }}>
+                            נמשך: ₪{withdrawnAmount.toLocaleString()}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ fontSize: '12px' }}>
                         {db.getSettings().showHebrewDates ? 
                           formatCombinedDate(deposit.depositDate) : 
                           new Date(deposit.depositDate).toLocaleDateString('he-IL')
                         }
                       </td>
-                      <td>{deposit.phone}</td>
-                      <td>{deposit.status === 'active' ? 'פעיל' : 'נמשך במלואו'}</td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                          {/* אמצעי הפקדה */}
+                          {depositMethodIcon && depositMethodName && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <span style={{ fontSize: '12px' }}>
+                                {depositMethodIcon} {depositMethodName}
+                              </span>
+                              {deposit.depositPaymentDetails && (
+                                <button
+                                  style={{
+                                    background: '#3498db',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '50%',
+                                    width: '16px',
+                                    height: '16px',
+                                    fontSize: '10px',
+                                    cursor: 'pointer'
+                                  }}
+                                  title="פרטי הפקדה"
+                                  onClick={() => {
+                                    const details = db.getPaymentDetailsDisplay(deposit.depositPaymentMethod || '', deposit.depositPaymentDetails)
+                                    showNotification(`פרטי הפקדה:<br>${details}`, 'info')
+                                  }}
+                                >
+                                  ℹ️
+                                </button>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* אמצעי משיכה */}
+                          {withdrawalMethodIcon && withdrawalMethodName && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <span style={{ fontSize: '12px', color: '#e67e22' }}>
+                                📤 {withdrawalMethodIcon}
+                              </span>
+                              {deposit.withdrawalPaymentDetails && (
+                                <button
+                                  style={{
+                                    background: '#e67e22',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '50%',
+                                    width: '16px',
+                                    height: '16px',
+                                    fontSize: '10px',
+                                    cursor: 'pointer'
+                                  }}
+                                  title="פרטי משיכה"
+                                  onClick={() => {
+                                    const details = db.getPaymentDetailsDisplay(deposit.withdrawalPaymentMethod || '', deposit.withdrawalPaymentDetails)
+                                    showNotification(`פרטי משיכה:<br>${details}`, 'info')
+                                  }}
+                                >
+                                  ℹ️
+                                </button>
+                              )}
+                            </div>
+                          )}
+                          
+                          {!depositMethodIcon && !withdrawalMethodIcon && (
+                            <span style={{ color: '#999', fontSize: '12px' }}>-</span>
+                          )}
+                        </div>
+                      </td>
+                      <td>
+                        <span style={{
+                          background: deposit.status === 'active' ? '#27ae60' : '#95a5a6',
+                          color: 'white',
+                          padding: '3px 8px',
+                          borderRadius: '10px',
+                          fontSize: '11px'
+                        }}>
+                          {deposit.status === 'active' ? '✅ פעיל' : '📤 נמשך'}
+                        </span>
+                      </td>
                       <td>
                         <button
                           onClick={() => {

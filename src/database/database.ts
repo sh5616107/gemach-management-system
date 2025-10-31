@@ -46,7 +46,10 @@ export interface CheckDetails {
 
 export interface TransferDetails {
   referenceNumber: string
-  receivingBank: string
+  bankCode: string
+  bankName: string
+  branchNumber: string
+  accountNumber: string
   transferDate: string
 }
 
@@ -829,13 +832,22 @@ class GemachDatabase {
     this.saveData()
   }
 
-  withdrawDeposit(id: number, amount: number): boolean {
+  withdrawDeposit(id: number, amount: number, withdrawalMethod?: string, withdrawalDetails?: string): boolean {
     const deposit = this.dataFile.deposits.find(d => d.id === id)
     if (deposit && deposit.status === 'active') {
       const withdrawnAmount = (deposit.withdrawnAmount || 0) + amount
       if (withdrawnAmount <= deposit.amount) {
         deposit.withdrawnAmount = withdrawnAmount
         deposit.withdrawnDate = new Date().toISOString().split('T')[0]
+        
+        // הוספת אמצעי תשלום למשיכה
+        if (withdrawalMethod) {
+          deposit.withdrawalPaymentMethod = withdrawalMethod as 'cash' | 'transfer' | 'check' | 'credit' | 'other'
+        }
+        if (withdrawalDetails) {
+          deposit.withdrawalPaymentDetails = withdrawalDetails
+        }
+        
         if (withdrawnAmount === deposit.amount) {
           deposit.status = 'withdrawn'
         }
@@ -1415,7 +1427,7 @@ class GemachDatabase {
       
       case 'transfer':
         const transferDetails = details as TransferDetails
-        return `אסמכתא ${transferDetails.referenceNumber} | ${transferDetails.receivingBank}`
+        return `אסמכתא ${transferDetails.referenceNumber} | ${transferDetails.bankName || transferDetails.bankCode}`
       
       case 'credit':
         const creditDetails = details as CreditDetails

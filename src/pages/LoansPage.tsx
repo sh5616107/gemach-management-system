@@ -860,8 +860,33 @@ function LoansPage() {
                 <input type="text" id="referenceNumber" placeholder="מספר אסמכתא" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
               </div>
               <div>
-                <label style="display: block; margin-bottom: 3px; font-size: 12px;">בנק מקבל:</label>
-                <input type="text" id="receivingBank" placeholder="שם הבנק" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                <label style="display: block; margin-bottom: 3px; font-size: 12px;">בנק:</label>
+                <select id="bankSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                  <option value="">בחר בנק</option>
+                  <option value="10">10 - בנק לאומי</option>
+                  <option value="11">11 - בנק דיסקונט</option>
+                  <option value="12">12 - בנק הפועלים</option>
+                  <option value="13">13 - בנק איגוד</option>
+                  <option value="14">14 - בנק אוצר החייל</option>
+                  <option value="15">15 - בנק ירושלים</option>
+                  <option value="16">16 - בנק מרכנתיל</option>
+                  <option value="17">17 - בנק מזרחי טפחות</option>
+                  <option value="18">18 - בנק הבינלאומי</option>
+                  <option value="19">19 - בנק יהב</option>
+                  <option value="20">20 - בנק מסד</option>
+                  <option value="31">31 - בנק הדואר</option>
+                  <option value="99">99 - בנק אחר</option>
+                </select>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+              <div>
+                <label style="display: block; margin-bottom: 3px; font-size: 12px;">מספר סניף:</label>
+                <input type="text" id="branchNumber" placeholder="מספר סניף" maxlength="3" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+              </div>
+              <div>
+                <label style="display: block; margin-bottom: 3px; font-size: 12px;">מספר חשבון:</label>
+                <input type="text" id="accountNumber" placeholder="מספר חשבון" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
               </div>
             </div>
             <div>
@@ -911,8 +936,15 @@ function LoansPage() {
               details.dueDate = (container.querySelector('#dueDate') as HTMLInputElement)?.value || ''
               break
             case 'transfer':
+              const bankSelect = container.querySelector('#bankSelect') as HTMLSelectElement
+              const selectedBankCode = bankSelect?.value || ''
+              const selectedBankName = bankSelect?.selectedOptions[0]?.text?.split(' - ')[1] || ''
+              
               details.referenceNumber = (container.querySelector('#referenceNumber') as HTMLInputElement)?.value || ''
-              details.receivingBank = (container.querySelector('#receivingBank') as HTMLInputElement)?.value || ''
+              details.bankCode = selectedBankCode
+              details.bankName = selectedBankName
+              details.branchNumber = (container.querySelector('#branchNumber') as HTMLInputElement)?.value || ''
+              details.accountNumber = (container.querySelector('#accountNumber') as HTMLInputElement)?.value || ''
               details.transferDate = (container.querySelector('#transferDate') as HTMLInputElement)?.value || ''
               break
             case 'credit':
@@ -1481,7 +1513,7 @@ function LoansPage() {
   }
 
   // פונקציה לביצוע פרעון מרובה
-  const performMultiplePayment = (borrowerLoans: any[], amount: number) => {
+  const performMultiplePayment = (borrowerLoans: any[], amount: number, paymentMethod?: string, paymentDetails?: string) => {
     let remainingAmount = amount
 
     // פרע לפי סדר הלוואות (הישנות קודם)
@@ -1497,6 +1529,8 @@ function LoansPage() {
         amount: paymentForThisLoan,
         date: getTodayString(),
         type: 'payment',
+        paymentMethod: paymentMethod as 'cash' | 'transfer' | 'check' | 'credit' | 'other' | undefined,
+        paymentDetails: paymentDetails || undefined,
         notes: `פרעון מרובה - חלק מ-₪${amount.toLocaleString()}`
       })
 
@@ -2432,17 +2466,78 @@ function LoansPage() {
                         />
                       </div>
                       <div className="form-group">
-                        <label>בנק מקבל:</label>
-                        <input
-                          type="text"
-                          placeholder="שם הבנק"
+                        <label>בנק:</label>
+                        <select
                           onChange={(e) => {
                             const details = db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails) || {}
-                            details.receivingBank = e.target.value
+                            details.bankCode = e.target.value
+                            details.bankName = e.target.selectedOptions[0]?.text?.split(' - ')[1] || ''
                             handleLoanChange('loanPaymentDetails', JSON.stringify(details))
                           }}
-                          value={db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails)?.receivingBank || ''}
+                          value={db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails)?.bankCode || ''}
+                          style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                        >
+                          <option value="">בחר בנק</option>
+                          <option value="10">10 - בנק לאומי</option>
+                          <option value="11">11 - בנק דיסקונט</option>
+                          <option value="12">12 - בנק הפועלים</option>
+                          <option value="13">13 - בנק איגוד</option>
+                          <option value="14">14 - בנק אוצר החייל</option>
+                          <option value="15">15 - בנק ירושלים</option>
+                          <option value="16">16 - בנק מרכנתיל</option>
+                          <option value="17">17 - בנק מזרחי טפחות</option>
+                          <option value="18">18 - בנק הבינלאומי</option>
+                          <option value="19">19 - בנק יהב</option>
+                          <option value="20">20 - בנק מסד</option>
+                          <option value="31">31 - בנק הדואר</option>
+                          <option value="99">99 - בנק אחר</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>מספר סניף:</label>
+                        <input
+                          type="text"
+                          placeholder="מספר סניף"
+                          maxLength={3}
+                          onChange={(e) => {
+                            const details = db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails) || {}
+                            details.branchNumber = e.target.value
+                            handleLoanChange('loanPaymentDetails', JSON.stringify(details))
+                          }}
+                          value={db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails)?.branchNumber || ''}
                         />
+                      </div>
+                      <div className="form-group">
+                        <label>מספר חשבון:</label>
+                        <input
+                          type="text"
+                          placeholder="מספר חשבון"
+                          onChange={(e) => {
+                            const details = db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails) || {}
+                            details.accountNumber = e.target.value
+                            handleLoanChange('loanPaymentDetails', JSON.stringify(details))
+                          }}
+                          value={db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails)?.accountNumber || ''}
+                        />
+                      </div>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>תאריך העברה:</label>
+                        <input
+                          type="date"
+                          onChange={(e) => {
+                            const details = db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails) || {}
+                            details.transferDate = e.target.value
+                            handleLoanChange('loanPaymentDetails', JSON.stringify(details))
+                          }}
+                          value={db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails)?.transferDate || ''}
+                        />
+                      </div>
+                      <div className="form-group">
+                        {/* שדה ריק לאיזון */}
                       </div>
                     </div>
                   </div>
@@ -2587,18 +2682,99 @@ function LoansPage() {
 
                     const totalBalance = borrowerLoans.reduce((sum, loan) => sum + loan.balance, 0)
 
-                    // מודל אישור לפרעון מרובה עם שדה קלט
-                    showConfirmModal({
-                      title: 'פרעון מרובה הלוואות',
-                      message: `הלוואות פעילות: ${borrowerLoans.length}\nיתרה כוללת: ₪${totalBalance.toLocaleString()}`,
-                      confirmText: 'בצע פרעון מרובה',
-                      cancelText: 'ביטול',
-                      type: 'info',
-                      hasInput: true,
-                      inputPlaceholder: 'הכנס סכום לפרעון',
-                      onConfirm: (inputValue) => {
-                        const amount = Number(inputValue)
-                        if (!inputValue || isNaN(amount) || amount <= 0) {
+                    // State לאמצעי תשלום בפרעון מרובה
+                    let multiplePaymentMethod = ''
+                    let multiplePaymentDetails = ''
+
+                    // יצירת מודל מתקדם לפרעון מרובה עם אמצעי תשלום
+                    const createMultiplePaymentModal = () => {
+                      const modalContent = document.createElement('div')
+                      modalContent.innerHTML = `
+                        <div style="
+                          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                          background: rgba(0,0,0,0.5); display: flex; align-items: center;
+                          justify-content: center; z-index: 10000; direction: rtl;
+                        ">
+                          <div style="
+                            background: white; border-radius: 10px; padding: 30px;
+                            max-width: 500px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                          ">
+                            <h3 style="margin-bottom: 20px; color: #e67e22; text-align: center;">פרעון מרובה הלוואות</h3>
+                            <p style="margin-bottom: 15px; text-align: center;">הלוואות פעילות: ${borrowerLoans.length}<br>יתרה כוללת: ₪${totalBalance.toLocaleString()}</p>
+                            
+                            <div style="margin-bottom: 15px;">
+                              <label style="display: block; margin-bottom: 5px; font-weight: bold;">סכום לפרעון:</label>
+                              <input type="number" id="multiplePaymentAmount" placeholder="הכנס סכום" style="
+                                width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px;
+                                font-size: 16px; text-align: center;
+                              " />
+                            </div>
+
+                            ${db.getSettings().trackPaymentMethods ? `
+                              <div style="margin-bottom: 15px;">
+                                <label style="display: block; margin-bottom: 5px; font-weight: bold;">אמצעי פרעון:</label>
+                                <select id="multiplePaymentMethodSelect" style="
+                                  width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;
+                                ">
+                                  <option value="">בחר אמצעי תשלום</option>
+                                  <option value="cash">💵 מזומן</option>
+                                  <option value="transfer">🏦 העברה בנקאית</option>
+                                  <option value="check">📝 צ'ק</option>
+                                  <option value="credit">💳 אשראי</option>
+                                  <option value="other">❓ אחר</option>
+                                </select>
+                              </div>
+
+                              <div id="multiplePaymentDetailsContainer" style="margin-bottom: 15px; display: none;">
+                                <!-- פרטים נוספים יתווספו כאן -->
+                              </div>
+                            ` : ''}
+
+                            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px;">
+                              <button id="confirmMultiplePayment" style="
+                                background: #e67e22; color: white; border: none; padding: 12px 24px;
+                                border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold;
+                              ">בצע פרעון מרובה</button>
+                              <button id="cancelMultiplePayment" style="
+                                background: #95a5a6; color: white; border: none; padding: 12px 24px;
+                                border-radius: 5px; font-size: 16px; cursor: pointer;
+                              ">ביטול</button>
+                            </div>
+                          </div>
+                        </div>
+                      `
+
+                      document.body.appendChild(modalContent)
+
+                      // הוספת event listeners
+                      const amountInput = modalContent.querySelector('#multiplePaymentAmount') as HTMLInputElement
+                      const methodSelect = modalContent.querySelector('#multiplePaymentMethodSelect') as HTMLSelectElement
+                      const detailsContainer = modalContent.querySelector('#multiplePaymentDetailsContainer') as HTMLDivElement
+                      const confirmBtn = modalContent.querySelector('#confirmMultiplePayment') as HTMLButtonElement
+                      const cancelBtn = modalContent.querySelector('#cancelMultiplePayment') as HTMLButtonElement
+
+                      amountInput.focus()
+
+                      // טיפול בשינוי אמצעי תשלום
+                      if (methodSelect) {
+                        methodSelect.addEventListener('change', (e) => {
+                          const method = (e.target as HTMLSelectElement).value
+                          multiplePaymentMethod = method
+                          
+                          if (method && detailsContainer) {
+                            detailsContainer.style.display = 'block'
+                            detailsContainer.innerHTML = createPaymentDetailsHTML(method)
+                            addPaymentDetailsListeners(detailsContainer, method)
+                          } else if (detailsContainer) {
+                            detailsContainer.style.display = 'none'
+                          }
+                        })
+                      }
+
+                      // אישור פרעון מרובה
+                      confirmBtn.addEventListener('click', () => {
+                        const amount = Number(amountInput.value)
+                        if (!amountInput.value || isNaN(amount) || amount <= 0) {
                           showNotification('⚠️ אנא הכנס סכום תקין', 'error')
                           return
                         }
@@ -2608,9 +2784,161 @@ function LoansPage() {
                           return
                         }
 
-                        performMultiplePayment(borrowerLoans, amount)
+                        performMultiplePayment(borrowerLoans, amount, multiplePaymentMethod || undefined, multiplePaymentDetails || undefined)
+                        document.body.removeChild(modalContent)
+                      })
+
+                      // ביטול
+                      cancelBtn.addEventListener('click', () => {
+                        document.body.removeChild(modalContent)
+                      })
+
+                      // סגירה בלחיצה על הרקע
+                      modalContent.addEventListener('click', (e) => {
+                        if (e.target === modalContent) {
+                          document.body.removeChild(modalContent)
+                        }
+                      })
+                    }
+
+                    // פונקציה להוספת event listeners לפרטי תשלום במרובה
+                    const addPaymentDetailsListeners = (container: HTMLDivElement, method: string) => {
+                      const inputs = container.querySelectorAll('input, textarea')
+                      inputs.forEach(input => {
+                        input.addEventListener('input', () => {
+                          const details: any = {}
+                          
+                          switch (method) {
+                            case 'check':
+                              details.checkNumber = (container.querySelector('#checkNumber') as HTMLInputElement)?.value || ''
+                              details.bank = (container.querySelector('#bank') as HTMLInputElement)?.value || ''
+                              details.branch = (container.querySelector('#branch') as HTMLInputElement)?.value || ''
+                              details.dueDate = (container.querySelector('#dueDate') as HTMLInputElement)?.value || ''
+                              break
+                            case 'transfer':
+                              const bankSelect = container.querySelector('#bankSelect') as HTMLSelectElement
+                              const selectedBankCode = bankSelect?.value || ''
+                              const selectedBankName = bankSelect?.selectedOptions[0]?.text?.split(' - ')[1] || ''
+                              
+                              details.referenceNumber = (container.querySelector('#referenceNumber') as HTMLInputElement)?.value || ''
+                              details.bankCode = selectedBankCode
+                              details.bankName = selectedBankName
+                              details.branchNumber = (container.querySelector('#branchNumber') as HTMLInputElement)?.value || ''
+                              details.accountNumber = (container.querySelector('#accountNumber') as HTMLInputElement)?.value || ''
+                              details.transferDate = (container.querySelector('#transferDate') as HTMLInputElement)?.value || ''
+                              break
+                            case 'credit':
+                              details.lastFourDigits = (container.querySelector('#lastFourDigits') as HTMLInputElement)?.value || ''
+                              details.transactionNumber = (container.querySelector('#transactionNumber') as HTMLInputElement)?.value || ''
+                              break
+                            case 'other':
+                              details.description = (container.querySelector('#description') as HTMLTextAreaElement)?.value || ''
+                              break
+                          }
+                          
+                          multiplePaymentDetails = JSON.stringify(details)
+                        })
+                      })
+                    }
+
+                    // פונקציה ליצירת HTML לפרטי תשלום במרובה (זהה לפונקציה הרגילה)
+                    const createPaymentDetailsHTML = (method: string): string => {
+                      switch (method) {
+                        case 'check':
+                          return `
+                            <h5 style="margin: 0 0 10px 0; color: #666; font-size: 14px;">📝 פרטי הצ'ק</h5>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                              <div>
+                                <label style="display: block; margin-bottom: 3px; font-size: 12px;">מספר צ'ק:</label>
+                                <input type="text" id="checkNumber" placeholder="מספר הצ'ק" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                              </div>
+                              <div>
+                                <label style="display: block; margin-bottom: 3px; font-size: 12px;">בנק:</label>
+                                <input type="text" id="bank" placeholder="שם הבנק" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                              </div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                              <div>
+                                <label style="display: block; margin-bottom: 3px; font-size: 12px;">סניף:</label>
+                                <input type="text" id="branch" placeholder="מספר סניף" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                              </div>
+                              <div>
+                                <label style="display: block; margin-bottom: 3px; font-size: 12px;">תאריך פדיון:</label>
+                                <input type="date" id="dueDate" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                              </div>
+                            </div>
+                          `
+                        case 'transfer':
+                          return `
+                            <h5 style="margin: 0 0 10px 0; color: #666; font-size: 14px;">🏦 פרטי ההעברה</h5>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                              <div>
+                                <label style="display: block; margin-bottom: 3px; font-size: 12px;">מספר אסמכתא:</label>
+                                <input type="text" id="referenceNumber" placeholder="מספר אסמכתא" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                              </div>
+                              <div>
+                                <label style="display: block; margin-bottom: 3px; font-size: 12px;">בנק:</label>
+                                <select id="bankSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                  <option value="">בחר בנק</option>
+                                  <option value="10">10 - בנק לאומי</option>
+                                  <option value="11">11 - בנק דיסקונט</option>
+                                  <option value="12">12 - בנק הפועלים</option>
+                                  <option value="13">13 - בנק איגוד</option>
+                                  <option value="14">14 - בנק אוצר החייל</option>
+                                  <option value="15">15 - בנק ירושלים</option>
+                                  <option value="16">16 - בנק מרכנתיל</option>
+                                  <option value="17">17 - בנק מזרחי טפחות</option>
+                                  <option value="18">18 - בנק הבינלאומי</option>
+                                  <option value="19">19 - בנק יהב</option>
+                                  <option value="20">20 - בנק מסד</option>
+                                  <option value="31">31 - בנק הדואר</option>
+                                  <option value="99">99 - בנק אחר</option>
+                                </select>
+                              </div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                              <div>
+                                <label style="display: block; margin-bottom: 3px; font-size: 12px;">מספר סניף:</label>
+                                <input type="text" id="branchNumber" placeholder="מספר סניף" maxlength="3" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                              </div>
+                              <div>
+                                <label style="display: block; margin-bottom: 3px; font-size: 12px;">מספר חשבון:</label>
+                                <input type="text" id="accountNumber" placeholder="מספר חשבון" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                              </div>
+                            </div>
+                            <div>
+                              <label style="display: block; margin-bottom: 3px; font-size: 12px;">תאריך העברה:</label>
+                              <input type="date" id="transferDate" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                            </div>
+                          `
+                        case 'credit':
+                          return `
+                            <h5 style="margin: 0 0 10px 0; color: #666; font-size: 14px;">💳 פרטי האשראי</h5>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                              <div>
+                                <label style="display: block; margin-bottom: 3px; font-size: 12px;">4 ספרות אחרונות:</label>
+                                <input type="text" id="lastFourDigits" placeholder="1234" maxlength="4" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                              </div>
+                              <div>
+                                <label style="display: block; margin-bottom: 3px; font-size: 12px;">מספר עסקה:</label>
+                                <input type="text" id="transactionNumber" placeholder="מספר עסקה" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                              </div>
+                            </div>
+                          `
+                        case 'other':
+                          return `
+                            <h5 style="margin: 0 0 10px 0; color: #666; font-size: 14px;">❓ פרטים נוספים</h5>
+                            <div>
+                              <label style="display: block; margin-bottom: 3px; font-size: 12px;">הסבר:</label>
+                              <textarea id="description" placeholder="הסבר על אמצעי התשלום" rows="3" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"></textarea>
+                            </div>
+                          `
+                        default:
+                          return ''
                       }
-                    })
+                    }
+
+                    createMultiplePaymentModal()
 
                     return // יציאה מהפונקציה כדי לא להמשיך עם הקוד הישן
 

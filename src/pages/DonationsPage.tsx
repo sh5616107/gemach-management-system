@@ -73,7 +73,8 @@ function DonationsPage() {
     donorLastName: '',
     amount: 0,
     donationDate: '',
-    method: 'cash' as 'cash' | 'transfer' | 'check' | 'other',
+    method: 'cash' as 'cash' | 'transfer' | 'check' | 'credit' | 'other',
+    paymentDetails: '',
     phone: '',
     address: '',
     notes: '',
@@ -319,6 +320,7 @@ function DonationsPage() {
         amount: 0,
         donationDate: '',
         method: 'cash',
+        paymentDetails: '',
         phone: '',
         address: '',
         notes: '',
@@ -389,12 +391,17 @@ function DonationsPage() {
                 <label>אופן התרומה:</label>
                 <select
                   value={newDonation.method}
-                  onChange={(e) => handleInputChange('method', e.target.value)}
+                  onChange={(e) => {
+                    handleInputChange('method', e.target.value)
+                    // נקה פרטי תשלום קודמים כשמשנים אמצעי
+                    handleInputChange('paymentDetails', '')
+                  }}
                 >
-                  <option value="cash">מזומן</option>
-                  <option value="transfer">העברה בנקאית</option>
-                  <option value="check">צ'ק</option>
-                  <option value="other">אחר</option>
+                  <option value="cash">💵 מזומן</option>
+                  <option value="transfer">🏦 העברה בנקאית</option>
+                  <option value="check">📝 צ'ק</option>
+                  <option value="credit">💳 אשראי</option>
+                  <option value="other">❓ אחר</option>
                 </select>
               </div>
               <div className="form-group">
@@ -408,6 +415,246 @@ function DonationsPage() {
                 </select>
               </div>
             </div>
+
+            {/* פרטי אמצעי תשלום - רק אם מופעל בהגדרות */}
+            {db.getSettings().trackPaymentMethods && newDonation.method !== 'cash' && (
+              <div style={{ 
+                background: '#f0f8ff', 
+                padding: '20px', 
+                borderRadius: '10px', 
+                border: '2px solid #e3f2fd',
+                margin: '20px 0'
+              }}>
+                <h4 style={{ 
+                  margin: '0 0 15px 0', 
+                  color: '#1976d2', 
+                  fontSize: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  💰 פרטי אמצעי התרומה
+                </h4>
+
+                {/* פרטים נוספים לפי אמצעי התשלום */}
+                {newDonation.method === 'check' && (
+                  <div>
+                    <h5 style={{ margin: '0 0 10px 0', color: '#666', fontSize: '14px' }}>📝 פרטי הצ'ק</h5>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>מספר צ'ק:</label>
+                        <input
+                          type="text"
+                          placeholder="מספר הצ'ק"
+                          onChange={(e) => {
+                            const details = db.parsePaymentDetails('check', newDonation.paymentDetails) || {}
+                            details.checkNumber = e.target.value
+                            handleInputChange('paymentDetails', JSON.stringify(details))
+                          }}
+                          value={db.parsePaymentDetails('check', newDonation.paymentDetails)?.checkNumber || ''}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>בנק:</label>
+                        <input
+                          type="text"
+                          placeholder="שם הבנק"
+                          onChange={(e) => {
+                            const details = db.parsePaymentDetails('check', newDonation.paymentDetails) || {}
+                            details.bank = e.target.value
+                            handleInputChange('paymentDetails', JSON.stringify(details))
+                          }}
+                          value={db.parsePaymentDetails('check', newDonation.paymentDetails)?.bank || ''}
+                        />
+                      </div>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>סניף:</label>
+                        <input
+                          type="text"
+                          placeholder="מספר סניף"
+                          onChange={(e) => {
+                            const details = db.parsePaymentDetails('check', newDonation.paymentDetails) || {}
+                            details.branch = e.target.value
+                            handleInputChange('paymentDetails', JSON.stringify(details))
+                          }}
+                          value={db.parsePaymentDetails('check', newDonation.paymentDetails)?.branch || ''}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>תאריך פדיון:</label>
+                        <input
+                          type="date"
+                          onChange={(e) => {
+                            const details = db.parsePaymentDetails('check', newDonation.paymentDetails) || {}
+                            details.dueDate = e.target.value
+                            handleInputChange('paymentDetails', JSON.stringify(details))
+                          }}
+                          value={db.parsePaymentDetails('check', newDonation.paymentDetails)?.dueDate || ''}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {newDonation.method === 'transfer' && (
+                  <div>
+                    <h5 style={{ margin: '0 0 10px 0', color: '#666', fontSize: '14px' }}>🏦 פרטי ההעברה</h5>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>מספר אסמכתא:</label>
+                        <input
+                          type="text"
+                          placeholder="מספר אסמכתא"
+                          onChange={(e) => {
+                            const details = db.parsePaymentDetails('transfer', newDonation.paymentDetails) || {}
+                            details.referenceNumber = e.target.value
+                            handleInputChange('paymentDetails', JSON.stringify(details))
+                          }}
+                          value={db.parsePaymentDetails('transfer', newDonation.paymentDetails)?.referenceNumber || ''}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>בנק:</label>
+                        <select
+                          onChange={(e) => {
+                            const details = db.parsePaymentDetails('transfer', newDonation.paymentDetails) || {}
+                            details.bankCode = e.target.value
+                            details.bankName = e.target.selectedOptions[0]?.text?.split(' - ')[1] || ''
+                            handleInputChange('paymentDetails', JSON.stringify(details))
+                          }}
+                          value={db.parsePaymentDetails('transfer', newDonation.paymentDetails)?.bankCode || ''}
+                          style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                        >
+                          <option value="">בחר בנק</option>
+                          <option value="10">10 - בנק לאומי</option>
+                          <option value="11">11 - בנק דיסקונט</option>
+                          <option value="12">12 - בנק הפועלים</option>
+                          <option value="13">13 - בנק איגוד</option>
+                          <option value="14">14 - בנק אוצר החייל</option>
+                          <option value="15">15 - בנק ירושלים</option>
+                          <option value="16">16 - בנק מרכנתיל</option>
+                          <option value="17">17 - בנק מזרחי טפחות</option>
+                          <option value="18">18 - בנק הבינלאומי</option>
+                          <option value="19">19 - בנק יהב</option>
+                          <option value="20">20 - בנק מסד</option>
+                          <option value="31">31 - בנק הדואר</option>
+                          <option value="99">99 - בנק אחר</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>מספר סניף:</label>
+                        <input
+                          type="text"
+                          placeholder="מספר סניף"
+                          maxLength={3}
+                          onChange={(e) => {
+                            const details = db.parsePaymentDetails('transfer', newDonation.paymentDetails) || {}
+                            details.branchNumber = e.target.value
+                            handleInputChange('paymentDetails', JSON.stringify(details))
+                          }}
+                          value={db.parsePaymentDetails('transfer', newDonation.paymentDetails)?.branchNumber || ''}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>מספר חשבון:</label>
+                        <input
+                          type="text"
+                          placeholder="מספר חשבון"
+                          onChange={(e) => {
+                            const details = db.parsePaymentDetails('transfer', newDonation.paymentDetails) || {}
+                            details.accountNumber = e.target.value
+                            handleInputChange('paymentDetails', JSON.stringify(details))
+                          }}
+                          value={db.parsePaymentDetails('transfer', newDonation.paymentDetails)?.accountNumber || ''}
+                        />
+                      </div>
+                    </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>תאריך העברה:</label>
+                        <input
+                          type="date"
+                          onChange={(e) => {
+                            const details = db.parsePaymentDetails('transfer', newDonation.paymentDetails) || {}
+                            details.transferDate = e.target.value
+                            handleInputChange('paymentDetails', JSON.stringify(details))
+                          }}
+                          value={db.parsePaymentDetails('transfer', newDonation.paymentDetails)?.transferDate || ''}
+                        />
+                      </div>
+                      <div className="form-group">
+                        {/* שדה ריק לאיזון */}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {newDonation.method === 'credit' && (
+                  <div>
+                    <h5 style={{ margin: '0 0 10px 0', color: '#666', fontSize: '14px' }}>💳 פרטי האשראי</h5>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label>4 ספרות אחרונות:</label>
+                        <input
+                          type="text"
+                          placeholder="1234"
+                          maxLength={4}
+                          onChange={(e) => {
+                            const details = db.parsePaymentDetails('credit', newDonation.paymentDetails) || {}
+                            details.lastFourDigits = e.target.value
+                            handleInputChange('paymentDetails', JSON.stringify(details))
+                          }}
+                          value={db.parsePaymentDetails('credit', newDonation.paymentDetails)?.lastFourDigits || ''}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>מספר עסקה:</label>
+                        <input
+                          type="text"
+                          placeholder="מספר עסקה"
+                          onChange={(e) => {
+                            const details = db.parsePaymentDetails('credit', newDonation.paymentDetails) || {}
+                            details.transactionNumber = e.target.value
+                            handleInputChange('paymentDetails', JSON.stringify(details))
+                          }}
+                          value={db.parsePaymentDetails('credit', newDonation.paymentDetails)?.transactionNumber || ''}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {newDonation.method === 'other' && (
+                  <div>
+                    <h5 style={{ margin: '0 0 10px 0', color: '#666', fontSize: '14px' }}>❓ פרטים נוספים</h5>
+                    <div className="form-group">
+                      <label>הסבר:</label>
+                      <textarea
+                        placeholder="הסבר על אמצעי התשלום"
+                        rows={3}
+                        onChange={(e) => {
+                          const details = { description: e.target.value }
+                          handleInputChange('paymentDetails', JSON.stringify(details))
+                        }}
+                        value={db.parsePaymentDetails('other', newDonation.paymentDetails)?.description || ''}
+                        style={{
+                          width: '100%',
+                          padding: '8px',
+                          border: '1px solid #ddd',
+                          borderRadius: '4px',
+                          fontSize: '14px',
+                          resize: 'vertical'
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="form-row">
               <div className="form-group">
@@ -454,6 +701,7 @@ function DonationsPage() {
                       amount: 0,
                       donationDate: '',
                       method: 'cash',
+                      paymentDetails: '',
                       phone: '',
                       address: '',
                       notes: '',
@@ -504,7 +752,10 @@ function DonationsPage() {
                     <td>
                       <button
                         onClick={() => {
-                          setNewDonation(donation)
+                          setNewDonation({
+                            ...donation,
+                            paymentDetails: donation.paymentDetails || ''
+                          })
                           setEditingId(donation.id)
                         }}
                         style={{

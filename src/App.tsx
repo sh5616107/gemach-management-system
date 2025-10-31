@@ -6,6 +6,7 @@ import DonationsPage from './pages/DonationsPage'
 import SettingsPage from './pages/SettingsPage'
 import HelpPage from './pages/HelpPage'
 import BorrowerReportPage from './pages/BorrowerReportPage'
+import StatisticsPage from './pages/StatisticsPage'
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/deposits" element={<DepositsPage />} />
         <Route path="/donations" element={<DonationsPage />} />
         <Route path="/borrower-report" element={<BorrowerReportPage />} />
+        <Route path="/statistics" element={<StatisticsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/help" element={<HelpPage />} />
       </Routes>

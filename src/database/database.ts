@@ -28,10 +28,35 @@ export interface DatabaseLoan {
   autoPaymentDay?: number // יום בחודש לפרעון אוטומטי
   autoPaymentStartDate?: string // תאריך תחילת פרעון אוטומטי
   autoPaymentFrequency?: number // תדירות פרעון בחודשים (1=כל חודש, 2=כל חודשיים וכו')
+  loanPaymentMethod?: 'cash' | 'transfer' | 'check' | 'credit' | 'other' // אמצעי מתן ההלוואה
+  loanPaymentDetails?: string // פרטי אמצעי התשלום (JSON string)
   notes: string
   guarantor1: string
   guarantor2: string
   status: 'active' | 'completed' | 'overdue' | 'reminder_sent'
+}
+
+// פרטי אמצעי תשלום
+export interface CheckDetails {
+  checkNumber: string
+  bank: string
+  branch: string
+  dueDate: string
+}
+
+export interface TransferDetails {
+  referenceNumber: string
+  receivingBank: string
+  transferDate: string
+}
+
+export interface CreditDetails {
+  lastFourDigits: string
+  transactionNumber: string
+}
+
+export interface OtherDetails {
+  description: string
 }
 
 export interface DatabasePayment {
@@ -40,6 +65,8 @@ export interface DatabasePayment {
   amount: number
   date: string
   type: 'loan' | 'payment'
+  paymentMethod?: 'cash' | 'transfer' | 'check' | 'credit' | 'other' // אמצעי התשלום
+  paymentDetails?: string // פרטי אמצעי התשלום (JSON string)
   notes: string
 }
 
@@ -56,6 +83,10 @@ export interface DatabaseDeposit {
   status: 'active' | 'withdrawn'
   withdrawnAmount?: number
   withdrawnDate?: string
+  depositPaymentMethod?: 'cash' | 'transfer' | 'check' | 'credit' | 'other' // אמצעי קבלת ההפקדה
+  depositPaymentDetails?: string // פרטי אמצעי התשלום (JSON string)
+  withdrawalPaymentMethod?: 'cash' | 'transfer' | 'check' | 'credit' | 'other' // אמצעי משיכת ההפקדה
+  withdrawalPaymentDetails?: string // פרטי אמצעי התשלום למשיכה (JSON string)
 }
 
 export interface DatabaseDonation {
@@ -64,7 +95,8 @@ export interface DatabaseDonation {
   donorLastName: string
   amount: number
   donationDate: string
-  method: 'cash' | 'transfer' | 'check' | 'other'
+  method: 'cash' | 'transfer' | 'check' | 'credit' | 'other'
+  paymentDetails?: string // פרטי אמצעי התשלום (JSON string)
   phone: string
   address: string
   notes: string
@@ -90,6 +122,8 @@ export interface DatabaseSettings {
   // הגדרות תאריכים עבריים
   showHebrewDates: boolean // הצגת תאריכים עבריים
   showDateWarnings: boolean // הצגת אזהרות חגים ושבתות
+  // הגדרות מעקב אמצעי תשלום
+  trackPaymentMethods: boolean // מעקב אחרי אמצעי תשלום
 }
 
 interface DatabaseFile {
@@ -129,7 +163,8 @@ class GemachDatabase {
       enableRecurringPayments: true,
       requireIdNumber: false, // כברירת מחדל לא חובה - מתאים לשימוש אישי
       showHebrewDates: false,
-      showDateWarnings: true
+      showDateWarnings: true,
+      trackPaymentMethods: true
     }
   }
 
@@ -264,6 +299,10 @@ class GemachDatabase {
           showHebrewDates: false,
           showDateWarnings: true
         }
+      }
+      // הוספת הגדרה חדשה למעקב אמצעי תשלום
+      if (this.dataFile.settings.trackPaymentMethods === undefined) {
+        this.dataFile.settings.trackPaymentMethods = false
       }
       this.saveData()
       return true
@@ -1049,7 +1088,8 @@ class GemachDatabase {
         enableRecurringPayments: false,
         requireIdNumber: false,
         showHebrewDates: false,
-        showDateWarnings: true
+        showDateWarnings: true,
+        trackPaymentMethods: true
       }
     }
     this.saveData()
@@ -1325,6 +1365,131 @@ class GemachDatabase {
     })
 
     return pendingLoans
+  }
+
+  // פונקציות עזר לאמצעי תשלום
+  getPaymentMethodIcon(method?: string): string {
+    switch (method) {
+      case 'cash': return '💵'
+      case 'transfer': return '🏦'
+      case 'check': return '📝'
+      case 'credit': return '💳'
+      case 'other': return '❓'
+      default: return '💰'
+    }
+  }
+
+  getPaymentMethodName(method?: string): string {
+    switch (method) {
+      case 'cash': return 'מזומן'
+      case 'transfer': return 'העברה בנקאית'
+      case 'check': return 'צ\'ק'
+      case 'credit': return 'אשראי'
+      case 'other': return 'אחר'
+      default: return 'לא צוין'
+    }
+  }
+
+  getPaymentMethodDisplay(method?: string): string {
+    return `${this.getPaymentMethodIcon(method)} ${this.getPaymentMethodName(method)}`
+  }
+
+  // פונקציות לטיפול בפרטי אמצעי תשלום
+  parsePaymentDetails(method?: string, detailsJson?: string): any {
+    if (!detailsJson || !method) return null
+    
+    try {
+      return JSON.parse(detailsJson)
+    } catch {
+      return null
+    }
+  }
+
+  formatPaymentDetails(method?: string, details?: any): string {
+    if (!method || !details) return ''
+    
+    switch (method) {
+      case 'check':
+        const checkDetails = details as CheckDetails
+        return `צ'ק ${checkDetails.checkNumber} | ${checkDetails.bank} סניף ${checkDetails.branch}`
+      
+      case 'transfer':
+        const transferDetails = details as TransferDetails
+        return `אסמכתא ${transferDetails.referenceNumber} | ${transferDetails.receivingBank}`
+      
+      case 'credit':
+        const creditDetails = details as CreditDetails
+        return `כרטיס ****${creditDetails.lastFourDigits} | עסקה ${creditDetails.transactionNumber}`
+      
+      case 'other':
+        const otherDetails = details as OtherDetails
+        return otherDetails.description
+      
+      default:
+        return ''
+    }
+  }
+
+  getPaymentDetailsDisplay(method?: string, detailsJson?: string): string {
+    const details = this.parsePaymentDetails(method, detailsJson)
+    return this.formatPaymentDetails(method, details)
+  }
+
+  // סטטיסטיקות אמצעי תשלום
+  getPaymentMethodStats() {
+    const payments = this.dataFile.payments.filter(p => p.type === 'payment')
+    const loans = this.dataFile.loans
+    
+    const stats = {
+      payments: {
+        cash: 0,
+        transfer: 0,
+        check: 0,
+        credit: 0,
+        other: 0,
+        unspecified: 0
+      },
+      loans: {
+        cash: 0,
+        transfer: 0,
+        check: 0,
+        credit: 0,
+        other: 0,
+        unspecified: 0
+      },
+      paymentAmounts: {
+        cash: 0,
+        transfer: 0,
+        check: 0,
+        credit: 0,
+        other: 0,
+        unspecified: 0
+      },
+      loanAmounts: {
+        cash: 0,
+        transfer: 0,
+        check: 0,
+        credit: 0,
+        other: 0,
+        unspecified: 0
+      }
+    }
+
+    // ספירת פרעונות
+    payments.forEach(payment => {
+      const method = payment.paymentMethod || 'unspecified'
+      stats.payments[method as keyof typeof stats.payments]++
+      stats.paymentAmounts[method as keyof typeof stats.paymentAmounts] += payment.amount
+    })
+
+    // ספירת הלוואות
+    loans.forEach(loan => {
+      const method = loan.loanPaymentMethod || 'unspecified'
+      stats.loans[method as keyof typeof stats.loans]++
+      stats.loanAmounts[method as keyof typeof stats.loanAmounts] += loan.amount
+    })
+
+    return stats
   }
 
   // פונקציה לבדיקה מהירה של הגדרות
@@ -1622,6 +1787,160 @@ class GemachDatabase {
     if (needsSave) {
       console.log('מעדכן הלוואות עם תאריכי הלוואה...')
       this.saveData()
+    }
+  }
+
+  // סטטיסטיקות אמצעי תשלום
+  getPaymentMethodStatistics() {
+    // וודא שהנתונים נטענו
+    if (!this.dataFile) {
+      this.loadData()
+    }
+
+    const stats = {
+      loans: { // הלוואות שניתנו
+        cash: { count: 0, amount: 0 },
+        transfer: { count: 0, amount: 0 },
+        check: { count: 0, amount: 0 },
+        credit: { count: 0, amount: 0 },
+        other: { count: 0, amount: 0 },
+        unknown: { count: 0, amount: 0 }
+      },
+      payments: { // פרעונות שהתקבלו
+        cash: { count: 0, amount: 0 },
+        transfer: { count: 0, amount: 0 },
+        check: { count: 0, amount: 0 },
+        credit: { count: 0, amount: 0 },
+        other: { count: 0, amount: 0 },
+        unknown: { count: 0, amount: 0 }
+      },
+      deposits: { // הפקדות שהתקבלו
+        cash: { count: 0, amount: 0 },
+        transfer: { count: 0, amount: 0 },
+        check: { count: 0, amount: 0 },
+        credit: { count: 0, amount: 0 },
+        other: { count: 0, amount: 0 },
+        unknown: { count: 0, amount: 0 }
+      },
+      withdrawals: { // משיכות הפקדות ששולמו
+        cash: { count: 0, amount: 0 },
+        transfer: { count: 0, amount: 0 },
+        check: { count: 0, amount: 0 },
+        credit: { count: 0, amount: 0 },
+        other: { count: 0, amount: 0 },
+        unknown: { count: 0, amount: 0 }
+      },
+      donations: { // תרומות שהתקבלו
+        cash: { count: 0, amount: 0 },
+        transfer: { count: 0, amount: 0 },
+        check: { count: 0, amount: 0 },
+        credit: { count: 0, amount: 0 },
+        other: { count: 0, amount: 0 },
+        unknown: { count: 0, amount: 0 }
+      }
+    }
+
+    // סטטיסטיקות הלוואות
+    if (this.dataFile.loans) {
+      this.dataFile.loans.forEach((loan: DatabaseLoan) => {
+        const method = loan.loanPaymentMethod || 'unknown'
+        if (stats.loans[method as keyof typeof stats.loans]) {
+          stats.loans[method as keyof typeof stats.loans].count++
+          stats.loans[method as keyof typeof stats.loans].amount += loan.amount
+        }
+      })
+    }
+
+    // סטטיסטיקות פרעונות
+    if (this.dataFile.payments) {
+      this.dataFile.payments.filter((p: DatabasePayment) => p.type === 'payment').forEach((payment: DatabasePayment) => {
+        const method = payment.paymentMethod || 'unknown'
+        if (stats.payments[method as keyof typeof stats.payments]) {
+          stats.payments[method as keyof typeof stats.payments].count++
+          stats.payments[method as keyof typeof stats.payments].amount += payment.amount
+        }
+      })
+    }
+
+    // סטטיסטיקות הפקדות
+    if (this.dataFile.deposits) {
+      this.dataFile.deposits.forEach((deposit: DatabaseDeposit) => {
+        const method = deposit.depositPaymentMethod || 'unknown'
+        if (stats.deposits[method as keyof typeof stats.deposits]) {
+          stats.deposits[method as keyof typeof stats.deposits].count++
+          stats.deposits[method as keyof typeof stats.deposits].amount += deposit.amount
+        }
+      })
+
+      // סטטיסטיקות משיכות הפקדות
+      this.dataFile.deposits.filter((d: DatabaseDeposit) => d.status === 'withdrawn').forEach((deposit: DatabaseDeposit) => {
+        const method = deposit.withdrawalPaymentMethod || 'unknown'
+        const amount = deposit.withdrawnAmount || deposit.amount
+        if (stats.withdrawals[method as keyof typeof stats.withdrawals]) {
+          stats.withdrawals[method as keyof typeof stats.withdrawals].count++
+          stats.withdrawals[method as keyof typeof stats.withdrawals].amount += amount
+        }
+      })
+    }
+
+    // סטטיסטיקות תרומות
+    if (this.dataFile.donations) {
+      this.dataFile.donations.forEach((donation: DatabaseDonation) => {
+        const method = donation.method || 'unknown'
+        if (stats.donations[method as keyof typeof stats.donations]) {
+          stats.donations[method as keyof typeof stats.donations].count++
+          stats.donations[method as keyof typeof stats.donations].amount += donation.amount
+        }
+      })
+    }
+
+    return stats
+  }
+
+  // סיכום כספי לפי אמצעי תשלום
+  getPaymentMethodSummary() {
+    const stats = this.getPaymentMethodStatistics()
+    const summary = {
+      cash: { in: 0, out: 0, net: 0 }, // מזומן
+      transfer: { in: 0, out: 0, net: 0 }, // העברות
+      check: { in: 0, out: 0, net: 0 }, // צ'קים
+      credit: { in: 0, out: 0, net: 0 }, // אשראי
+      other: { in: 0, out: 0, net: 0 }, // אחר
+      unknown: { in: 0, out: 0, net: 0 } // לא ידוע
+    }
+
+    // כספים שנכנסו (פרעונות + הפקדות + תרומות)
+    Object.keys(summary).forEach(method => {
+      const key = method as keyof typeof summary
+      summary[key].in = 
+        stats.payments[key].amount + 
+        stats.deposits[key].amount + 
+        stats.donations[key].amount
+      
+      // כספים שיצאו (הלוואות + משיכות הפקדות)
+      summary[key].out = 
+        stats.loans[key].amount + 
+        stats.withdrawals[key].amount
+      
+      // נטו
+      summary[key].net = summary[key].in - summary[key].out
+    })
+
+    return summary
+  }
+
+  // פרטי אמצעי תשלום מפורטים
+  getDetailedPaymentMethodReport() {
+    const stats = this.getPaymentMethodStatistics()
+    
+    return {
+      summary: this.getPaymentMethodSummary(),
+      detailed: stats,
+      totals: {
+        totalIn: Object.values(this.getPaymentMethodSummary()).reduce((sum, method) => sum + method.in, 0),
+        totalOut: Object.values(this.getPaymentMethodSummary()).reduce((sum, method) => sum + method.out, 0),
+        totalNet: Object.values(this.getPaymentMethodSummary()).reduce((sum, method) => sum + method.net, 0)
+      }
     }
   }
 }

@@ -825,6 +825,11 @@ function HomePage() {
             <h2 className="category-title">הגדרות</h2>
           </div>
 
+          <div className="category" onClick={() => navigate('/statistics')}>
+            <div className="category-image">📊</div>
+            <h2 className="category-title">סטטיסטיקות</h2>
+          </div>
+
           <div className="category" onClick={() => navigate('/help')}>
             <div className="category-image">📖</div>
             <h2 className="category-title">מדריך שימוש</h2>

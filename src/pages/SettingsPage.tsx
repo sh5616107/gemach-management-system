@@ -80,7 +80,8 @@ function SettingsPage() {
     enableRecurringPayments: false,
     requireIdNumber: false,
     showHebrewDates: false,
-    showDateWarnings: true
+    showDateWarnings: true,
+    trackPaymentMethods: false
   })
 
   useEffect(() => {
@@ -158,7 +159,8 @@ function SettingsPage() {
           enableRecurringPayments: false,
           requireIdNumber: false,
           showHebrewDates: false,
-          showDateWarnings: true
+          showDateWarnings: true,
+          trackPaymentMethods: false
         }
         setSettings(defaultSettings)
         db.updateSettings(defaultSettings)
@@ -315,7 +317,17 @@ function SettingsPage() {
                 </small>
               </div>
               <div className="form-group">
-                {/* שדה ריק לאיזון */}
+                <label>מעקב אמצעי תשלום:</label>
+                <select
+                  value={settings.trackPaymentMethods ? 'true' : 'false'}
+                  onChange={(e) => handleSettingChange('trackPaymentMethods', e.target.value === 'true')}
+                >
+                  <option value="false">כבוי</option>
+                  <option value="true">מופעל</option>
+                </select>
+                <small style={{ display: 'block', color: '#666', marginTop: '5px' }}>
+                  מעקב מפורט אחרי אמצעי תשלום (מזומן, העברה, צ'ק, אשראי) בהלוואות, פרעונות, הפקדות ותרומות. מאפשר יצירת סטטיסטיקות מפורטות.
+                </small>
               </div>
             </div>
           </div>

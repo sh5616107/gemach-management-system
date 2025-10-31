@@ -664,7 +664,22 @@ function DepositsPage() {
               </div>
               <div>
                 <label style="display: block; margin-bottom: 3px; font-size: 12px;">בנק:</label>
-                <input type="text" id="bank" placeholder="שם הבנק" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" />
+                <select id="checkBankSelect" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                  <option value="">בחר בנק</option>
+                  <option value="10">10 - בנק לאומי</option>
+                  <option value="11">11 - בנק דיסקונט</option>
+                  <option value="12">12 - בנק הפועלים</option>
+                  <option value="13">13 - בנק איגוד</option>
+                  <option value="14">14 - בנק אוצר החייל</option>
+                  <option value="15">15 - בנק ירושלים</option>
+                  <option value="16">16 - בנק מרכנתיל</option>
+                  <option value="17">17 - בנק מזרחי טפחות</option>
+                  <option value="18">18 - בנק הבינלאומי</option>
+                  <option value="19">19 - בנק יהב</option>
+                  <option value="20">20 - בנק מסד</option>
+                  <option value="31">31 - בנק הדואר</option>
+                  <option value="99">99 - בנק אחר</option>
+                </select>
               </div>
             </div>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
@@ -757,8 +772,13 @@ function DepositsPage() {
           
           switch (method) {
             case 'check':
+              const checkBankSelect = container.querySelector('#checkBankSelect') as HTMLSelectElement
+              const selectedCheckBankCode = checkBankSelect?.value || ''
+              const selectedCheckBankName = checkBankSelect?.selectedOptions[0]?.text?.split(' - ')[1] || ''
+              
               details.checkNumber = (container.querySelector('#checkNumber') as HTMLInputElement)?.value || ''
-              details.bank = (container.querySelector('#bank') as HTMLInputElement)?.value || ''
+              details.bankCode = selectedCheckBankCode
+              details.bankName = selectedCheckBankName
               details.branch = (container.querySelector('#branch') as HTMLInputElement)?.value || ''
               details.dueDate = (container.querySelector('#dueDate') as HTMLInputElement)?.value || ''
               break
@@ -990,16 +1010,32 @@ function DepositsPage() {
                       </div>
                       <div className="form-group">
                         <label>בנק:</label>
-                        <input
-                          type="text"
-                          placeholder="שם הבנק"
+                        <select
                           onChange={(e) => {
                             const details = db.parsePaymentDetails('check', newDeposit.depositPaymentDetails) || {}
-                            details.bank = e.target.value
+                            const selectedBankCode = e.target.value
+                            const selectedBankName = e.target.selectedOptions[0]?.text?.split(' - ')[1] || ''
+                            details.bankCode = selectedBankCode
+                            details.bankName = selectedBankName
                             handleInputChange('depositPaymentDetails', JSON.stringify(details))
                           }}
-                          value={db.parsePaymentDetails('check', newDeposit.depositPaymentDetails)?.bank || ''}
-                        />
+                          value={db.parsePaymentDetails('check', newDeposit.depositPaymentDetails)?.bankCode || ''}
+                        >
+                          <option value="">בחר בנק</option>
+                          <option value="10">10 - בנק לאומי</option>
+                          <option value="11">11 - בנק דיסקונט</option>
+                          <option value="12">12 - בנק הפועלים</option>
+                          <option value="13">13 - בנק איגוד</option>
+                          <option value="14">14 - בנק אוצר החייל</option>
+                          <option value="15">15 - בנק ירושלים</option>
+                          <option value="16">16 - בנק מרכנתיל</option>
+                          <option value="17">17 - בנק מזרחי טפחות</option>
+                          <option value="18">18 - בנק הבינלאומי</option>
+                          <option value="19">19 - בנק יהב</option>
+                          <option value="20">20 - בנק מסד</option>
+                          <option value="31">31 - בנק הדואר</option>
+                          <option value="99">99 - בנק אחר</option>
+                        </select>
                       </div>
                     </div>
                     <div className="form-row">

@@ -39,7 +39,9 @@ export interface DatabaseLoan {
 // פרטי אמצעי תשלום
 export interface CheckDetails {
   checkNumber: string
-  bank: string
+  bank?: string // שדה ישן לתאימות לאחור
+  bankCode?: string // קוד בנק חדש
+  bankName?: string // שם בנק חדש
   branch: string
   dueDate: string
 }
@@ -904,45 +906,7 @@ class GemachDatabase {
     }
   }
 
-  // סטטיסטיקות
-  getStats() {
-    const allLoans = this.dataFile.loans
-    const activeLoans = this.getActiveLoans()
-    const futureLoans = this.getFutureLoans()
-    const deposits = this.dataFile.deposits
-    const donations = this.dataFile.donations
 
-    const totalLoansAmount = allLoans.reduce((sum, loan) => sum + loan.amount, 0)
-    const activeLoansAmount = activeLoans.reduce((sum, loan) => sum + loan.amount, 0)
-    const futureLoansAmount = futureLoans.reduce((sum, loan) => sum + loan.amount, 0)
-
-    // חישוב רק הפקדות פעילות (לא נמשכו במלואן)
-    const activeDeposits = deposits.filter(deposit => deposit.status === 'active')
-    const totalDepositsAmount = activeDeposits.reduce((sum, deposit) => {
-      const remainingAmount = deposit.amount - (deposit.withdrawnAmount || 0)
-      return sum + remainingAmount
-    }, 0)
-    const totalDonationsAmount = donations.reduce((sum, donation) => sum + donation.amount, 0)
-
-    // חישוב יתרת הלוואות אמיתית (רק הלוואות פעילות, אחרי פרעונות)
-    const totalLoansBalance = activeLoans.reduce((sum, loan) => sum + this.getLoanBalance(loan.id), 0)
-
-    return {
-      totalLoans: allLoans.length,
-      activeLoans: activeLoans.length,
-      futureLoans: futureLoans.length,
-      totalDeposits: activeDeposits.length,
-      totalDonations: donations.length,
-      totalLoansAmount,
-      activeLoansAmount,
-      futureLoansAmount,
-      totalLoansBalance, // יתרה אמיתית של הלוואות פעילות בלבד
-      totalDepositsAmount,
-      totalDonationsAmount,
-      balance: totalDonationsAmount + totalDepositsAmount - totalLoansBalance, // חישוב נכון: תרומות + פקדונות - הלוואות פעילות
-      lastUpdated: this.dataFile.lastUpdated
-    }
-  }
 
   // רשימת הלוואות עם פרטי לווים
   getLoansWithBorrowers() {
@@ -1425,7 +1389,9 @@ class GemachDatabase {
         const checkDetails = details as CheckDetails
         const checkParts = []
         if (checkDetails.checkNumber) checkParts.push(`מספר צ'ק: ${checkDetails.checkNumber}`)
-        if (checkDetails.bank) checkParts.push(`בנק: ${checkDetails.bank}`)
+        if (checkDetails.bankName) checkParts.push(`בנק: ${checkDetails.bankName}`)
+        if (checkDetails.bankCode) checkParts.push(`מספר בנק: ${checkDetails.bankCode}`)
+        if (checkDetails.bank && !checkDetails.bankName) checkParts.push(`בנק: ${checkDetails.bank}`) // תאימות לאחור
         if (checkDetails.branch) checkParts.push(`סניף: ${checkDetails.branch}`)
         if (checkDetails.dueDate) checkParts.push(`תאריך פדיון: ${new Date(checkDetails.dueDate).toLocaleDateString('he-IL')}`)
         return checkParts.join('\n')
@@ -1867,9 +1833,9 @@ class GemachDatabase {
       }
     }
 
-    // סטטיסטיקות הלוואות
+    // סטטיסטיקות הלוואות (רק הלוואות פעילות, לא עתידיות)
     if (this.dataFile.loans) {
-      this.dataFile.loans.forEach((loan: DatabaseLoan) => {
+      this.getActiveLoans().forEach((loan: DatabaseLoan) => {
         const method = loan.loanPaymentMethod || 'unknown'
         if (stats.loans[method as keyof typeof stats.loans]) {
           stats.loans[method as keyof typeof stats.loans].count++
@@ -1968,6 +1934,49 @@ class GemachDatabase {
         totalOut: Object.values(this.getPaymentMethodSummary()).reduce((sum, method) => sum + method.out, 0),
         totalNet: Object.values(this.getPaymentMethodSummary()).reduce((sum, method) => sum + method.net, 0)
       }
+    }
+  }
+
+  // סטטיסטיקות כלליות לדף הבית
+  getStats() {
+    const activeLoans = this.getActiveLoans()
+    const futureLoans = this.getFutureLoans()
+    const allLoans = this.dataFile.loans
+    const deposits = this.dataFile.deposits
+    const donations = this.dataFile.donations
+
+    // חישוב סכומים
+    const totalLoansAmount = allLoans.reduce((sum, loan) => sum + loan.amount, 0)
+    const activeLoansAmount = activeLoans.reduce((sum, loan) => sum + loan.amount, 0)
+    const futureLoansAmount = futureLoans.reduce((sum, loan) => sum + loan.amount, 0)
+    const totalLoansBalance = activeLoans.reduce((sum, loan) => sum + this.getLoanBalance(loan.id), 0)
+
+    const totalDepositsAmount = deposits.filter(d => d.status === 'active').reduce((sum, deposit) => sum + deposit.amount, 0)
+    const totalDonationsAmount = donations.reduce((sum, donation) => sum + donation.amount, 0)
+
+    // חישוב יתרת הגמ"ח: כסף שיש - התחייבויות
+    const totalPayments = this.dataFile.payments
+      .filter(p => p.type === 'payment')
+      .reduce((sum, payment) => sum + payment.amount, 0)
+
+    // יתרת הגמ"ח = כסף שיש (תרומות + פקדונות) - התחייבויות (הלוואות פעילות)
+    const balance = totalDonationsAmount + totalDepositsAmount - totalLoansBalance
+
+    return {
+      totalLoans: allLoans.length,
+      activeLoans: activeLoans.length,
+      futureLoans: futureLoans.length,
+      totalDeposits: deposits.filter(d => d.status === 'active').length,
+      totalDonations: donations.length,
+      totalLoansAmount,
+      activeLoansAmount,
+      futureLoansAmount,
+      totalLoansBalance,
+      totalDepositsAmount,
+      totalDonationsAmount,
+      totalPayments,
+      balance,
+      lastUpdated: new Date().toISOString()
     }
   }
 

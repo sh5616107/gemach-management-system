@@ -488,16 +488,32 @@ function DonationsPage() {
                       </div>
                       <div className="form-group">
                         <label>בנק:</label>
-                        <input
-                          type="text"
-                          placeholder="שם הבנק"
+                        <select
                           onChange={(e) => {
                             const details = db.parsePaymentDetails('check', newDonation.paymentDetails) || {}
-                            details.bank = e.target.value
+                            const selectedBankCode = e.target.value
+                            const selectedBankName = e.target.selectedOptions[0]?.text?.split(' - ')[1] || ''
+                            details.bankCode = selectedBankCode
+                            details.bankName = selectedBankName
                             handleInputChange('paymentDetails', JSON.stringify(details))
                           }}
-                          value={db.parsePaymentDetails('check', newDonation.paymentDetails)?.bank || ''}
-                        />
+                          value={db.parsePaymentDetails('check', newDonation.paymentDetails)?.bankCode || ''}
+                        >
+                          <option value="">בחר בנק</option>
+                          <option value="10">10 - בנק לאומי</option>
+                          <option value="11">11 - בנק דיסקונט</option>
+                          <option value="12">12 - בנק הפועלים</option>
+                          <option value="13">13 - בנק איגוד</option>
+                          <option value="14">14 - בנק אוצר החייל</option>
+                          <option value="15">15 - בנק ירושלים</option>
+                          <option value="16">16 - בנק מרכנתיל</option>
+                          <option value="17">17 - בנק מזרחי טפחות</option>
+                          <option value="18">18 - בנק הבינלאומי</option>
+                          <option value="19">19 - בנק יהב</option>
+                          <option value="20">20 - בנק מסד</option>
+                          <option value="31">31 - בנק הדואר</option>
+                          <option value="99">99 - בנק אחר</option>
+                        </select>
                       </div>
                     </div>
                     <div className="form-row">

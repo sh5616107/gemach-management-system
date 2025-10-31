@@ -77,6 +77,7 @@ function HomePage() {
     totalLoansBalance: 0,
     totalDepositsAmount: 0,
     totalDonationsAmount: 0,
+    totalPayments: 0,
     balance: 0,
     lastUpdated: ''
   })
@@ -868,10 +869,10 @@ function HomePage() {
               {stats.balance >= 0 ? '💰 יתרה כוללת: ' : '⚠️ גרעון: '}{db.formatCurrency(Math.abs(stats.balance))}
             </h4>
             <p style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
-              {stats.balance >= 0 ? 'הגמ"ח במצב חיובי' : 'הגמ"ח במצב גרעון - יש יותר התחייבויות מאשר כסף זמין'}
+              {stats.balance >= 0 ? 'הגמ"ח במצב יתרה חיובית' : 'הגמ"ח במצב גרעון - יש יותר התחייבויות מכסף זמין'}
             </p>
             <p style={{ fontSize: '11px', color: '#888', marginTop: '3px', fontStyle: 'italic' }}>
-              חישוב: תרומות ({db.formatCurrency(stats.totalDonationsAmount)}) + פקדונות פעילות ({db.formatCurrency(stats.totalDepositsAmount)}) - הלוואות שניתנו ({db.formatCurrency(stats.totalLoansBalance)})
+              חישוב: כסף זמין [תרומות ({db.formatCurrency(stats.totalDonationsAmount)}) + פקדונות ({db.formatCurrency(stats.totalDepositsAmount)})] - התחייבויות [הלוואות פעילות ({db.formatCurrency(stats.totalLoansBalance)})]
             </p>
             <p style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
               עדכון אחרון: {stats.lastUpdated ? new Date(stats.lastUpdated).toLocaleString('he-IL') : 'לא זמין'}

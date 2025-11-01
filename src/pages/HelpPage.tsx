@@ -287,6 +287,31 @@ function HelpPage() {
                         </section>
 
                         <section style={{ marginBottom: '30px' }}>
+                            <h3 style={{ color: '#9b59b6', borderBottom: '2px solid #9b59b6', paddingBottom: '10px' }}>
+                                🔄 עדכונים אוטומטיים
+                            </h3>
+                            <div style={{ background: '#f8f4fd', padding: '15px', borderRadius: '8px', margin: '10px 0' }}>
+                                <h4>🚀 איך זה עובד:</h4>
+                                <ul>
+                                    <li><strong>בדיקה אוטומטית:</strong> התוכנה בודקת עדכונים בכל פתיחה</li>
+                                    <li><strong>הורדה ברקע:</strong> אם יש עדכון, הוא מתחיל להוריד אוטומטית</li>
+                                    <li><strong>התקנה בבחירה:</strong> אתה בוחר מתי להפעיל מחדש ולהתקין</li>
+                                    <li><strong>מה חדש:</strong> תראה מה השתנה בגרסה החדשה</li>
+                                </ul>
+
+                                <h4 style={{ marginTop: '15px' }}>🔧 בדיקה ידנית:</h4>
+                                <ul>
+                                    <li><strong>דרך התפריט:</strong> עזרה → בדוק עדכונים</li>
+                                    <li><strong>דרך ההגדרות:</strong> כפתור "🔄 בדוק עדכונים"</li>
+                                </ul>
+
+                                <div style={{ background: '#e8f4fd', padding: '10px', borderRadius: '5px', margin: '10px 0' }}>
+                                    <p><strong>💡 טיפ:</strong> העדכונים אוטומטיים זמינים רק בגרסת ה-EXE. בדפדפן תצטרך להוריד גרסה חדשה ידנית.</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section style={{ marginBottom: '30px' }}>
                             <h3 style={{ color: '#f39c12', borderBottom: '2px solid #f39c12', paddingBottom: '10px' }}>
                                 📊 הבנת הנתונים
                             </h3>

@@ -1,8 +1,72 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron')
+const { autoUpdater } = require('electron-updater')
 const path = require('path')
 const isDev = require('electron-is-dev')
 
 let mainWindow
+
+// הגדרות auto-updater
+if (!isDev) {
+  // הגדר את auto-updater רק בפרודקשן
+  autoUpdater.checkForUpdatesAndNotify()
+  
+  // לוג עדכונים
+  autoUpdater.logger = require('electron-log')
+  autoUpdater.logger.transports.file.level = 'info'
+  
+  // אירועי עדכון
+  autoUpdater.on('checking-for-update', () => {
+    console.log('בודק עדכונים...')
+  })
+  
+  autoUpdater.on('update-available', (info) => {
+    console.log('עדכון זמין:', info.version)
+    
+    // הצג הודעה למשתמש
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'עדכון זמין',
+      message: `גרסה חדשה זמינה: ${info.version}`,
+      detail: 'העדכון יורד ברקע. תקבל הודעה כשיהיה מוכן להתקנה.',
+      buttons: ['אישור']
+    })
+  })
+  
+  autoUpdater.on('update-not-available', (info) => {
+    console.log('אין עדכונים זמינים')
+  })
+  
+  autoUpdater.on('error', (err) => {
+    console.log('שגיאה בעדכון:', err)
+  })
+  
+  autoUpdater.on('download-progress', (progressObj) => {
+    let log_message = "מהירות הורדה: " + progressObj.bytesPerSecond
+    log_message = log_message + ' - הורד ' + progressObj.percent + '%'
+    log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')'
+    console.log(log_message)
+  })
+  
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('עדכון הורד:', info.version)
+    
+    // הצג הודעה עם אפשרות להפעיל מחדש
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'עדכון מוכן',
+      message: `עדכון לגרסה ${info.version} הורד בהצלחה!`,
+      detail: 'לחץ "הפעל מחדש" כדי להתקין את העדכון, או "מאוחר יותר" כדי להמשיך לעבוד.',
+      buttons: ['הפעל מחדש', 'מאוחר יותר'],
+      defaultId: 0,
+      cancelId: 1
+    }).then((result) => {
+      if (result.response === 0) {
+        // המשתמש בחר להפעיל מחדש
+        autoUpdater.quitAndInstall()
+      }
+    })
+  })
+}
 
 function createWindow() {
   // יצירת חלון הדפדפן
@@ -187,13 +251,20 @@ function createWindow() {
       label: 'עזרה',
       submenu: [
         {
+          label: 'בדוק עדכונים',
+          click: () => {
+            checkForUpdates()
+          }
+        },
+        { type: 'separator' },
+        {
           label: 'אודות מערכת ניהול גמ"ח',
           click: () => {
             require('electron').dialog.showMessageBox(mainWindow, {
               type: 'info',
               title: 'אודות',
               message: 'מערכת ניהול גמ"ח',
-              detail: 'גרסה 2.4.0\nמערכת מקיפה לניהול גמילות חסדים\nכולל: הלוואות, פקדונות, תרומות ודוחות\nעם תמיכה מלאה בתאריכים עבריים\nפותח עבור קהילת הגמ"חים בישראל 🇮🇱'
+              detail: 'גרסה 2.5.0\nמערכת מקיפה לניהול גמילות חסדים\nכולל: הלוואות, פקדונות, תרומות ודוחות\nעם תמיכה מלאה בתאריכים עבריים\nועדכונים אוטומטיים!\nפותח עבור קהילת הגמ"חים בישראל 🇮🇱'
             })
           }
         }
@@ -254,8 +325,47 @@ ipcMain.handle('print-to-pdf', async () => {
   }
 })
 
+// פונקציה לבדיקת עדכונים ידנית
+function checkForUpdates() {
+  if (isDev) {
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'בדיקת עדכונים',
+      message: 'בדיקת עדכונים זמינה רק בגרסת הפרודקשן',
+      buttons: ['אישור']
+    })
+    return
+  }
+  
+  autoUpdater.checkForUpdatesAndNotify()
+  
+  // הצג הודעה שהבדיקה התחילה
+  dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: 'בדיקת עדכונים',
+    message: 'בודק עדכונים...',
+    detail: 'תקבל הודעה אם יימצא עדכון זמין.',
+    buttons: ['אישור']
+  })
+}
+
+// IPC handler לבדיקת עדכונים מהממשק
+ipcMain.handle('check-for-updates', async () => {
+  checkForUpdates()
+  return { success: true }
+})
+
 // האפליקציה מוכנה
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  createWindow()
+  
+  // בדוק עדכונים בפתיחה (רק בפרודקשן)
+  if (!isDev) {
+    setTimeout(() => {
+      autoUpdater.checkForUpdatesAndNotify()
+    }, 3000) // המתן 3 שניות אחרי פתיחה
+  }
+})
 
 // יציאה כשכל החלונות נסגרו
 app.on('window-all-closed', () => {

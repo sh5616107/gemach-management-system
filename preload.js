@@ -6,6 +6,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   print: () => ipcRenderer.invoke('print-document'),
   printToPDF: () => ipcRenderer.invoke('print-to-pdf'),
 
+  // פונקציות עדכון
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+
   // בדיקה אם זה Electron
   isElectron: () => true,
 

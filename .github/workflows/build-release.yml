@@ -49,7 +49,7 @@ jobs:
       run: npm run postinstall
       
     - name: Build Electron app
-      run: npm run dist
+      run: npm run build-electron
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         

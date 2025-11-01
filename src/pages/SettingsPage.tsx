@@ -451,6 +451,26 @@ function SettingsPage() {
             >
               🔄 אפס לברירת מחדל
             </button>
+            
+            {/* כפתור בדיקת עדכונים - רק ב-Electron */}
+            {(window as any).electronAPI && (
+              <button
+                className="btn"
+                onClick={async () => {
+                  try {
+                    await (window as any).electronAPI.checkForUpdates()
+                    showNotification('🔍 בודק עדכונים...', 'info')
+                  } catch (error) {
+                    showNotification('❌ שגיאה בבדיקת עדכונים', 'error')
+                  }
+                }}
+                style={{ backgroundColor: '#9b59b6', color: 'white' }}
+                title="בדוק אם יש גרסה חדשה זמינה"
+              >
+                🔄 בדוק עדכונים
+              </button>
+            )}
+            
             <button
               className="btn"
               onClick={() => navigate('/')}

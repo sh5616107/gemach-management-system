@@ -1968,24 +1968,7 @@ function LoansPage() {
 
   // פונקציות למודל עדכון פרטי תשלום
   const openPaymentDetailsModal = (type: 'loan' | 'payment', itemId: number) => {
-    // איפוס הטופס
-    setPaymentDetailsForm({
-      paymentMethod: '',
-      referenceNumber: '',
-      bankCode: '',
-      bankName: '',
-      branchNumber: '',
-      accountNumber: '',
-      transferDate: getTodayString(),
-      checkNumber: '',
-      branch: '',
-      dueDate: getTodayString(),
-      lastFourDigits: '',
-      transactionNumber: '',
-      description: ''
-    })
-
-    // טען נתונים קיימים אם יש
+    // קודם טען נתונים קיימים
     let currentMethod = ''
     let currentDetails = ''
 
@@ -2003,21 +1986,60 @@ function LoansPage() {
       }
     }
 
-    // אם יש נתונים קיימים, טען אותם לטופס
-    if (currentMethod && currentDetails) {
-      try {
-        const details = JSON.parse(currentDetails)
-        setPaymentDetailsForm(prev => ({
-          ...prev,
-          paymentMethod: currentMethod,
-          ...details
-        }))
-      } catch {
-        setPaymentDetailsForm(prev => ({
-          ...prev,
-          paymentMethod: currentMethod
-        }))
+    // טען נתונים קיימים לטופס
+    if (currentMethod) {
+      // תמיד טען את אמצעי התשלום
+      setPaymentDetailsForm(prev => ({
+        ...prev,
+        paymentMethod: currentMethod
+      }))
+      
+      // אם יש פרטים נוספים, טען גם אותם
+      if (currentDetails) {
+        try {
+          const details = JSON.parse(currentDetails)
+          setPaymentDetailsForm(prev => ({
+            ...prev,
+            paymentMethod: currentMethod,
+            ...details
+          }))
+          
+          // אם יש קוד בנק, וודא שגם שם הבנק מעודכן
+          if (details.bankCode && !details.bankName) {
+            const selectedBank = getBankByCode(details.bankCode)
+            if (selectedBank) {
+              setPaymentDetailsForm(prev => ({
+                ...prev,
+                bankName: selectedBank.name
+              }))
+            }
+          }
+        } catch (error) {
+          console.log('שגיאה בפענוח פרטי תשלום:', error)
+          // אם יש שגיאה בפענוח, לפחות נשמור את אמצעי התשלום
+          setPaymentDetailsForm(prev => ({
+            ...prev,
+            paymentMethod: currentMethod
+          }))
+        }
       }
+    } else {
+      // אם אין אמצעי תשלום, איפוס הטופס
+      setPaymentDetailsForm({
+        paymentMethod: '',
+        referenceNumber: '',
+        bankCode: '',
+        bankName: '',
+        branchNumber: '',
+        accountNumber: '',
+        transferDate: getTodayString(),
+        checkNumber: '',
+        branch: '',
+        dueDate: getTodayString(),
+        lastFourDigits: '',
+        transactionNumber: '',
+        description: ''
+      })
     }
 
     setPaymentDetailsModal({

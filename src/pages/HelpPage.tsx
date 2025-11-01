@@ -88,6 +88,8 @@ function HelpPage() {
                                     <li>בחר הלוואה פעילה</li>
                                     <li>לחץ "הוסף פרעון"</li>
                                     <li>הזן סכום הפרעון</li>
+                                    <li>אם הופעל מעקב אמצעי תשלום - בחר אמצעי תשלום והזן פרטים</li>
+                                    <li>לחץ "📄 שובר" להפקת שובר פרעון או "📁 PDF" לשמירה (ב-Electron)</li>
                                     <li>אשר את הפעולה</li>
                                 </ul>
 
@@ -258,6 +260,24 @@ function HelpPage() {
                                     <li><strong>שמירת PDF:</strong> כפתור "📁 שמור PDF" (זמין רק ב-Electron)</li>
                                     <li><strong>תצוגה מקדימה:</strong> בדפדפנים רגילים - חלון עם כפתורי הדפסה וסגירה</li>
                                     <li><strong>תפריט הדפסה:</strong> Ctrl+P להדפסה מהירה, Ctrl+Shift+P לשמירת PDF</li>
+                                </ul>
+
+                                <h4>📄 סוגי מסמכים:</h4>
+                                <ul>
+                                    <li><strong>שטר הלוואה:</strong> מסמך רשמי להלוואה עם כל הפרטים</li>
+                                    <li><strong>שובר פרעון:</strong> אישור על קבלת תשלום עם פרטי אמצעי התשלום</li>
+                                    <li><strong>שטר הפקדה:</strong> מסמך רשמי להפקדה</li>
+                                    <li><strong>קבלה על תרומה:</strong> לצורכי מס</li>
+                                    <li><strong>דו"ח לווה:</strong> סיכום מפורט של כל הלוואות הלווה</li>
+                                </ul>
+
+                                <h4>💳 מעקב אמצעי תשלום:</h4>
+                                <ul>
+                                    <li><strong>מופעל כברירת מחדל</strong> - מאפשר מעקב מפורט אחרי אמצעי תשלום</li>
+                                    <li><strong>הלוואות מחזוריות:</strong> נוצרות ללא פרטי תשלום ודורשות השלמה</li>
+                                    <li><strong>פרעונות אוטומטיים:</strong> נוצרים ללא פרטי תשלום ודורשים השלמה</li>
+                                    <li><strong>כפתור "⚠️ השלמת פרטים":</strong> מופיע כשיש פריטים שדורשים השלמה</li>
+                                    <li><strong>שוברי פרעון:</strong> כוללים את כל פרטי אמצעי התשלום</li>
                                 </ul>
 
                                 <div style={{ background: '#e8f4fd', padding: '10px', borderRadius: '5px', margin: '10px 0' }}>

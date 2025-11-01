@@ -238,7 +238,9 @@ function HomePage() {
 
   // פונקציה לאישור הלוואה מחזורית
   const approveRecurringLoan = (loan: any) => {
-    const newLoan = db.createRecurringLoan(loan.id)
+    const newLoan = db.getSettings().trackPaymentMethods ? 
+      db.createRecurringLoanWithPaymentTracking(loan.id) : 
+      db.createRecurringLoan(loan.id)
     if (newLoan) {
       showNotification(`✅ הלוואה חדשה נוצרה עבור ${loan.borrowerName} - ${db.formatCurrency(loan.amount)}`, 'success')
     } else {
@@ -248,7 +250,9 @@ function HomePage() {
 
   // פונקציה לאישור פרעון אוטומטי
   const approveAutoPayment = (payment: any) => {
-    const success = db.executeAutoPayment(payment.id, payment.paymentAmount)
+    const success = db.getSettings().trackPaymentMethods ? 
+      db.executeAutoPaymentWithTracking(payment.id, payment.paymentAmount) : 
+      db.executeAutoPayment(payment.id, payment.paymentAmount)
     if (success) {
       showNotification(`✅ פרעון נרשם עבור ${payment.borrowerName} - ${db.formatCurrency(payment.paymentAmount)}`, 'success')
     } else {
@@ -262,14 +266,20 @@ function HomePage() {
 
     // אשר כל ההלוואות המחזוריות
     pendingRecurringLoans.forEach(loan => {
-      if (db.createRecurringLoan(loan.id)) {
+      const newLoan = db.getSettings().trackPaymentMethods ? 
+        db.createRecurringLoanWithPaymentTracking(loan.id) : 
+        db.createRecurringLoan(loan.id)
+      if (newLoan) {
         successCount++
       }
     })
 
     // אשר כל הפרעונות האוטומטיים
     pendingAutoPayments.forEach(payment => {
-      if (db.executeAutoPayment(payment.id, payment.paymentAmount)) {
+      const success = db.getSettings().trackPaymentMethods ? 
+        db.executeAutoPaymentWithTracking(payment.id, payment.paymentAmount) : 
+        db.executeAutoPayment(payment.id, payment.paymentAmount)
+      if (success) {
         successCount++
       }
     })

@@ -30,6 +30,7 @@ export interface DatabaseLoan {
   autoPaymentFrequency?: number // תדירות פרעון בחודשים (1=כל חודש, 2=כל חודשיים וכו')
   loanPaymentMethod?: 'cash' | 'transfer' | 'check' | 'credit' | 'other' // אמצעי מתן ההלוואה
   loanPaymentDetails?: string // פרטי אמצעי התשלום (JSON string)
+  paymentDetailsComplete?: boolean // האם פרטי התשלום הושלמו (למעקב אמצעי תשלום)
   notes: string
   guarantor1: string
   guarantor2: string
@@ -72,6 +73,7 @@ export interface DatabasePayment {
   type: 'loan' | 'payment'
   paymentMethod?: 'cash' | 'transfer' | 'check' | 'credit' | 'other' // אמצעי התשלום
   paymentDetails?: string // פרטי אמצעי התשלום (JSON string)
+  paymentDetailsComplete?: boolean // האם פרטי התשלום הושלמו (למעקב אמצעי תשלום)
   notes: string
 }
 
@@ -1978,6 +1980,195 @@ class GemachDatabase {
       balance,
       lastUpdated: new Date().toISOString()
     }
+  }
+
+  // פונקציות למעקב השלמת פרטי תשלום
+  
+  // קבלת הלוואות שדורשות השלמת פרטי תשלום
+  getLoansRequiringPaymentDetails(): DatabaseLoan[] {
+    const settings = this.getSettings()
+    if (!settings.trackPaymentMethods) {
+      return []
+    }
+
+    return this.dataFile.loans.filter(loan => 
+      loan.status === 'active' && 
+      loan.paymentDetailsComplete !== true &&
+      (loan.loanPaymentMethod === 'transfer' || loan.loanPaymentMethod === 'check' || !loan.loanPaymentMethod)
+    )
+  }
+
+  // קבלת פרעונות שדורשים השלמת פרטי תשלום
+  getPaymentsRequiringPaymentDetails(): DatabasePayment[] {
+    const settings = this.getSettings()
+    if (!settings.trackPaymentMethods) {
+      return []
+    }
+
+    return this.dataFile.payments.filter(payment => 
+      payment.type === 'payment' && 
+      payment.paymentDetailsComplete !== true &&
+      (payment.paymentMethod === 'transfer' || payment.paymentMethod === 'check' || !payment.paymentMethod)
+    )
+  }
+
+  // סימון השלמת פרטי תשלום להלוואה
+  markLoanPaymentDetailsComplete(loanId: number): void {
+    const loan = this.dataFile.loans.find(l => l.id === loanId)
+    if (loan) {
+      loan.paymentDetailsComplete = true
+      this.saveData()
+    }
+  }
+
+  // סימון השלמת פרטי תשלום לפרעון
+  markPaymentDetailsComplete(paymentId: number): void {
+    const payment = this.dataFile.payments.find(p => p.id === paymentId)
+    if (payment) {
+      payment.paymentDetailsComplete = true
+      this.saveData()
+    }
+  }
+
+  // עדכון פרטי תשלום להלוואה
+  updateLoanPaymentDetails(loanId: number, paymentMethod: string, paymentDetails?: string): boolean {
+    const loan = this.dataFile.loans.find(l => l.id === loanId)
+    if (!loan) return false
+
+    loan.loanPaymentMethod = paymentMethod as 'cash' | 'transfer' | 'check' | 'credit' | 'other'
+    loan.loanPaymentDetails = paymentDetails
+    loan.paymentDetailsComplete = true
+    this.saveData()
+    return true
+  }
+
+  // עדכון פרטי תשלום לפרעון
+  updatePaymentDetails(paymentId: number, paymentMethod: string, paymentDetails?: string): boolean {
+    const payment = this.dataFile.payments.find(p => p.id === paymentId)
+    if (!payment) return false
+
+    payment.paymentMethod = paymentMethod as 'cash' | 'transfer' | 'check' | 'credit' | 'other'
+    payment.paymentDetails = paymentDetails
+    payment.paymentDetailsComplete = true
+    this.saveData()
+    return true
+  }
+
+  // יצירת הלוואה מחזורית עם סטטוס השלמת פרטים
+  createRecurringLoanWithPaymentTracking(originalLoanId: number): DatabaseLoan | null {
+    const originalLoan = this.dataFile.loans.find(l => l.id === originalLoanId)
+    if (!originalLoan || !originalLoan.isRecurring) return null
+
+    // בדוק אם עדיין יש הלוואות שצריכות להיווצר
+    const existingRecurringLoans = this.dataFile.loans.filter(l =>
+      l.borrowerId === originalLoan.borrowerId &&
+      l.amount === originalLoan.amount &&
+      l.isRecurring &&
+      l.recurringDay === originalLoan.recurringDay
+    ).length
+
+    const remainingLoans = (originalLoan.recurringMonths || 12) - existingRecurringLoans
+    if (remainingLoans <= 0) return null
+
+    // בדוק אם כבר נוצרה הלוואה היום
+    const today = new Date()
+    const todayString = today.toISOString().split('T')[0]
+    const hasLoanToday = this.dataFile.loans.some(l =>
+      l.borrowerId === originalLoan.borrowerId &&
+      l.amount === originalLoan.amount &&
+      l.isRecurring &&
+      l.recurringDay === originalLoan.recurringDay &&
+      l.loanDate === todayString
+    )
+
+    if (hasLoanToday) {
+      return null
+    }
+
+    // צור הלוואה חדשה
+    const loanDate = todayString
+    const returnDate = new Date(today)
+    returnDate.setMonth(returnDate.getMonth() + 1)
+
+    const settings = this.getSettings()
+    
+    const newLoan = this.addLoan({
+      borrowerId: originalLoan.borrowerId,
+      amount: originalLoan.amount,
+      loanDate: loanDate,
+      returnDate: returnDate.toISOString().split('T')[0],
+      loanType: originalLoan.loanType || 'fixed',
+      isRecurring: true,
+      recurringDay: originalLoan.recurringDay,
+      recurringMonths: originalLoan.recurringMonths,
+      autoPayment: originalLoan.autoPayment || false,
+      autoPaymentAmount: originalLoan.autoPaymentAmount || 0,
+      autoPaymentDay: originalLoan.autoPaymentDay || 1,
+      // אם מעקב אמצעי תשלום מופעל, השאר ללא פרטים
+      loanPaymentMethod: settings.trackPaymentMethods ? undefined : originalLoan.loanPaymentMethod,
+      loanPaymentDetails: settings.trackPaymentMethods ? undefined : originalLoan.loanPaymentDetails,
+      paymentDetailsComplete: settings.trackPaymentMethods ? false : true,
+      notes: `הלוואה מחזורית #${existingRecurringLoans + 1} מתוך ${originalLoan.recurringMonths || 12}`,
+      guarantor1: originalLoan.guarantor1 || '',
+      guarantor2: originalLoan.guarantor2 || ''
+    })
+
+    return newLoan
+  }
+
+  // ביצוע פרעון אוטומטי עם מעקב פרטי תשלום
+  executeAutoPaymentWithTracking(loanId: number, amount?: number): boolean {
+    const loan = this.dataFile.loans.find(l => l.id === loanId)
+    if (!loan || !loan.autoPayment) return false
+
+    const balance = this.getLoanBalance(loanId)
+    if (balance <= 0) return false
+
+    const todayString = new Date().toISOString().split('T')[0]
+    const loanDate = new Date(loan.loanDate)
+    const todayDate = new Date(todayString)
+
+    if (loanDate > todayDate) {
+      return false
+    }
+
+    // בדוק אם כבר בוצע פרעון אוטומטי היום
+    const hasPaymentToday = this.dataFile.payments.some(payment =>
+      payment.loanId === loanId &&
+      payment.date === todayString &&
+      payment.type === 'payment' &&
+      payment.notes.includes('פרעון אוטומטי')
+    )
+
+    if (hasPaymentToday) {
+      return false
+    }
+
+    const paymentAmount = amount || Math.min(loan.autoPaymentAmount || 0, balance)
+    if (paymentAmount <= 0) return false
+
+    const settings = this.getSettings()
+
+    // הוסף את הפרעון
+    this.addPayment({
+      loanId: loanId,
+      amount: paymentAmount,
+      date: todayString,
+      type: 'payment',
+      // אם מעקב אמצעי תשלום מופעל, השאר ללא פרטים
+      paymentMethod: settings.trackPaymentMethods ? undefined : 'cash',
+      paymentDetails: settings.trackPaymentMethods ? undefined : undefined,
+      paymentDetailsComplete: settings.trackPaymentMethods ? false : true,
+      notes: `פרעון אוטומטי - ${paymentAmount.toLocaleString()} ש"ח`
+    })
+
+    // בדוק אם ההלוואה נפרעה במלואה
+    const newBalance = this.getLoanBalance(loanId)
+    if (newBalance <= 0) {
+      this.updateLoan(loanId, { status: 'completed' })
+    }
+
+    return true
   }
 
 

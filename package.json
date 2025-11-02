@@ -68,8 +68,7 @@
       "installerLanguages": [
         "en"
       ],
-      "language": "1033",
-      "artifactName": "${productName}-Setup-${version}.${ext}"
+      "language": "1033"
     },
     "mac": {
       "target": "dmg",

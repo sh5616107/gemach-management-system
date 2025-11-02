@@ -9,19 +9,19 @@ let mainWindow
 if (!isDev) {
   // הגדר את auto-updater רק בפרודקשן
   autoUpdater.checkForUpdatesAndNotify()
-  
+
   // לוג עדכונים
   autoUpdater.logger = require('electron-log')
   autoUpdater.logger.transports.file.level = 'info'
-  
+
   // אירועי עדכון
   autoUpdater.on('checking-for-update', () => {
     console.log('בודק עדכונים...')
   })
-  
+
   autoUpdater.on('update-available', (info) => {
     console.log('עדכון זמין:', info.version)
-    
+
     // הצג הודעה למשתמש
     dialog.showMessageBox(mainWindow, {
       type: 'info',
@@ -31,25 +31,25 @@ if (!isDev) {
       buttons: ['אישור']
     })
   })
-  
+
   autoUpdater.on('update-not-available', (info) => {
     console.log('אין עדכונים זמינים')
   })
-  
+
   autoUpdater.on('error', (err) => {
     console.log('שגיאה בעדכון:', err)
   })
-  
+
   autoUpdater.on('download-progress', (progressObj) => {
     let log_message = "מהירות הורדה: " + progressObj.bytesPerSecond
     log_message = log_message + ' - הורד ' + progressObj.percent + '%'
     log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')'
     console.log(log_message)
   })
-  
+
   autoUpdater.on('update-downloaded', (info) => {
     console.log('עדכון הורד:', info.version)
-    
+
     // הצג הודעה עם אפשרות להפעיל מחדש
     dialog.showMessageBox(mainWindow, {
       type: 'info',
@@ -125,7 +125,7 @@ function createWindow() {
     // המתן קצת יותר כדי לוודא שהתוכן נטען
     setTimeout(() => {
       mainWindow.show()
-      
+
       // פתיחת DevTools רק במצב פיתוח
       if (isDev) {
         mainWindow.webContents.openDevTools()
@@ -336,9 +336,9 @@ function checkForUpdates() {
     })
     return
   }
-  
+
   autoUpdater.checkForUpdatesAndNotify()
-  
+
   // הצג הודעה שהבדיקה התחילה
   dialog.showMessageBox(mainWindow, {
     type: 'info',
@@ -358,7 +358,7 @@ ipcMain.handle('check-for-updates', async () => {
 // האפליקציה מוכנה
 app.whenReady().then(() => {
   createWindow()
-  
+
   // בדוק עדכונים בפתיחה (רק בפרודקשן)
   if (!isDev) {
     setTimeout(() => {

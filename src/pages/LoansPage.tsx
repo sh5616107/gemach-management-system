@@ -1614,8 +1614,12 @@ function LoansPage() {
     const gemachName = db.getGemachName()
     const settings = db.getSettings()
 
-    // חישוב יתרת חוב לאחר הפרעון
-    const currentBalance = db.getLoanBalance(loan.id)
+    // חישוב יתרת חוב לאחר הפרעון הספציפי הזה
+    const balanceAfterThisPayment = db.getLoanBalanceAfterPayment(loan.id, payment)
+    
+    // פרעונות קודמים
+    const previousPayments = db.getPreviousPayments(loan.id, payment)
+    const totalPreviousPayments = previousPayments.reduce((sum, p) => sum + p.amount, 0)
 
     // פרטי התשלום
     const paymentAmount = payment.amount.toLocaleString()
@@ -1667,6 +1671,27 @@ function LoansPage() {
                 <p style="margin: 5px 0;">תאריך מתן הלוואה: <strong>${loanDate}</strong></p>
               </div>
 
+              ${previousPayments.length > 0 ? `
+                <div style="border: 2px solid #3498db; padding: 15px; margin: 15px 0; background: #e8f4fd;">
+                  <h3 style="margin: 0 0 10px 0; color: #3498db;">פרעונות קודמים:</h3>
+                  ${previousPayments.map((prevPayment, index) => {
+                    const prevPaymentDate = settings.showHebrewDates ?
+                      formatCombinedDate(prevPayment.date) :
+                      new Date(prevPayment.date).toLocaleDateString('he-IL')
+                    return `
+                      <p style="margin: 5px 0; font-size: 14px;">
+                        פרעון ${index + 1}: <strong>₪${prevPayment.amount.toLocaleString()}</strong> 
+                        ${db.getPaymentMethodIcon(prevPayment.paymentMethod)} ${db.getPaymentMethodName(prevPayment.paymentMethod)}
+                        (${prevPaymentDate})
+                      </p>
+                    `
+                  }).join('')}
+                  <p style="margin: 10px 0 5px 0; font-weight: bold; border-top: 1px solid #3498db; padding-top: 10px;">
+                    סה"כ פרעונות קודמים: <strong>₪${totalPreviousPayments.toLocaleString()}</strong>
+                  </p>
+                </div>
+              ` : ''}
+
               <div style="border: 2px solid #27ae60; padding: 15px; margin: 15px 0; background: #d5f4e6;">
                 <h3 style="margin: 0 0 10px 0; color: #27ae60;">פרטי הפרעון:</h3>
                 <p style="margin: 5px 0; font-size: 16px; font-weight: bold;">סכום פרעון: <strong>₪${paymentAmount}</strong></p>
@@ -1681,10 +1706,10 @@ function LoansPage() {
               </div>
 
               <div style="text-align: right; margin: 15px 0;">
-                <p style="margin: 5px 0; font-size: 16px; font-weight: bold; color: ${currentBalance > 0 ? '#e74c3c' : '#27ae60'};">
-                  יתרת חוב לאחר פרעון: <strong>₪${currentBalance.toLocaleString()}</strong>
+                <p style="margin: 5px 0; font-size: 16px; font-weight: bold; color: ${balanceAfterThisPayment > 0 ? '#e74c3c' : '#27ae60'};">
+                  יתרת חוב לאחר פרעון: <strong>₪${balanceAfterThisPayment.toLocaleString()}</strong>
                 </p>
-                ${currentBalance === 0 ? `
+                ${balanceAfterThisPayment === 0 ? `
                   <div style="background: #27ae60; color: white; padding: 10px; border-radius: 5px; margin: 10px 0; text-align: center;">
                     <strong>🎉 ההלוואה נפרעה במלואה! 🎉</strong>
                   </div>
@@ -1848,6 +1873,27 @@ function LoansPage() {
                   <p style="margin: 5px 0;">תאריך מתן הלוואה: <strong>${loanDate}</strong></p>
                 </div>
 
+                ${previousPayments.length > 0 ? `
+                  <div style="border: 2px solid #3498db; padding: 15px; margin: 15px 0; background: #e8f4fd;">
+                    <h3 style="margin: 0 0 10px 0; color: #3498db;">פרעונות קודמים:</h3>
+                    ${previousPayments.map((prevPayment, index) => {
+                      const prevPaymentDate = settings.showHebrewDates ?
+                        formatCombinedDate(prevPayment.date) :
+                        new Date(prevPayment.date).toLocaleDateString('he-IL')
+                      return `
+                        <p style="margin: 5px 0; font-size: 14px;">
+                          פרעון ${index + 1}: <strong>₪${prevPayment.amount.toLocaleString()}</strong> 
+                          ${db.getPaymentMethodIcon(prevPayment.paymentMethod)} ${db.getPaymentMethodName(prevPayment.paymentMethod)}
+                          (${prevPaymentDate})
+                        </p>
+                      `
+                    }).join('')}
+                    <p style="margin: 10px 0 5px 0; font-weight: bold; border-top: 1px solid #3498db; padding-top: 10px;">
+                      סה"כ פרעונות קודמים: <strong>₪${totalPreviousPayments.toLocaleString()}</strong>
+                    </p>
+                  </div>
+                ` : ''}
+
                 <div class="payment-details">
                   <h3 style="margin: 0 0 10px 0; color: #27ae60;">פרטי הפרעון:</h3>
                   <p style="margin: 5px 0; font-size: 16px; font-weight: bold;">סכום פרעון: <strong>₪${paymentAmount}</strong></p>
@@ -1862,10 +1908,10 @@ function LoansPage() {
                 </div>
 
                 <div style="text-align: right; margin: 15px 0;">
-                  <p style="margin: 5px 0; font-size: 16px; font-weight: bold; color: ${currentBalance > 0 ? '#e74c3c' : '#27ae60'};">
-                    יתרת חוב לאחר פרעון: <strong>₪${currentBalance.toLocaleString()}</strong>
+                  <p style="margin: 5px 0; font-size: 16px; font-weight: bold; color: ${balanceAfterThisPayment > 0 ? '#e74c3c' : '#27ae60'};">
+                    יתרת חוב לאחר פרעון: <strong>₪${balanceAfterThisPayment.toLocaleString()}</strong>
                   </p>
-                  ${currentBalance === 0 ? `
+                  ${balanceAfterThisPayment === 0 ? `
                     <div class="completed-loan">
                       <strong>🎉 ההלוואה נפרעה במלואה! 🎉</strong>
                     </div>

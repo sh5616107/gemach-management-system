@@ -670,6 +670,62 @@ class GemachDatabase {
     return loan.amount - totalPaid
   }
 
+  // חישוב יתרת חוב אחרי פרעון ספציפי (לשוברי פרעון)
+  getLoanBalanceAfterPayment(loanId: number, specificPayment: DatabasePayment): number {
+    const loan = this.dataFile.loans.find(l => l.id === loanId)
+    if (!loan) return 0
+
+    const payments = this.getPaymentsByLoanId(loanId)
+    
+    // חשב את סך הפרעונות עד התאריך של הפרעון הספציפי (כולל)
+    const totalPaidUntilPayment = payments
+      .filter(p => p.type === 'payment')
+      .filter(p => {
+        // כלול פרעונות שהיו לפני או באותו תאריך
+        const paymentDate = new Date(p.date)
+        const specificDate = new Date(specificPayment.date)
+        
+        // אם זה אותו תאריך, כלול רק פרעונות עד ה-ID של הפרעון הספציפי
+        if (paymentDate.getTime() === specificDate.getTime()) {
+          return p.id <= specificPayment.id
+        }
+        
+        return paymentDate <= specificDate
+      })
+      .reduce((sum, p) => sum + p.amount, 0)
+
+    return loan.amount - totalPaidUntilPayment
+  }
+
+  // קבלת פרעונות קודמים לפרעון ספציפי (לשוברי פרעון)
+  getPreviousPayments(loanId: number, specificPayment: DatabasePayment): DatabasePayment[] {
+    const payments = this.getPaymentsByLoanId(loanId)
+    
+    return payments
+      .filter(p => p.type === 'payment')
+      .filter(p => {
+        // כלול רק פרעונות שהיו לפני הפרעון הספציפי
+        const paymentDate = new Date(p.date)
+        const specificDate = new Date(specificPayment.date)
+        
+        // אם זה אותו תאריך, כלול רק פרעונות עם ID קטן יותר
+        if (paymentDate.getTime() === specificDate.getTime()) {
+          return p.id < specificPayment.id
+        }
+        
+        return paymentDate < specificDate
+      })
+      .sort((a, b) => {
+        // מיין לפי תאריך ואז לפי ID
+        const dateA = new Date(a.date)
+        const dateB = new Date(b.date)
+        if (dateA.getTime() !== dateB.getTime()) {
+          return dateA.getTime() - dateB.getTime()
+        }
+        return a.id - b.id
+      })
+  }
+
   canAddPayment(loanId: number, amount: number): boolean {
     const balance = this.getLoanBalance(loanId)
     return amount > 0 && amount <= balance

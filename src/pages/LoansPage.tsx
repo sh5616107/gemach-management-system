@@ -1352,6 +1352,12 @@ function LoansPage() {
                   <strong>✅ ההלוואה נפרעה במלואה ✅</strong><br>
                   <small>תאריך פרעון מלא: ${db.getSettings().showHebrewDates ? formatCombinedDate(new Date()) : new Date().toLocaleDateString('he-IL')}</small>
                 </div>
+              ` : balance < loan.amount ? `
+                <div style="background: #f39c12; color: white; padding: 10px; border-radius: 5px; margin: 15px 0; text-align: center;">
+                  <strong>🔄 ההלוואה נפרעה חלקית 🔄</strong><br>
+                  <small>נפרע עד כה: <strong>${db.formatCurrency(loan.amount - balance)}</strong> מתוך <strong>${db.formatCurrency(loan.amount)}</strong></small><br>
+                  <small>יתרת חוב: <strong>${db.formatCurrency(balance)}</strong></small>
+                </div>
               ` : ''}
               <p style="margin: 8px 0;">תאריך הפקת השטר: <strong>${db.getSettings().showHebrewDates ? formatCombinedDate(new Date()) : new Date().toLocaleDateString('he-IL')}</strong></p>
               <div style="display: flex; justify-content: space-between; margin-top: 40px; flex-wrap: wrap; gap: 20px;">
@@ -1557,6 +1563,12 @@ function LoansPage() {
                   <div style="background: #27ae60; color: white; padding: 10px; border-radius: 5px; margin: 15px 0; text-align: center;">
                     <strong>✅ ההלוואה נפרעה במלואה ✅</strong><br>
                     <small>תאריך פרעון מלא: ${db.getSettings().showHebrewDates ? formatCombinedDate(new Date()) : new Date().toLocaleDateString('he-IL')}</small>
+                  </div>
+                ` : balance < loan.amount ? `
+                  <div style="background: #f39c12; color: white; padding: 10px; border-radius: 5px; margin: 15px 0; text-align: center;">
+                    <strong>🔄 ההלוואה נפרעה חלקית 🔄</strong><br>
+                    <small>נפרע עד כה: <strong>${db.formatCurrency(loan.amount - balance)}</strong> מתוך <strong>${db.formatCurrency(loan.amount)}</strong></small><br>
+                    <small>יתרת חוב: <strong>${db.formatCurrency(balance)}</strong></small>
                   </div>
                 ` : ''}
                 <p>תאריך הפקת השטר: <strong>${db.getSettings().showHebrewDates ? formatCombinedDate(new Date()) : new Date().toLocaleDateString('he-IL')}</strong></p>

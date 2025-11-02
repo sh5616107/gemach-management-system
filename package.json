@@ -1,6 +1,6 @@
 {
   "name": "gemach-management-system",
-  "version": "2.5.3",
+  "version": "2.5.4",
   "description": "Gemach Management System - Comprehensive system for managing loans, deposits and donations",
   "main": "electron.js",
   "homepage": "./",
@@ -24,9 +24,10 @@
   "build": {
     "appId": "com.gemach.management",
     "productName": "Gemach Management System",
+    "artifactName": "${productName}-Setup-${version}.${ext}",
     "directories": {
       "output": "dist-electron"
-    },
+    },</invoke>
     "files": [
       "dist/**/*",
       "electron.js",
@@ -67,7 +68,8 @@
       "installerLanguages": [
         "en"
       ],
-      "language": "1033"
+      "language": "1033",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "mac": {
       "target": "dmg",

@@ -63,8 +63,7 @@ jobs:
       with:
         name: מערכת-ניהול-גמח-windows
         path: |
-          dist-electron/*.exe
-          dist-electron/*.exe.blockmap
+          dist-electron/*Setup*.exe
           
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
@@ -107,7 +106,7 @@ jobs:
           ---
           **פותח עבור קהילת הגמ"חים בישראל 🇮🇱**
         files: |
-          dist-electron/*.exe
+          dist-electron/*Setup*.exe
         draft: false
         prerelease: false
         fail_on_unmatched_files: false

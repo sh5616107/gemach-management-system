@@ -23,11 +23,11 @@
   },
   "build": {
     "appId": "com.gemach.management",
-    "productName": "Gemach Management System",
+    "productName": "מערכת ניהול גמח",
     "artifactName": "${productName}-Setup-${version}.${ext}",
     "directories": {
       "output": "dist-electron"
-    },</invoke>
+    },
     "files": [
       "dist/**/*",
       "electron.js",
@@ -60,7 +60,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Gemach Management System",
+      "shortcutName": "מערכת ניהול גמח",
       "deleteAppDataOnUninstall": false,
       "runAfterFinish": true,
       "menuCategory": "Business Tools",

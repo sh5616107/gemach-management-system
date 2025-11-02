@@ -817,18 +817,13 @@ function HomePage() {
 
         <div className="categories">
           <div className="category" onClick={() => navigate('/loans')}>
-            <div className="category-image">💰</div>
+            <div className="category-image">📋</div>
             <h2 className="category-title">הלוואות</h2>
           </div>
 
-          <div className="category" onClick={() => navigate('/deposits')}>
-            <div className="category-image">💵</div>
-            <h2 className="category-title">פקדונות</h2>
-          </div>
-
           <div className="category" onClick={() => navigate('/donations')}>
-            <div className="category-image">💸</div>
-            <h2 className="category-title">תרומות</h2>
+            <div className="category-image">💰</div>
+            <h2 className="category-title">תרומות והפקדות</h2>
           </div>
 
           <div className="category" onClick={() => navigate('/settings')}>

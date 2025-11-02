@@ -814,9 +814,26 @@ function DepositsPage() {
   return (
     <div>
       <header className="header">
-        <h1>פקדונות</h1>
+        <h1>תרומות והפקדות</h1>
         <button className="close-btn" onClick={() => navigate('/')}>×</button>
       </header>
+
+      {/* טאבים */}
+      <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+        <button
+          className="btn btn-primary"
+          onClick={() => navigate('/donations')}
+          style={{ marginLeft: '10px' }}
+        >
+          💸 תרומות
+        </button>
+        <button
+          className="btn btn-success"
+          style={{ marginLeft: '10px' }}
+        >
+          💵 פקדונות
+        </button>
+      </div>
 
       <div className="container">
         <div className="main-content">

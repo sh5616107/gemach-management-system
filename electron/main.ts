@@ -12,7 +12,7 @@ function createWindow(): void {
       contextIsolation: false
     },
     titleBarStyle: 'default',
-    title: 'ניהול גמ"ח כספים'
+    title: 'מערכת ניהול גמח'
   })
 
   if (isDev) {

@@ -175,7 +175,7 @@ class GemachDatabase {
       defaultLoanPeriod: 12,
       theme: 'light',
       customBackgroundColor: '#87CEEB',
-      headerTitle: 'מערכת לניהול גמ"ח כספים',
+      headerTitle: 'מערכת ניהול גמח',
       footerText: 'אמר רבי אבא אמר רבי שמעון בן לקיש גדול המלוה יותר מן העושה צדקה (שבת סג.)',
       contactText: 'ניתן להפצה לזיכוי הרבים\n⭐ עולם חסד יבנה',
       // פונקציות מתקדמות - מופעלות כברירת מחדל

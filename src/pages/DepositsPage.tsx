@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { db, DatabaseDeposit } from '../database/database'
+import { db, DatabaseDeposit, DatabaseWithdrawal } from '../database/database'
 import NumberInput from '../components/NumberInput'
 import { formatCombinedDate } from '../utils/hebrewDate'
 
@@ -114,7 +114,9 @@ function DepositsPage() {
   }, [])
 
   const loadDeposits = () => {
-    setDeposits(db.getDeposits())
+    const newDeposits = db.getDeposits()
+    setDeposits(newDeposits)
+    console.log('🔄 רענון טבלת הפקדות:', newDeposits.length)
   }
 
   const handleInputChange = (field: string, value: string | number) => {
@@ -811,6 +813,520 @@ function DepositsPage() {
     createWithdrawalModal()
   }
 
+  // פונקציה להצגת מודל בחירת משיכה לשובר
+  const showWithdrawalSelectionModal = (depositId: number, withdrawals: DatabaseWithdrawal[]) => {
+    const deposit = deposits.find(d => d.id === depositId)
+    if (!deposit) return
+
+    const modalContent = document.createElement('div')
+    modalContent.innerHTML = `
+      <div style="
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5); display: flex; align-items: center;
+        justify-content: center; z-index: 10000; direction: rtl;
+      ">
+        <div style="
+          background: white; border-radius: 10px; padding: 30px;
+          max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        ">
+          <h3 style="margin-bottom: 20px; color: #2c3e50; text-align: center;">
+            בחר משיכה להדפסת שובר
+          </h3>
+          
+          <!-- סיכום כללי -->
+          <div style="
+            background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;
+            border: 1px solid #e9ecef;
+          ">
+            <div style="text-align: center; margin-bottom: 10px;">
+              <strong style="color: #2c3e50; font-size: 16px;">מפקיד: ${deposit.depositorName}</strong>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center;">
+              <div>
+                <div style="font-size: 12px; color: #666;">סכום הפקדה מקורי</div>
+                <div style="font-weight: bold; color: #3498db;">₪${deposit.amount.toLocaleString()}</div>
+              </div>
+              <div>
+                <div style="font-size: 12px; color: #666;">סה"כ נמשך</div>
+                <div style="font-weight: bold; color: #e74c3c;">₪${withdrawals.reduce((sum, w) => sum + w.amount, 0).toLocaleString()}</div>
+              </div>
+              <div>
+                <div style="font-size: 12px; color: #666;">יתרה נוכחית</div>
+                <div style="font-weight: bold; color: #27ae60;">₪${(deposit.amount - withdrawals.reduce((sum, w) => sum + w.amount, 0)).toLocaleString()}</div>
+              </div>
+            </div>
+            <div style="text-align: center; margin-top: 10px; font-size: 14px; color: #666;">
+              סה"כ משיכות: <strong>${withdrawals.length}</strong>
+            </div>
+          </div>
+          
+          <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 5px;">
+            ${withdrawals.map((withdrawal, index) => {
+              const withdrawalDate = db.getSettings().showHebrewDates ? 
+                formatCombinedDate(withdrawal.date) : 
+                new Date(withdrawal.date).toLocaleDateString('he-IL')
+              
+              const paymentMethodDisplay = withdrawal.paymentMethod ? 
+                db.getPaymentMethodDisplay(withdrawal.paymentMethod) : 'לא צוין'
+              
+              // חישוב יתרה לאחר משיכה זו
+              const withdrawalsUpToThis = withdrawals.slice(0, index + 1)
+              const totalWithdrawnUpToThis = withdrawalsUpToThis.reduce((sum, w) => sum + w.amount, 0)
+              const remainingAfterThis = deposit.amount - totalWithdrawnUpToThis
+              
+              return `
+                <div style="
+                  padding: 15px; border-bottom: 1px solid #eee; cursor: pointer;
+                  transition: background-color 0.2s;
+                " 
+                onmouseover="this.style.backgroundColor='#f8f9fa'" 
+                onmouseout="this.style.backgroundColor='white'"
+                onclick="selectWithdrawal(${withdrawal.id})">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="flex: 1;">
+                      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="font-weight: bold; color: #2c3e50; font-size: 16px;">
+                          משיכה #${withdrawal.id}
+                        </div>
+                        <div style="font-weight: bold; color: #e74c3c; font-size: 16px;">
+                          ₪${withdrawal.amount.toLocaleString()}
+                        </div>
+                      </div>
+                      
+                      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 8px;">
+                        <div style="font-size: 13px; color: #666;">
+                          📅 תאריך: <strong>${withdrawalDate}</strong>
+                        </div>
+                        <div style="font-size: 13px; color: #666;">
+                          💳 ${paymentMethodDisplay}
+                        </div>
+                      </div>
+                      
+                      <div style="
+                        background: ${remainingAfterThis === 0 ? '#fee2e2' : '#f0f9ff'}; 
+                        padding: 8px; border-radius: 4px; font-size: 12px;
+                        border: 1px solid ${remainingAfterThis === 0 ? '#fecaca' : '#bae6fd'};
+                      ">
+                        <strong>יתרה לאחר משיכה זו: 
+                        <span style="color: ${remainingAfterThis === 0 ? '#dc2626' : '#0369a1'};">
+                          ₪${remainingAfterThis.toLocaleString()}
+                        </span></strong>
+                        ${remainingAfterThis === 0 ? ' (הפקדון נמשך במלואו)' : ''}
+                      </div>
+                      
+                      ${withdrawal.notes ? `
+                        <div style="font-size: 12px; color: #999; margin-top: 5px; font-style: italic;">
+                          📝 ${withdrawal.notes}
+                        </div>
+                      ` : ''}
+                    </div>
+                    
+                    <div style="
+                      background: #3498db; color: white; padding: 10px 15px;
+                      border-radius: 5px; font-size: 14px; font-weight: bold;
+                      margin-right: 15px; white-space: nowrap;
+                    ">
+                      📄 הדפס שובר
+                    </div>
+                  </div>
+                </div>
+              `
+            }).join('')}
+          </div>
+
+          <div style="display: flex; justify-content: center; margin-top: 20px;">
+            <button id="cancelSelection" style="
+              background: #95a5a6; color: white; border: none; padding: 12px 24px;
+              border-radius: 5px; font-size: 16px; cursor: pointer;
+            ">סגור</button>
+          </div>
+        </div>
+      </div>
+    `
+
+    document.body.appendChild(modalContent)
+
+    // הוספת פונקציה גלובלית לבחירת משיכה
+    ;(window as any).selectWithdrawal = (withdrawalId: number) => {
+      generateWithdrawalReceipt(depositId, withdrawalId)
+      document.body.removeChild(modalContent)
+      delete (window as any).selectWithdrawal
+    }
+
+    // כפתור ביטול
+    const cancelBtn = modalContent.querySelector('#cancelSelection') as HTMLButtonElement
+    cancelBtn.addEventListener('click', () => {
+      document.body.removeChild(modalContent)
+      delete (window as any).selectWithdrawal
+    })
+
+    // סגירה בלחיצה על הרקע
+    modalContent.addEventListener('click', (e) => {
+      if (e.target === modalContent) {
+        document.body.removeChild(modalContent)
+        delete (window as any).selectWithdrawal
+      }
+    })
+  }
+
+  // פונקציה ליצירת שובר משיכה
+  const generateWithdrawalReceipt = (depositId: number, withdrawalId: number) => {
+    const deposit = deposits.find(d => d.id === depositId)
+    const withdrawals = db.getWithdrawalsByDepositId(depositId)
+    const withdrawal = withdrawals.find(w => w.id === withdrawalId)
+    
+    if (!deposit || !withdrawal) {
+      showNotification('⚠️ לא ניתן להפיק שובר - נתונים חסרים', 'error')
+      return
+    }
+
+    printWithdrawalReceipt(withdrawal, deposit)
+  }
+
+  const printWithdrawalReceipt = (withdrawal: DatabaseWithdrawal, deposit: DatabaseDeposit) => {
+    const gemachName = db.getGemachName()
+    const settings = db.getSettings()
+
+    // כל המשיכות של ההפקדה
+    const allWithdrawals = db.getWithdrawalsByDepositId(deposit.id)
+    const currentWithdrawalIndex = allWithdrawals.findIndex(w => w.id === withdrawal.id)
+    const previousWithdrawals = allWithdrawals.slice(0, currentWithdrawalIndex)
+    
+    // פרטי המשיכה הנוכחית
+    const withdrawalAmount = withdrawal.amount.toLocaleString()
+    const withdrawalDate = settings.showHebrewDates ?
+      formatCombinedDate(withdrawal.date) :
+      new Date(withdrawal.date).toLocaleDateString('he-IL')
+
+    // פרטי ההפקדה
+    const depositAmount = deposit.amount.toLocaleString()
+    const depositDate = settings.showHebrewDates ?
+      formatCombinedDate(deposit.depositDate) :
+      new Date(deposit.depositDate).toLocaleDateString('he-IL')
+
+    // חישוב יתרות
+    const totalWithdrawnBeforeCurrent = previousWithdrawals.reduce((sum, w) => sum + w.amount, 0)
+    const totalWithdrawnIncludingCurrent = totalWithdrawnBeforeCurrent + withdrawal.amount
+    const remainingAmount = deposit.amount - totalWithdrawnIncludingCurrent
+
+    // פרטי אמצעי תשלום
+    const paymentMethodName = db.getPaymentMethodName(withdrawal.paymentMethod)
+    const paymentMethodIcon = db.getPaymentMethodIcon(withdrawal.paymentMethod)
+    const paymentDetails = db.getPaymentDetailsDisplay(withdrawal.paymentMethod, withdrawal.paymentDetails)
+
+    // תאריך הפקת השובר
+    const receiptDate = settings.showHebrewDates ?
+      formatCombinedDate(new Date()) :
+      new Date().toLocaleDateString('he-IL')
+
+    // יצירת פירוט משיכות קודמות
+    const previousWithdrawalsHTML = previousWithdrawals.length > 0 ? `
+      <div style="text-align: right; margin: 15px 0; border: 1px solid #ddd; padding: 10px; background: #f9f9f9;">
+        <h4 style="margin: 0 0 10px 0; color: #666; font-size: 14px;">📋 משיכות קודמות:</h4>
+        ${previousWithdrawals.map((prevWithdrawal, index) => {
+          const prevDate = settings.showHebrewDates ?
+            formatCombinedDate(prevWithdrawal.date) :
+            new Date(prevWithdrawal.date).toLocaleDateString('he-IL')
+          return `
+            <div style="margin: 5px 0; font-size: 12px; color: #555;">
+              ${index + 1}. ₪${prevWithdrawal.amount.toLocaleString()} - ${prevDate}
+            </div>
+          `
+        }).join('')}
+        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd; font-weight: bold; color: #333;">
+          סה"כ משיכות קודמות: ₪${totalWithdrawnBeforeCurrent.toLocaleString()}
+        </div>
+      </div>
+    ` : ''
+
+    if ((window as any).electronAPI) {
+      // במצב Electron - הדפסה ישירה
+      const printContent = `
+        <div id="print-content" style="display: none;">
+          <div style="font-family: Arial, sans-serif; direction: rtl; text-align: center; padding: 20px; line-height: 1.4; font-size: 14px; margin: 0;">
+            <div style="max-width: 500px; margin: 0 auto; text-align: right;">
+              <h1 style="font-size: 20px; margin-bottom: 20px; text-decoration: underline;">שובר משיכת פקדון</h1>
+              
+              <div style="border: 2px solid #2c3e50; padding: 15px; margin: 15px 0; background: #f8f9fa;">
+                <h3 style="margin: 0 0 10px 0; color: #e67e22;">מספר משיכה: #${withdrawal.id}</h3>
+                <p style="margin: 5px 0; font-weight: bold;">תאריך משיכה: ${withdrawalDate}</p>
+              </div>
+
+              <div style="text-align: right; margin: 15px 0;">
+                <h3 style="margin-bottom: 10px; color: #2c3e50;">פרטי המפקיד:</h3>
+                <p style="margin: 5px 0;">שם: <strong>${deposit.depositorName}</strong></p>
+                ${deposit.idNumber ? `<p style="margin: 5px 0;">ת.ז: <strong>${db.formatIdNumber(deposit.idNumber)}</strong></p>` : ''}
+              </div>
+
+              <div style="text-align: right; margin: 15px 0;">
+                <h3 style="margin-bottom: 10px; color: #2c3e50;">פרטי ההפקדה:</h3>
+                <p style="margin: 5px 0;">סכום הפקדה מקורי: <strong>₪${depositAmount}</strong></p>
+                <p style="margin: 5px 0;">תאריך הפקדה: <strong>${depositDate}</strong></p>
+              </div>
+
+              ${previousWithdrawalsHTML}
+
+              <div style="border: 2px solid #e67e22; padding: 15px; margin: 15px 0; background: #fef2e8;">
+                <h3 style="margin: 0 0 10px 0; color: #e67e22;">*** משיכה נוכחית ***</h3>
+                <p style="margin: 5px 0; font-size: 16px; font-weight: bold;">סכום משיכה: <strong>₪${withdrawalAmount}</strong></p>
+                <p style="margin: 5px 0;">תאריך משיכה: <strong>${withdrawalDate}</strong></p>
+                <p style="margin: 5px 0;">אמצעי תשלום: <strong>${paymentMethodIcon} ${paymentMethodName}</strong></p>
+                ${paymentDetails ? `
+                  <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 5px;">
+                    <strong>פרטי התשלום:</strong><br>
+                    ${paymentDetails.split('\n').map(line => `<div style="margin: 2px 0;">${line}</div>`).join('')}
+                  </div>
+                ` : ''}
+                ${withdrawal.notes ? `<p style="margin: 5px 0;">הערות: <strong>${withdrawal.notes}</strong></p>` : ''}
+              </div>
+
+              <div style="border: 2px solid #2c3e50; padding: 15px; margin: 15px 0; background: #f8f9fa;">
+                <h3 style="margin: 0 0 10px 0; color: #2c3e50;">*** סיכום ***</h3>
+                ${previousWithdrawals.length > 0 ? `
+                  <p style="margin: 5px 0;">משיכות קודמות: <strong>₪${totalWithdrawnBeforeCurrent.toLocaleString()}</strong></p>
+                ` : ''}
+                <p style="margin: 5px 0;">משיכה נוכחית: <strong>₪${withdrawalAmount}</strong></p>
+                <p style="margin: 5px 0; border-top: 1px solid #ddd; padding-top: 5px;">
+                  <strong>סה"כ נמשך: ₪${totalWithdrawnIncludingCurrent.toLocaleString()}</strong>
+                </p>
+                <p style="margin: 5px 0; font-size: 16px; font-weight: bold; color: ${remainingAmount > 0 ? '#27ae60' : '#e74c3c'};">
+                  יתרת פקדון: <strong>₪${remainingAmount.toLocaleString()}</strong>
+                </p>
+                ${remainingAmount === 0 ? `
+                  <div style="background: #e67e22; color: white; padding: 10px; border-radius: 5px; margin: 10px 0; text-align: center;">
+                    <strong>🏁 הפקדון נמשך במלואו 🏁</strong>
+                  </div>
+                ` : ''}
+              </div>
+
+              <div style="text-align: center; margin: 20px 0; padding: 15px; border-top: 1px solid #bdc3c7;">
+                <p style="margin: 5px 0; font-weight: bold;">גמ"ח "${gemachName}"</p>
+                <p style="margin: 5px 0; font-size: 12px;">תאריך הפקת השובר: ${receiptDate}</p>
+              </div>
+
+              <div style="margin-top: 30px; text-align: center; font-size: 12px; color: #7f8c8d;">
+                <p>שובר זה מהווה אישור על ביצוע המשיכה</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      `
+
+      // הוסף את התוכן לדף
+      const existingContent = document.getElementById('print-content')
+      if (existingContent) {
+        existingContent.remove()
+      }
+      document.body.insertAdjacentHTML('beforeend', printContent)
+
+      // המתן רגע ואז הדפס
+      setTimeout(() => {
+        window.print()
+      }, 100)
+
+    } else {
+      // פתרון רגיל לדפדפנים - יצירת חלון הדפסה
+      const printWindow = window.open('', '_blank', 'width=800,height=600')
+      if (printWindow) {
+        printWindow.document.write(`
+          <html dir="rtl">
+            <head>
+              <title>שובר משיכת פקדון - ${deposit.depositorName}</title>
+              <style>
+                body {
+                  font-family: Arial, sans-serif;
+                  direction: rtl;
+                  text-align: center;
+                  padding: 20px;
+                  line-height: 1.4;
+                  font-size: 14px;
+                  margin: 0;
+                }
+                h1 {
+                  font-size: 20px;
+                  margin-bottom: 20px;
+                  text-decoration: underline;
+                }
+                .content {
+                  max-width: 500px;
+                  margin: 0 auto;
+                  text-align: right;
+                }
+                p {
+                  margin: 8px 0;
+                }
+                .receipt-header {
+                  border: 2px solid #2c3e50;
+                  padding: 15px;
+                  margin: 15px 0;
+                  background: #f8f9fa;
+                }
+                .withdrawal-details {
+                  border: 2px solid #e67e22;
+                  padding: 15px;
+                  margin: 15px 0;
+                  background: #fef2e8;
+                }
+                .payment-method-details {
+                  margin: 10px 0;
+                  padding: 10px;
+                  background: white;
+                  border-radius: 5px;
+                }
+                .completed-withdrawal {
+                  background: #e67e22;
+                  color: white;
+                  padding: 10px;
+                  border-radius: 5px;
+                  margin: 10px 0;
+                  text-align: center;
+                }
+                .footer {
+                  text-align: center;
+                  margin: 20px 0;
+                  padding: 15px;
+                  border-top: 1px solid #bdc3c7;
+                }
+                .disclaimer {
+                  margin-top: 30px;
+                  text-align: center;
+                  font-size: 12px;
+                  color: #7f8c8d;
+                }
+                .print-buttons {
+                  text-align: center;
+                  margin: 20px 0;
+                  padding: 20px;
+                  background: #f5f5f5;
+                  border-radius: 5px;
+                }
+                .print-btn {
+                  background: #007bff;
+                  color: white;
+                  border: none;
+                  padding: 10px 20px;
+                  margin: 0 10px;
+                  border-radius: 5px;
+                  cursor: pointer;
+                  font-size: 14px;
+                }
+                .print-btn:hover {
+                  background: #0056b3;
+                }
+                .close-btn {
+                  background: #6c757d;
+                }
+                .close-btn:hover {
+                  background: #545b62;
+                }
+                @media print {
+                  .print-buttons { display: none; }
+                  body { 
+                    padding: 15px;
+                    font-size: 12px;
+                  }
+                  h1 { font-size: 18px; margin-bottom: 15px; }
+                  p { margin: 5px 0; }
+                  .receipt-header, .withdrawal-details { margin: 10px 0; }
+                }
+              </style>
+            </head>
+            <body>
+              <div class="print-buttons">
+                <button class="print-btn" onclick="window.print()">🖨️ הדפס</button>
+                <button class="print-btn close-btn" onclick="window.close()">❌ סגור</button>
+              </div>
+              <div class="content">
+                <h1>שובר משיכת פקדון</h1>
+                
+                <div class="receipt-header">
+                  <h3 style="margin: 0 0 10px 0; color: #e67e22;">מספר משיכה: #${withdrawal.id}</h3>
+                  <p style="margin: 5px 0; font-weight: bold;">תאריך משיכה: ${withdrawalDate}</p>
+                </div>
+
+                <div style="text-align: right; margin: 15px 0;">
+                  <h3 style="margin-bottom: 10px; color: #2c3e50;">פרטי המפקיד:</h3>
+                  <p style="margin: 5px 0;">שם: <strong>${deposit.depositorName}</strong></p>
+                  ${deposit.idNumber ? `<p style="margin: 5px 0;">ת.ז: <strong>${db.formatIdNumber(deposit.idNumber)}</strong></p>` : ''}
+                </div>
+
+                <div style="text-align: right; margin: 15px 0;">
+                  <h3 style="margin-bottom: 10px; color: #2c3e50;">פרטי ההפקדה:</h3>
+                  <p style="margin: 5px 0;">סכום הפקדה מקורי: <strong>₪${depositAmount}</strong></p>
+                  <p style="margin: 5px 0;">תאריך הפקדה: <strong>${depositDate}</strong></p>
+                </div>
+
+                ${previousWithdrawals.length > 0 ? `
+                  <div style="text-align: right; margin: 15px 0; border: 1px solid #ddd; padding: 10px; background: #f9f9f9;">
+                    <h4 style="margin: 0 0 10px 0; color: #666; font-size: 14px;">📋 משיכות קודמות:</h4>
+                    ${previousWithdrawals.map((prevWithdrawal, index) => {
+                      const prevDate = settings.showHebrewDates ?
+                        formatCombinedDate(prevWithdrawal.date) :
+                        new Date(prevWithdrawal.date).toLocaleDateString('he-IL')
+                      return `
+                        <div style="margin: 5px 0; font-size: 12px; color: #555;">
+                          ${index + 1}. ₪${prevWithdrawal.amount.toLocaleString()} - ${prevDate}
+                        </div>
+                      `
+                    }).join('')}
+                    <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #ddd; font-weight: bold; color: #333;">
+                      סה"כ משיכות קודמות: ₪${totalWithdrawnBeforeCurrent.toLocaleString()}
+                    </div>
+                  </div>
+                ` : ''}
+
+                <div class="withdrawal-details">
+                  <h3 style="margin: 0 0 10px 0; color: #e67e22;">*** משיכה נוכחית ***</h3>
+                  <p style="margin: 5px 0; font-size: 16px; font-weight: bold;">סכום משיכה: <strong>₪${withdrawalAmount}</strong></p>
+                  <p style="margin: 5px 0;">תאריך משיכה: <strong>${withdrawalDate}</strong></p>
+                  <p style="margin: 5px 0;">אמצעי תשלום: <strong>${paymentMethodIcon} ${paymentMethodName}</strong></p>
+                  ${paymentDetails ? `
+                    <div class="payment-method-details">
+                      <strong>פרטי התשלום:</strong><br>
+                      ${paymentDetails.split('\n').map(line => `<div style="margin: 2px 0;">${line}</div>`).join('')}
+                    </div>
+                  ` : ''}
+                  ${withdrawal.notes ? `<p style="margin: 5px 0;">הערות: <strong>${withdrawal.notes}</strong></p>` : ''}
+                </div>
+
+                <div style="border: 2px solid #2c3e50; padding: 15px; margin: 15px 0; background: #f8f9fa;">
+                  <h3 style="margin: 0 0 10px 0; color: #2c3e50;">*** סיכום ***</h3>
+                  ${previousWithdrawals.length > 0 ? `
+                    <p style="margin: 5px 0;">משיכות קודמות: <strong>₪${totalWithdrawnBeforeCurrent.toLocaleString()}</strong></p>
+                  ` : ''}
+                  <p style="margin: 5px 0;">משיכה נוכחית: <strong>₪${withdrawalAmount}</strong></p>
+                  <p style="margin: 5px 0; border-top: 1px solid #ddd; padding-top: 5px;">
+                    <strong>סה"כ נמשך: ₪${totalWithdrawnIncludingCurrent.toLocaleString()}</strong>
+                  </p>
+                  <p style="margin: 5px 0; font-size: 16px; font-weight: bold; color: ${remainingAmount > 0 ? '#27ae60' : '#e74c3c'};">
+                    יתרת פקדון: <strong>₪${remainingAmount.toLocaleString()}</strong>
+                  </p>
+                  ${remainingAmount === 0 ? `
+                    <div style="background: #e67e22; color: white; padding: 10px; border-radius: 5px; margin: 10px 0; text-align: center;">
+                      <strong>🏁 הפקדון נמשך במלואו 🏁</strong>
+                    </div>
+                  ` : ''}
+                </div>
+
+                <div class="footer">
+                  <p style="margin: 5px 0; font-weight: bold;">גמ"ח "${gemachName}"</p>
+                  <p style="margin: 5px 0; font-size: 12px;">תאריך הפקת השובר: ${receiptDate}</p>
+                </div>
+
+                <div class="disclaimer">
+                  <p>שובר זה מהווה אישור על ביצוע המשיכה</p>
+                </div>
+              </div>
+            </body>
+          </html>
+        `)
+        printWindow.document.close()
+        printWindow.focus()
+      }
+    }
+  }
+
   return (
     <div>
       <header className="header">
@@ -1316,7 +1832,7 @@ function DepositsPage() {
               </thead>
               <tbody>
                 {deposits.map((deposit) => {
-                  const withdrawnAmount = deposit.withdrawnAmount || 0
+                  const withdrawnAmount = db.getTotalWithdrawnAmount(deposit.id)
                   const remainingAmount = deposit.amount - withdrawnAmount
                   
                   // פרטי אמצעי הפקדה
@@ -1374,12 +1890,12 @@ function DepositsPage() {
                         }
                       </td>
                       <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '120px' }}>
                           {/* אמצעי הפקדה */}
                           {depositMethodIcon && depositMethodName && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              <span style={{ fontSize: '12px' }}>
-                                {depositMethodIcon} {depositMethodName}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', background: '#e8f5e8', padding: '4px 8px', borderRadius: '4px' }}>
+                              <span style={{ fontSize: '12px', color: '#27ae60', fontWeight: 'bold' }}>
+                                📥 {depositMethodIcon} {depositMethodName}
                               </span>
                               {deposit.depositPaymentDetails && (
                                 <button
@@ -1388,15 +1904,33 @@ function DepositsPage() {
                                     color: 'white',
                                     border: 'none',
                                     borderRadius: '50%',
-                                    width: '16px',
-                                    height: '16px',
-                                    fontSize: '10px',
-                                    cursor: 'pointer'
+                                    width: '20px',
+                                    height: '20px',
+                                    fontSize: '12px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
                                   }}
                                   title="פרטי הפקדה"
                                   onClick={() => {
                                     const details = db.getPaymentDetailsDisplay(deposit.depositPaymentMethod || '', deposit.depositPaymentDetails)
-                                    showNotification(`פרטי הפקדה:<br>${details}`, 'info')
+                                    const fullInfo = `📥 פרטי הפקדה:\n\n` +
+                                      `💰 סכום הפקדה: ₪${deposit.amount.toLocaleString()}\n` +
+                                      `📅 תאריך הפקדה: ${db.getSettings().showHebrewDates ? formatCombinedDate(deposit.depositDate) : new Date(deposit.depositDate).toLocaleDateString('he-IL')}\n` +
+                                      `💳 אמצעי תשלום: ${db.getPaymentMethodDisplay(deposit.depositPaymentMethod)}\n\n` +
+                                      (details ? `פרטים נוספים:\n${details}` : 'אין פרטים נוספים')
+                                    
+                                    setModalConfig({
+                                      isOpen: true,
+                                      title: 'פרטי הפקדה מלאים',
+                                      message: fullInfo,
+                                      confirmText: 'סגור',
+                                      cancelText: '',
+                                      type: 'info',
+                                      onConfirm: () => {},
+                                      onCancel: () => {}
+                                    })
                                   }}
                                 >
                                   ℹ️
@@ -1407,9 +1941,9 @@ function DepositsPage() {
                           
                           {/* אמצעי משיכה */}
                           {withdrawalMethodIcon && withdrawalMethodName && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                              <span style={{ fontSize: '12px', color: '#e67e22' }}>
-                                📤 {withdrawalMethodIcon}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '3px', background: '#fef2e8', padding: '3px 6px', borderRadius: '3px' }}>
+                              <span style={{ fontSize: '11px', color: '#e67e22' }}>
+                                📤 {withdrawalMethodIcon} {withdrawalMethodName}
                               </span>
                               {deposit.withdrawalPaymentDetails && (
                                 <button
@@ -1418,15 +1952,82 @@ function DepositsPage() {
                                     color: 'white',
                                     border: 'none',
                                     borderRadius: '50%',
-                                    width: '16px',
-                                    height: '16px',
-                                    fontSize: '10px',
-                                    cursor: 'pointer'
+                                    width: '20px',
+                                    height: '20px',
+                                    fontSize: '12px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
                                   }}
-                                  title="פרטי משיכה"
+                                  title="היסטוריית משיכות"
                                   onClick={() => {
-                                    const details = db.getPaymentDetailsDisplay(deposit.withdrawalPaymentMethod || '', deposit.withdrawalPaymentDetails)
-                                    showNotification(`פרטי משיכה:<br>${details}`, 'info')
+                                    const withdrawals = db.getWithdrawalsByDepositId(deposit.id)
+                                    const totalWithdrawn = db.getTotalWithdrawnAmount(deposit.id)
+                                    const remainingAmount = deposit.amount - totalWithdrawn
+                                    
+                                    let fullInfo = `📤 היסטוריית משיכות מלאה:\n\n` +
+                                      `💰 סכום הפקדה מקורי: ₪${deposit.amount.toLocaleString()}\n` +
+                                      `💸 סה"כ נמשך: ₪${totalWithdrawn.toLocaleString()}\n` +
+                                      `💵 יתרה נוכחית: ₪${remainingAmount.toLocaleString()}\n\n`
+                                    
+                                    if (withdrawals.length > 0) {
+                                      fullInfo += `📋 פירוט כל המשיכות (${withdrawals.length}):\n\n`
+                                      
+                                      withdrawals.forEach((withdrawal, index) => {
+                                        const withdrawalDate = db.getSettings().showHebrewDates ? 
+                                          formatCombinedDate(withdrawal.date) : 
+                                          new Date(withdrawal.date).toLocaleDateString('he-IL')
+                                        
+                                        // חישוב יתרה לאחר משיכה זו
+                                        const withdrawalsUpToThis = withdrawals.slice(0, index + 1)
+                                        const totalWithdrawnUpToThis = withdrawalsUpToThis.reduce((sum, w) => sum + w.amount, 0)
+                                        const remainingAfterThis = deposit.amount - totalWithdrawnUpToThis
+                                        
+                                        fullInfo += `${index + 1}. משיכה #${withdrawal.id} - ₪${withdrawal.amount.toLocaleString()}\n`
+                                        fullInfo += `   📅 תאריך: ${withdrawalDate}\n`
+                                        fullInfo += `   💳 ${db.getPaymentMethodDisplay(withdrawal.paymentMethod)}\n`
+                                        fullInfo += `   💰 יתרה לאחר משיכה: ₪${remainingAfterThis.toLocaleString()}`
+                                        
+                                        if (remainingAfterThis === 0) {
+                                          fullInfo += ` (הפקדון נמשך במלואו)`
+                                        }
+                                        fullInfo += `\n`
+                                        
+                                        if (withdrawal.paymentDetails) {
+                                          const details = db.getPaymentDetailsDisplay(withdrawal.paymentMethod || '', withdrawal.paymentDetails)
+                                          if (details) {
+                                            // הגבל את אורך הפרטים
+                                            const shortDetails = details.length > 80 ? 
+                                              details.substring(0, 80) + '...' : details
+                                            fullInfo += `   📝 ${shortDetails.replace(/\n/g, '\n   ')}\n`
+                                          }
+                                        }
+                                        
+                                        if (withdrawal.notes) {
+                                          fullInfo += `   📋 הערות: ${withdrawal.notes}\n`
+                                        }
+                                        
+                                        fullInfo += '\n'
+                                      })
+                                    } else {
+                                      fullInfo += 'אין משיכות עדיין'
+                                    }
+                                    
+                                    setModalConfig({
+                                      isOpen: true,
+                                      title: 'היסטוריית משיכות מלאה',
+                                      message: fullInfo,
+                                      confirmText: withdrawals.length > 1 ? 'הדפס שובר' : 'סגור',
+                                      cancelText: withdrawals.length > 1 ? 'סגור' : '',
+                                      type: 'info',
+                                      onConfirm: () => {
+                                        if (withdrawals.length > 1) {
+                                          showWithdrawalSelectionModal(deposit.id, withdrawals)
+                                        }
+                                      },
+                                      onCancel: () => {}
+                                    })
                                   }}
                                 >
                                   ℹ️
@@ -1499,6 +2100,22 @@ function DepositsPage() {
                             משיכה
                           </button>
                         )}
+                        {(() => {
+                          const withdrawals = db.getWithdrawalsByDepositId(deposit.id)
+                          return withdrawals.length > 0 && (
+                            <button 
+                              className="btn btn-success" 
+                              style={{ padding: '5px 10px', fontSize: '12px', marginLeft: '5px' }}
+                              onClick={() => {
+                                // הצג רשימת כל המשיכות לבחירה
+                                showWithdrawalSelectionModal(deposit.id, withdrawals)
+                              }}
+                              title={`הדפס שובר למשיכה (${withdrawals.length} משיכות)`}
+                            >
+                              📄 שוברים
+                            </button>
+                          )
+                        })()}
                         <button
                           onClick={() => {
                             showConfirmModal({
@@ -1563,11 +2180,13 @@ function DepositsPage() {
               backgroundColor: 'white',
               borderRadius: '10px',
               padding: '30px',
-              maxWidth: '400px',
+              maxWidth: '500px',
+              maxHeight: '80vh',
               width: '90%',
               boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
               textAlign: 'center',
-              direction: 'rtl'
+              direction: 'rtl',
+              overflow: 'auto'
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -1632,23 +2251,25 @@ function DepositsPage() {
                 {modalConfig.confirmText}
               </button>
               
-              <button
-                onClick={() => {
-                  if (modalConfig.onCancel) modalConfig.onCancel()
-                  closeModal()
-                }}
-                style={{
-                  backgroundColor: '#95a5a6',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '5px',
-                  fontSize: '16px',
-                  cursor: 'pointer'
-                }}
-              >
-                {modalConfig.cancelText}
-              </button>
+              {modalConfig.cancelText && modalConfig.cancelText.trim() !== '' && (
+                <button
+                  onClick={() => {
+                    if (modalConfig.onCancel) modalConfig.onCancel()
+                    closeModal()
+                  }}
+                  style={{
+                    backgroundColor: '#95a5a6',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '5px',
+                    fontSize: '16px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {modalConfig.cancelText}
+                </button>
+              )}
             </div>
           </div>
         </div>

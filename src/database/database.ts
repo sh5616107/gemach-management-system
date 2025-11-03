@@ -88,12 +88,23 @@ export interface DatabaseDeposit {
   phone: string
   notes: string
   status: 'active' | 'withdrawn'
-  withdrawnAmount?: number
-  withdrawnDate?: string
+  withdrawnAmount?: number // סכום כולל שנמשך (לתאימות לאחור)
+  withdrawnDate?: string // תאריך משיכה אחרונה (לתאימות לאחור)
   depositPaymentMethod?: 'cash' | 'transfer' | 'check' | 'credit' | 'other' // אמצעי קבלת ההפקדה
   depositPaymentDetails?: string // פרטי אמצעי התשלום (JSON string)
-  withdrawalPaymentMethod?: 'cash' | 'transfer' | 'check' | 'credit' | 'other' // אמצעי משיכת ההפקדה
-  withdrawalPaymentDetails?: string // פרטי אמצעי התשלום למשיכה (JSON string)
+  withdrawalPaymentMethod?: 'cash' | 'transfer' | 'check' | 'credit' | 'other' // אמצעי משיכה אחרונה (לתאימות לאחור)
+  withdrawalPaymentDetails?: string // פרטי אמצעי התשלום למשיכה אחרונה (לתאימות לאחור)
+}
+
+export interface DatabaseWithdrawal {
+  id: number
+  depositId: number // קישור להפקדה
+  amount: number
+  date: string
+  paymentMethod?: 'cash' | 'transfer' | 'check' | 'credit' | 'other' // אמצעי התשלום
+  paymentDetails?: string // פרטי אמצעי התשלום (JSON string)
+  paymentDetailsComplete?: boolean // האם פרטי התשלום הושלמו
+  notes?: string
 }
 
 export interface DatabaseDonation {
@@ -139,6 +150,7 @@ interface DatabaseFile {
   deposits: DatabaseDeposit[]
   donations: DatabaseDonation[]
   payments: DatabasePayment[]
+  withdrawals: DatabaseWithdrawal[] // טבלת משיכות חדשה
   lastUpdated: string
   gemachName: string
   settings: DatabaseSettings
@@ -151,6 +163,7 @@ class GemachDatabase {
     deposits: [],
     donations: [],
     payments: [],
+    withdrawals: [],
     lastUpdated: new Date().toISOString(),
     gemachName: 'נר שרה',
     settings: {
@@ -194,6 +207,7 @@ class GemachDatabase {
       const deposits = localStorage.getItem('gemach_deposits')
       const donations = localStorage.getItem('gemach_donations')
       const payments = localStorage.getItem('gemach_payments')
+      const withdrawals = localStorage.getItem('gemach_withdrawals')
 
       const gemachName = localStorage.getItem('gemach_name')
       const settings = localStorage.getItem('gemach_settings')
@@ -204,6 +218,7 @@ class GemachDatabase {
         deposits: deposits ? JSON.parse(deposits) : [],
         donations: donations ? JSON.parse(donations) : [],
         payments: payments ? JSON.parse(payments) : [],
+        withdrawals: withdrawals ? JSON.parse(withdrawals) : [],
         lastUpdated: new Date().toISOString(),
         gemachName: gemachName || 'נר שרה',
         settings: settings ? JSON.parse(settings) : {
@@ -247,6 +262,7 @@ class GemachDatabase {
       localStorage.setItem('gemach_deposits', JSON.stringify(this.dataFile.deposits))
       localStorage.setItem('gemach_donations', JSON.stringify(this.dataFile.donations))
       localStorage.setItem('gemach_payments', JSON.stringify(this.dataFile.payments))
+      localStorage.setItem('gemach_withdrawals', JSON.stringify(this.dataFile.withdrawals))
       localStorage.setItem('gemach_name', this.dataFile.gemachName)
       localStorage.setItem('gemach_settings', JSON.stringify(this.dataFile.settings))
 
@@ -258,7 +274,8 @@ class GemachDatabase {
         loans: this.dataFile.loans.length,
         deposits: this.dataFile.deposits.length,
         donations: this.dataFile.donations.length,
-        payments: this.dataFile.payments.length
+        payments: this.dataFile.payments.length,
+        withdrawals: this.dataFile.withdrawals.length
       })
     } catch (error) {
       console.error('שגיאה בשמירת נתונים:', error)
@@ -286,6 +303,7 @@ class GemachDatabase {
         deposits: importedData.deposits || [],
         donations: importedData.donations || [],
         payments: importedData.payments || [],
+        withdrawals: importedData.withdrawals || [],
         lastUpdated: new Date().toISOString(),
         gemachName: importedData.gemachName || 'נר שרה',
         settings: importedData.settings || {
@@ -895,27 +913,67 @@ class GemachDatabase {
   withdrawDeposit(id: number, amount: number, withdrawalMethod?: string, withdrawalDetails?: string): boolean {
     const deposit = this.dataFile.deposits.find(d => d.id === id)
     if (deposit && deposit.status === 'active') {
-      const withdrawnAmount = (deposit.withdrawnAmount || 0) + amount
-      if (withdrawnAmount <= deposit.amount) {
-        deposit.withdrawnAmount = withdrawnAmount
+      const currentWithdrawn = this.getTotalWithdrawnAmount(id)
+      const newTotalWithdrawn = currentWithdrawn + amount
+      
+      if (newTotalWithdrawn <= deposit.amount) {
+        // יצירת רשומת משיכה חדשה
+        const newWithdrawal: DatabaseWithdrawal = {
+          id: this.getNextId(this.dataFile.withdrawals),
+          depositId: id,
+          amount: amount,
+          date: new Date().toISOString().split('T')[0],
+          paymentMethod: withdrawalMethod as 'cash' | 'transfer' | 'check' | 'credit' | 'other' | undefined,
+          paymentDetails: withdrawalDetails,
+          paymentDetailsComplete: true,
+          notes: ''
+        }
+        
+        this.dataFile.withdrawals.push(newWithdrawal)
+        
+        // עדכון ההפקדה (לתאימות לאחור)
+        deposit.withdrawnAmount = newTotalWithdrawn
         deposit.withdrawnDate = new Date().toISOString().split('T')[0]
+        deposit.withdrawalPaymentMethod = withdrawalMethod as 'cash' | 'transfer' | 'check' | 'credit' | 'other' | undefined
+        deposit.withdrawalPaymentDetails = withdrawalDetails
 
-        // הוספת אמצעי תשלום למשיכה
-        if (withdrawalMethod) {
-          deposit.withdrawalPaymentMethod = withdrawalMethod as 'cash' | 'transfer' | 'check' | 'credit' | 'other'
-        }
-        if (withdrawalDetails) {
-          deposit.withdrawalPaymentDetails = withdrawalDetails
-        }
-
-        if (withdrawnAmount === deposit.amount) {
+        if (newTotalWithdrawn === deposit.amount) {
           deposit.status = 'withdrawn'
         }
+        
         this.saveData()
         return true
       }
     }
     return false
+  }
+
+  // פונקציות עזר למשיכות
+  getTotalWithdrawnAmount(depositId: number): number {
+    return this.dataFile.withdrawals
+      .filter(w => w.depositId === depositId)
+      .reduce((sum, w) => sum + w.amount, 0)
+  }
+
+  getWithdrawalsByDepositId(depositId: number): DatabaseWithdrawal[] {
+    return this.dataFile.withdrawals
+      .filter(w => w.depositId === depositId)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  }
+
+  addWithdrawal(withdrawal: Omit<DatabaseWithdrawal, 'id'>): DatabaseWithdrawal {
+    const newWithdrawal: DatabaseWithdrawal = {
+      ...withdrawal,
+      id: this.getNextId(this.dataFile.withdrawals)
+    }
+    this.dataFile.withdrawals.push(newWithdrawal)
+    this.saveData()
+    return newWithdrawal
+  }
+
+  deleteWithdrawal(id: number): void {
+    this.dataFile.withdrawals = this.dataFile.withdrawals.filter(w => w.id !== id)
+    this.saveData()
   }
 
   // תרומות
@@ -1104,6 +1162,7 @@ class GemachDatabase {
       deposits: [],
       donations: [],
       payments: [],
+      withdrawals: [],
       lastUpdated: new Date().toISOString(),
       gemachName: 'נר שרה',
       settings: {

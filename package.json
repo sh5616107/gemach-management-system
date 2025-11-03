@@ -1,6 +1,6 @@
 {
   "name": "gemach-management-system",
-  "version": "2.5.5",
+  "version": "2.6.0",
   "description": "Gemach Management System - Comprehensive system for managing loans, deposits and donations",
   "main": "electron.js",
   "homepage": "./",
@@ -53,7 +53,8 @@
         }
       ],
       "icon": "assets/icon.ico",
-      "requestedExecutionLevel": "asInvoker"
+      "requestedExecutionLevel": "asInvoker",
+      "publisherName": "Gemach System"
     },
     "nsis": {
       "oneClick": false,
@@ -97,6 +98,10 @@
       "provider": "github",
       "owner": "sh5616107",
       "repo": "gemach-management-system"
+    },
+    "generateUpdatesFilesForAllChannels": false,
+    "releaseInfo": {
+      "releaseNotes": "גרסה חדשה של מערכת ניהול גמח"
     }
   },
   "devDependencies": {

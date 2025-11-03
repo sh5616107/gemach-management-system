@@ -818,7 +818,7 @@ function HomePage() {
         <div className="categories">
           <div className="category" onClick={() => navigate('/loans')}>
             <div className="category-image">📋</div>
-            <h2 className="category-title">הלוואות</h2>
+            <h2 className="category-title">הלוואות וערבים</h2>
           </div>
 
           <div className="category" onClick={() => navigate('/donations')}>

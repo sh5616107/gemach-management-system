@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { db, DatabaseLoan, DatabasePayment, DatabaseBorrower } from '../database/database'
+import { db, DatabaseLoan, DatabasePayment, DatabaseBorrower, DatabaseGuarantor } from '../database/database'
 import NumberInput from '../components/NumberInput'
+import BlacklistManager from '../components/BlacklistManager'
+import WarningLetterGenerator from '../components/WarningLetterGenerator'
 import { formatCombinedDate, formatHebrewDateOnly } from '../utils/hebrewDate'
 import { israeliBanks, getBankByCode, formatBankOption } from '../utils/israeliBanks'
 
@@ -71,7 +73,8 @@ function LoansPage() {
     phone: '',
     address: '',
     email: '',
-    idNumber: ''
+    idNumber: '',
+    notes: ''
   })
 
   const [currentLoan, setCurrentLoan] = useState<Partial<DatabaseLoan>>({
@@ -89,16 +92,35 @@ function LoansPage() {
     autoPaymentFrequency: 1,
     notes: '',
     guarantor1: '',
-    guarantor2: ''
+    guarantor2: '',
+    guarantor1Id: undefined,
+    guarantor2Id: undefined
   })
 
   const [borrowers, setBorrowers] = useState<DatabaseBorrower[]>([])
   const [loans, setLoans] = useState<DatabaseLoan[]>([])
   const [payments, setPayments] = useState<DatabasePayment[]>([])
+  const [guarantors, setGuarantors] = useState<DatabaseGuarantor[]>([])
   const [selectedLoanId, setSelectedLoanId] = useState<number | null>(null)
   const [selectedBorrowerId, setSelectedBorrowerId] = useState<number | null>(null)
-  const [mode, setMode] = useState<'borrower' | 'loan' | 'payment-details'>('borrower')
+  const [editingGuarantorId, setEditingGuarantorId] = useState<number | null>(null)
+  const [guarantorSearchTerm, setGuarantorSearchTerm] = useState('')
+  const [showBlacklistManager, setShowBlacklistManager] = useState(false)
+  const [showWarningLetterGenerator, setShowWarningLetterGenerator] = useState(false)
+  const [mode, setMode] = useState<'borrower' | 'guarantor' | 'loan' | 'payment-details'>('borrower')
   const [isAdvancedEditMode, setIsAdvancedEditMode] = useState(false)
+
+  // State לערב חדש
+  const [newGuarantor, setNewGuarantor] = useState({
+    firstName: '',
+    lastName: '',
+    idNumber: '',
+    phone: '',
+    email: '',
+    address: '',
+    notes: '',
+    status: 'active' as 'active' | 'blacklisted' | 'at_risk'
+  })
 
   // State למודל אישור
   const [modalConfig, setModalConfig] = useState<{
@@ -146,6 +168,7 @@ function LoansPage() {
 
   useEffect(() => {
     loadData()
+    loadGuarantors()
   }, [])
 
   // טיפול בפרמטר loanId לאחר טעינת הנתונים
@@ -240,6 +263,96 @@ function LoansPage() {
     })
   }
 
+  const loadGuarantors = () => {
+    const newGuarantors = db.getGuarantors()
+    // עדכן סטטיסטיקות לכל הערבים
+    db.updateAllGuarantorStats()
+    setGuarantors(newGuarantors)
+    console.log('🔄 רענון טבלת ערבים:', newGuarantors.length)
+  }
+
+  const handleGuarantorInputChange = (field: string, value: string) => {
+    setNewGuarantor(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const saveGuarantor = () => {
+    if (!newGuarantor.firstName || !newGuarantor.lastName || !newGuarantor.phone) {
+      showNotification('⚠️ אנא מלא את השדות החובה: שם מלא וטלפון', 'error')
+      return
+    }
+
+    // בדוק מספר זהות רק אם זה חובה
+    if (db.getSettings().requireIdNumber && (!newGuarantor.idNumber || newGuarantor.idNumber.trim() === '')) {
+      showNotification('⚠️ מספר זהות הוא שדה חובה (ניתן לשנות בהגדרות)', 'error')
+      return
+    }
+
+    if (editingGuarantorId) {
+      // עדכון ערב קיים
+      if (db.updateGuarantor(editingGuarantorId, newGuarantor)) {
+        setEditingGuarantorId(null)
+        showNotification('✅ הערב עודכן בהצלחה!')
+      } else {
+        showNotification('❌ שגיאה בעדכון הערב', 'error')
+        return
+      }
+    } else {
+      // ערב חדש
+      const result = db.addGuarantor(newGuarantor)
+      if ('error' in result) {
+        showNotification(`❌ ${result.error}`, 'error')
+        return
+      } else {
+        showNotification('✅ ערב חדש נוסף בהצלחה!')
+      }
+    }
+
+    loadGuarantors()
+    setNewGuarantor({
+      firstName: '',
+      lastName: '',
+      idNumber: '',
+      phone: '',
+      email: '',
+      address: '',
+      notes: '',
+      status: 'active'
+    })
+  }
+
+  const editGuarantor = (guarantor: DatabaseGuarantor) => {
+    setNewGuarantor({
+      firstName: guarantor.firstName,
+      lastName: guarantor.lastName,
+      idNumber: guarantor.idNumber || '',
+      phone: guarantor.phone,
+      email: guarantor.email || '',
+      address: guarantor.address || '',
+      notes: guarantor.notes || '',
+      status: guarantor.status
+    })
+    setEditingGuarantorId(guarantor.id)
+  }
+
+  const cancelGuarantorEdit = () => {
+    setEditingGuarantorId(null)
+    setNewGuarantor({
+      firstName: '',
+      lastName: '',
+      idNumber: '',
+      phone: '',
+      email: '',
+      address: '',
+      notes: '',
+      status: 'active'
+    })
+  }
+
+
+
   const selectBorrower = (borrowerId: number) => {
     const borrower = borrowers.find(b => b.id === borrowerId)
     if (borrower) {
@@ -277,7 +390,9 @@ function LoansPage() {
           autoPaymentFrequency: 1,
           notes: '',
           guarantor1: '',
-          guarantor2: ''
+          guarantor2: '',
+          guarantor1Id: undefined,
+          guarantor2Id: undefined
         })
         setSelectedLoanId(null)
         setPayments([])
@@ -478,7 +593,9 @@ function LoansPage() {
               returnDate: calculateDefaultReturnDate(today),
               notes: '',
               guarantor1: '',
-              guarantor2: ''
+              guarantor2: '',
+              guarantor1Id: undefined,
+              guarantor2Id: undefined
             })
           }
         }
@@ -557,6 +674,25 @@ function LoansPage() {
         amount: currentLoan.amount
       })
       showNotification('⚠️ אנא בחר לווה והכנס סכום', 'error')
+      return
+    }
+
+    // בדיקה שהלווה לא ברשימה שחורה
+    if (db.isBlacklisted('borrower', currentLoan.borrowerId)) {
+      showNotification('🚫 לא ניתן להלוות ללווה הנמצא ברשימה השחורה!', 'error')
+      return
+    }
+
+    // בדיקה שהערבים לא ברשימה שחורה
+    if (currentLoan.guarantor1Id && db.isBlacklisted('guarantor', currentLoan.guarantor1Id)) {
+      const guarantor = db.getGuarantor(currentLoan.guarantor1Id)
+      showNotification(`🚫 לא ניתן להשתמש בערב "${guarantor?.firstName} ${guarantor?.lastName}" - נמצא ברשימה השחורה!`, 'error')
+      return
+    }
+
+    if (currentLoan.guarantor2Id && db.isBlacklisted('guarantor', currentLoan.guarantor2Id)) {
+      const guarantor = db.getGuarantor(currentLoan.guarantor2Id)
+      showNotification(`🚫 לא ניתן להשתמש בערב "${guarantor?.firstName} ${guarantor?.lastName}" - נמצא ברשימה השחורה!`, 'error')
       return
     }
 
@@ -1048,7 +1184,8 @@ function LoansPage() {
       phone: '',
       address: '',
       email: '',
-      idNumber: ''
+      idNumber: '',
+      notes: ''
     })
     setSelectedBorrowerId(null)
     setMode('borrower')
@@ -1074,7 +1211,9 @@ function LoansPage() {
       autoPaymentFrequency: 1, // ברירת מחדל - כל חודש
       notes: '',
       guarantor1: '',
-      guarantor2: ''
+      guarantor2: '',
+      guarantor1Id: undefined,
+      guarantor2Id: undefined
     })
     setSelectedLoanId(null)
     setPayments([])
@@ -1628,7 +1767,7 @@ function LoansPage() {
 
     // חישוב יתרת חוב לאחר הפרעון הספציפי הזה
     const balanceAfterThisPayment = db.getLoanBalanceAfterPayment(loan.id, payment)
-    
+
     // פרעונות קודמים
     const previousPayments = db.getPreviousPayments(loan.id, payment)
     const totalPreviousPayments = previousPayments.reduce((sum, p) => sum + p.amount, 0)
@@ -1687,17 +1826,17 @@ function LoansPage() {
                 <div style="border: 2px solid #3498db; padding: 15px; margin: 15px 0; background: #e8f4fd;">
                   <h3 style="margin: 0 0 10px 0; color: #3498db;">פרעונות קודמים:</h3>
                   ${previousPayments.map((prevPayment, index) => {
-                    const prevPaymentDate = settings.showHebrewDates ?
-                      formatCombinedDate(prevPayment.date) :
-                      new Date(prevPayment.date).toLocaleDateString('he-IL')
-                    return `
+        const prevPaymentDate = settings.showHebrewDates ?
+          formatCombinedDate(prevPayment.date) :
+          new Date(prevPayment.date).toLocaleDateString('he-IL')
+        return `
                       <p style="margin: 5px 0; font-size: 14px;">
                         פרעון ${index + 1}: <strong>₪${prevPayment.amount.toLocaleString()}</strong> 
                         ${db.getPaymentMethodIcon(prevPayment.paymentMethod)} ${db.getPaymentMethodName(prevPayment.paymentMethod)}
                         (${prevPaymentDate})
                       </p>
                     `
-                  }).join('')}
+      }).join('')}
                   <p style="margin: 10px 0 5px 0; font-weight: bold; border-top: 1px solid #3498db; padding-top: 10px;">
                     סה"כ פרעונות קודמים: <strong>₪${totalPreviousPayments.toLocaleString()}</strong>
                   </p>
@@ -1889,17 +2028,17 @@ function LoansPage() {
                   <div style="border: 2px solid #3498db; padding: 15px; margin: 15px 0; background: #e8f4fd;">
                     <h3 style="margin: 0 0 10px 0; color: #3498db;">פרעונות קודמים:</h3>
                     ${previousPayments.map((prevPayment, index) => {
-                      const prevPaymentDate = settings.showHebrewDates ?
-                        formatCombinedDate(prevPayment.date) :
-                        new Date(prevPayment.date).toLocaleDateString('he-IL')
-                      return `
+          const prevPaymentDate = settings.showHebrewDates ?
+            formatCombinedDate(prevPayment.date) :
+            new Date(prevPayment.date).toLocaleDateString('he-IL')
+          return `
                         <p style="margin: 5px 0; font-size: 14px;">
                           פרעון ${index + 1}: <strong>₪${prevPayment.amount.toLocaleString()}</strong> 
                           ${db.getPaymentMethodIcon(prevPayment.paymentMethod)} ${db.getPaymentMethodName(prevPayment.paymentMethod)}
                           (${prevPaymentDate})
                         </p>
                       `
-                    }).join('')}
+        }).join('')}
                     <p style="margin: 10px 0 5px 0; font-weight: bold; border-top: 1px solid #3498db; padding-top: 10px;">
                       סה"כ פרעונות קודמים: <strong>₪${totalPreviousPayments.toLocaleString()}</strong>
                     </p>
@@ -2051,7 +2190,7 @@ function LoansPage() {
         ...prev,
         paymentMethod: currentMethod
       }))
-      
+
       // אם יש פרטים נוספים, טען גם אותם
       if (currentDetails) {
         try {
@@ -2061,7 +2200,7 @@ function LoansPage() {
             paymentMethod: currentMethod,
             ...details
           }))
-          
+
           // אם יש קוד בנק, וודא שגם שם הבנק מעודכן
           if (details.bankCode && !details.bankName) {
             const selectedBank = getBankByCode(details.bankCode)
@@ -2224,6 +2363,19 @@ function LoansPage() {
     }
   }
 
+  // סינון ערבים לפי חיפוש
+  const filteredGuarantors = guarantors.filter(guarantor => {
+    if (!guarantorSearchTerm) return true
+    const search = guarantorSearchTerm.toLowerCase()
+    return (
+      guarantor.firstName.toLowerCase().includes(search) ||
+      guarantor.lastName.toLowerCase().includes(search) ||
+      guarantor.phone.includes(search) ||
+      (guarantor.idNumber && guarantor.idNumber.includes(search)) ||
+      (guarantor.email && guarantor.email.toLowerCase().includes(search))
+    )
+  })
+
   return (
     <div>
       <header className="header">
@@ -2239,6 +2391,13 @@ function LoansPage() {
             style={{ marginLeft: '10px' }}
           >
             ניהול לווים
+          </button>
+          <button
+            className={`btn ${mode === 'guarantor' ? 'btn-success' : 'btn-primary'}`}
+            onClick={() => setMode('guarantor')}
+            style={{ marginLeft: '10px' }}
+          >
+            ניהול ערבים
           </button>
           <button
             className={`btn ${mode === 'loan' ? 'btn-success' : 'btn-primary'}`}
@@ -2278,6 +2437,50 @@ function LoansPage() {
         {mode === 'borrower' && (
           <div className="form-container">
             <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>ניהול לווים</h3>
+
+            {/* כפתורי פעולות מתקדמות */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '15px',
+              marginBottom: '20px'
+            }}>
+              <button
+                onClick={() => setShowBlacklistManager(true)}
+                style={{
+                  background: 'linear-gradient(135deg, #e74c3c, #c0392b)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  boxShadow: '0 2px 10px rgba(231, 76, 60, 0.3)'
+                }}
+              >
+                🚫 ניהול רשימה שחורה
+              </button>
+              <button
+                onClick={() => {
+                  // TODO: פתח מנהל מכתבי התראה
+                  showNotification('🚧 מכתבי התראה יתווספו בקרוב', 'info')
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #f39c12, #e67e22)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  boxShadow: '0 2px 10px rgba(243, 156, 18, 0.3)'
+                }}
+              >
+                📧 מכתבי התראה
+              </button>
+            </div>
 
             <div className="form-row">
               <div className="form-group">
@@ -2418,6 +2621,26 @@ function LoansPage() {
               </div>
             </div>
 
+            <div className="form-row">
+              <div className="form-group" style={{ width: '100%' }}>
+                <label>הערות:</label>
+                <input
+                  key={`notes-${selectedBorrowerId || 'new'}`}
+                  type="text"
+                  value={currentBorrower.notes || ''}
+                  onChange={(e) => handleBorrowerChange('notes', e.target.value)}
+                  placeholder=""
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+            </div>
+
             <div className="form-row" style={{ justifyContent: 'center' }}>
               <button className="btn btn-success" onClick={saveBorrower}>
                 שמור לווה
@@ -2484,9 +2707,499 @@ function LoansPage() {
           </div>
         )}
 
+        {mode === 'guarantor' && (
+          <div style={{ padding: '20px' }}>
+            <h2 style={{ color: '#2c3e50', marginBottom: '20px', textAlign: 'center' }}>
+              🤝 מערכת ניהול ערבים מתקדמת
+            </h2>
+            <p style={{ color: '#34495e', fontSize: '16px', textAlign: 'center', marginBottom: '15px' }}>
+              נהל את כל הערבים של הגמ"ח במקום אחד - עם מעקב אחר ערבויות פעילות וסיכונים
+            </p>
+
+            {/* הסבר על סטטוסים */}
+            <div style={{
+              background: '#f8f9fa',
+              padding: '15px',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              fontSize: '14px',
+              textAlign: 'center'
+            }}>
+              <strong>הסבר סטטוסים:</strong>
+              <span style={{ color: '#27ae60', marginLeft: '10px' }}>✅ פעיל</span> - ערב רגיל |
+              <span style={{ color: '#f39c12', marginLeft: '10px' }}>⚠️ בסיכון גבוה</span> - מעל 50,000 ש"ח ערבויות |
+              <span style={{ color: '#e74c3c', marginLeft: '10px' }}>🚫 חסום</span> - ברשימה שחורה
+            </div>
+
+            {/* סטטיסטיקות מהירות */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gap: '15px',
+              marginBottom: '30px'
+            }}>
+              <div style={{
+                background: 'linear-gradient(135deg, #3498db, #2980b9)',
+                color: 'white',
+                padding: '20px',
+                borderRadius: '10px',
+                textAlign: 'center'
+              }}>
+                <h3 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>{guarantors.length}</h3>
+                <p style={{ margin: 0, fontSize: '14px' }}>סה"כ ערבים</p>
+              </div>
+              <div style={{
+                background: 'linear-gradient(135deg, #27ae60, #229954)',
+                color: 'white',
+                padding: '20px',
+                borderRadius: '10px',
+                textAlign: 'center'
+              }}>
+                <h3 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>
+                  {guarantors.filter(g => g.status === 'active').length}
+                </h3>
+                <p style={{ margin: 0, fontSize: '14px' }}>ערבים פעילים</p>
+              </div>
+              <div style={{
+                background: 'linear-gradient(135deg, #f39c12, #e67e22)',
+                color: 'white',
+                padding: '20px',
+                borderRadius: '10px',
+                textAlign: 'center'
+              }}>
+                <h3 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>
+                  {guarantors.filter(g => g.status === 'at_risk').length}
+                </h3>
+                <p style={{ margin: 0, fontSize: '14px' }}>ערבים בסיכון גבוה</p>
+              </div>
+              <div style={{
+                background: 'linear-gradient(135deg, #e74c3c, #c0392b)',
+                color: 'white',
+                padding: '20px',
+                borderRadius: '10px',
+                textAlign: 'center'
+              }}>
+                <h3 style={{ margin: '0 0 10px 0', fontSize: '24px' }}>
+                  {guarantors.reduce((sum, g) => sum + g.activeGuarantees, 0)}
+                </h3>
+                <p style={{ margin: 0, fontSize: '14px' }}>ערבויות פעילות</p>
+              </div>
+            </div>
+
+            {/* כפתורי פעולות מתקדמות */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '15px',
+              marginBottom: '20px'
+            }}>
+              <button
+                onClick={() => setShowBlacklistManager(true)}
+                style={{
+                  background: 'linear-gradient(135deg, #e74c3c, #c0392b)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  boxShadow: '0 2px 10px rgba(231, 76, 60, 0.3)'
+                }}
+              >
+                🚫 ניהול רשימה שחורה
+              </button>
+              <button
+                onClick={() => {
+                  // TODO: פתח מנהל מכתבי התראה
+                  showNotification('🚧 מכתבי התראה יתווספו בקרוב', 'info')
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #f39c12, #e67e22)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  boxShadow: '0 2px 10px rgba(243, 156, 18, 0.3)'
+                }}
+              >
+                📧 מכתבי התראה
+              </button>
+            </div>
+
+            {/* חיפוש */}
+            <div style={{ marginBottom: '20px' }}>
+              <input
+                type="text"
+                placeholder="🔍 חפש ערב לפי שם, טלפון או מספר זהות..."
+                value={guarantorSearchTerm}
+                onChange={(e) => setGuarantorSearchTerm(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  fontSize: '16px',
+                  border: '2px solid #ddd',
+                  borderRadius: '8px',
+                  marginBottom: '10px'
+                }}
+              />
+            </div>
+
+            <div className="form-container" style={{ marginBottom: '30px' }}>
+              <h3 style={{ marginBottom: '20px', color: '#2c3e50', textAlign: 'center' }}>
+                {editingGuarantorId ? 'עריכת ערב' : 'הוספת ערב חדש'}
+              </h3>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>שם פרטי: <span style={{ color: '#e74c3c' }}>*</span></label>
+                  <input
+                    type="text"
+                    value={newGuarantor.firstName}
+                    onChange={(e) => handleGuarantorInputChange('firstName', e.target.value)}
+                    placeholder="הכנס שם פרטי"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>שם משפחה: <span style={{ color: '#e74c3c' }}>*</span></label>
+                  <input
+                    type="text"
+                    value={newGuarantor.lastName}
+                    onChange={(e) => handleGuarantorInputChange('lastName', e.target.value)}
+                    placeholder="הכנס שם משפחה"
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>טלפון: <span style={{ color: '#e74c3c' }}>*</span></label>
+                  <input
+                    type="text"
+                    value={newGuarantor.phone}
+                    onChange={(e) => handleGuarantorInputChange('phone', e.target.value)}
+                    placeholder="הכנס מספר טלפון"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>
+                    מספר זהות: {db.getSettings().requireIdNumber && <span style={{ color: '#e74c3c' }}>*</span>}
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        color: '#666',
+                        marginRight: '5px',
+                        cursor: 'help'
+                      }}
+                      title={db.getSettings().requireIdNumber ?
+                        "מספר זהות ישראלי תקין עם ספרת ביקורת נכונה (חובה)" :
+                        "מספר זהות ישראלי תקין עם ספרת ביקורת נכונה (אופציונלי)"
+                      }
+                    >
+                      ℹ️
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    value={newGuarantor.idNumber}
+                    onChange={(e) => {
+                      const cleanValue = e.target.value.replace(/[^\d\s-]/g, '')
+                      handleGuarantorInputChange('idNumber', cleanValue)
+                    }}
+                    placeholder={db.getSettings().requireIdNumber ? "דוגמה: 123456782" : "דוגמה: 123456782 (אופציונלי)"}
+                    maxLength={11}
+                    style={{
+                      borderColor: newGuarantor.idNumber && !db.validateIsraeliId(newGuarantor.idNumber) ? '#e74c3c' : undefined
+                    }}
+                  />
+                  {newGuarantor.idNumber && (
+                    <small style={{
+                      color: db.validateIsraeliId(newGuarantor.idNumber) ? '#27ae60' : '#e74c3c',
+                      fontSize: '12px',
+                      display: 'block',
+                      marginTop: '2px'
+                    }}>
+                      {(() => {
+                        const cleanId = newGuarantor.idNumber.replace(/[\s-]/g, '')
+                        if (cleanId.length !== 9) {
+                          return `נדרשות 9 ספרות (יש ${cleanId.length})`
+                        } else if (db.validateIsraeliId(newGuarantor.idNumber)) {
+                          return '✓ מספר זהות תקין'
+                        } else {
+                          return '❌ מספר זהות לא תקין (ספרת ביקורת שגויה)'
+                        }
+                      })()}
+                    </small>
+                  )}
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>כתובת:</label>
+                  <input
+                    type="text"
+                    value={newGuarantor.address || ''}
+                    onChange={(e) => handleGuarantorInputChange('address', e.target.value)}
+                    placeholder="הכנס כתובת (אופציונלי)"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>אימייל:</label>
+                  <input
+                    type="email"
+                    value={newGuarantor.email || ''}
+                    onChange={(e) => handleGuarantorInputChange('email', e.target.value)}
+                    placeholder="הכנס אימייל (אופציונלי)"
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>הערות:</label>
+                  <textarea
+                    value={newGuarantor.notes || ''}
+                    onChange={(e) => handleGuarantorInputChange('notes', e.target.value)}
+                    placeholder="הערות נוספות (אופציונלי)"
+                    rows={3}
+                    style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+                  />
+                </div>
+              </div>
+
+              <div className="form-row" style={{ justifyContent: 'center' }}>
+                <button className="btn btn-success" onClick={saveGuarantor}>
+                  {editingGuarantorId ? '💾 עדכן ערב' : '➕ הוסף ערב'}
+                </button>
+                {editingGuarantorId && (
+                  <button
+                    className="btn"
+                    onClick={cancelGuarantorEdit}
+                    style={{ backgroundColor: '#e74c3c', color: 'white', marginRight: '10px' }}
+                  >
+                    ❌ ביטול עריכה
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {filteredGuarantors.length > 0 && (
+              <div>
+                <h3 style={{ color: '#2c3e50', marginBottom: '15px' }}>
+                  רשימת ערבים ({filteredGuarantors.length})
+                </h3>
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>מספר</th>
+                      <th>שם מלא</th>
+                      <th>טלפון</th>
+                      <th>מספר זהות</th>
+                      <th>ערבויות פעילות</th>
+                      <th>סיכון כולל</th>
+                      <th>סטטוס</th>
+                      <th>פעולות</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredGuarantors.map((guarantor) => (
+                      <tr key={guarantor.id}>
+                        <td>{guarantor.id}</td>
+                        <td>
+                          <div style={{ fontWeight: 'bold' }}>
+                            {guarantor.firstName} {guarantor.lastName}
+                          </div>
+                          {guarantor.email && (
+                            <div style={{ fontSize: '12px', color: '#666' }}>
+                              📧 {guarantor.email}
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          <div>{guarantor.phone}</div>
+                          {guarantor.address && (
+                            <div style={{ fontSize: '11px', color: '#666' }}>
+                              📍 {guarantor.address}
+                            </div>
+                          )}
+                        </td>
+                        <td>{db.formatIdNumber(guarantor.idNumber || '')}</td>
+                        <td style={{
+                          color: guarantor.activeGuarantees > 0 ? '#e74c3c' : '#27ae60',
+                          fontWeight: 'bold',
+                          textAlign: 'center'
+                        }}>
+                          {guarantor.activeGuarantees}
+                        </td>
+                        <td style={{
+                          color: guarantor.totalRisk > 50000 ? '#e74c3c' :
+                            guarantor.totalRisk > 20000 ? '#f39c12' : '#27ae60',
+                          fontWeight: 'bold',
+                          textAlign: 'center'
+                        }}>
+                          ₪{guarantor.totalRisk.toLocaleString()}
+                        </td>
+                        <td>
+                          <span style={{
+                            background: guarantor.status === 'active' ? '#27ae60' :
+                              guarantor.status === 'at_risk' ? '#f39c12' : '#e74c3c',
+                            color: 'white',
+                            padding: '4px 8px',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                            fontWeight: 'bold'
+                          }}>
+                            {guarantor.status === 'active' ? '✅ פעיל' :
+                              guarantor.status === 'at_risk' ? '⚠️ בסיכון גבוה' : '🚫 חסום'}
+                          </span>
+                          {guarantor.notes && (
+                            <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
+                              📝 {guarantor.notes.length > 20 ? guarantor.notes.substring(0, 20) + '...' : guarantor.notes}
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          <button
+                            onClick={() => editGuarantor(guarantor)}
+                            style={{
+                              padding: '6px 12px',
+                              fontSize: '12px',
+                              backgroundColor: '#f39c12',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              marginLeft: '5px'
+                            }}
+                            title="ערוך פרטי ערב"
+                          >
+                            ✏️ ערוך
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (guarantor.activeGuarantees > 0) {
+                                showNotification('❌ לא ניתן למחוק ערב עם ערבויות פעילות', 'error')
+                                return
+                              }
+
+                              if (window.confirm(`האם אתה בטוח שברצונך למחוק את הערב ${guarantor.firstName} ${guarantor.lastName}?\n\nפעולה זו לא ניתנת לביטול.`)) {
+                                if (db.deleteGuarantor(guarantor.id)) {
+                                  loadGuarantors()
+                                  showNotification('✅ הערב נמחק בהצלחה!')
+                                } else {
+                                  showNotification('❌ שגיאה במחיקת הערב', 'error')
+                                }
+                              }
+                            }}
+                            style={{
+                              padding: '6px 12px',
+                              fontSize: '12px',
+                              backgroundColor: '#e74c3c',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '4px',
+                              cursor: 'pointer'
+                            }}
+                            title="מחק ערב (רק אם אין ערבויות פעילות)"
+                          >
+                            🗑️ מחק
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {filteredGuarantors.length === 0 && guarantorSearchTerm && (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px',
+                color: '#666',
+                background: '#f8f9fa',
+                borderRadius: '8px',
+                margin: '20px 0'
+              }}>
+                <h3>🔍 לא נמצאו ערבים</h3>
+                <p>לא נמצאו ערבים התואמים לחיפוש "{guarantorSearchTerm}"</p>
+                <button
+                  onClick={() => setGuarantorSearchTerm('')}
+                  className="btn btn-primary"
+                  style={{ marginTop: '10px' }}
+                >
+                  נקה חיפוש
+                </button>
+              </div>
+            )}
+
+            {guarantors.length === 0 && (
+              <div style={{
+                textAlign: 'center',
+                padding: '40px',
+                color: '#666',
+                background: '#f8f9fa',
+                borderRadius: '8px',
+                margin: '20px 0'
+              }}>
+                <h3>🤝 אין ערבים במערכת</h3>
+                <p>התחל בהוספת הערב הראשון באמצעות הטופס למעלה</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {mode === 'loan' && (
           <div className="form-container">
             <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>ניהול הלוואות</h3>
+
+            {/* כפתורי פעולות מתקדמות */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '15px',
+              marginBottom: '20px'
+            }}>
+              <button
+                onClick={() => setShowBlacklistManager(true)}
+                style={{
+                  background: 'linear-gradient(135deg, #e74c3c, #c0392b)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  boxShadow: '0 2px 10px rgba(231, 76, 60, 0.3)'
+                }}
+              >
+                🚫 ניהול רשימה שחורה
+              </button>
+              <button
+                onClick={() => {
+                  // TODO: פתח מנהל מכתבי התראה
+                  showNotification('🚧 מכתבי התראה יתווספו בקרוב', 'info')
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #f39c12, #e67e22)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  boxShadow: '0 2px 10px rgba(243, 156, 18, 0.3)'
+                }}
+              >
+                📧 מכתבי התראה
+              </button>
+            </div>
 
             <div className="form-row">
               <div className="form-group">
@@ -3305,20 +4018,98 @@ function LoansPage() {
 
             <div className="form-row">
               <div className="form-group">
-                <label>ערב 1:</label>
-                <input
-                  type="text"
-                  value={currentLoan.guarantor1 || ''}
-                  onChange={(e) => handleLoanChange('guarantor1', e.target.value)}
-                />
+                <label>ערב ראשון:</label>
+                <select
+                  value={currentLoan.guarantor1Id || ''}
+                  onChange={(e) => {
+                    const guarantorId = e.target.value ? Number(e.target.value) : undefined
+                    const guarantor = guarantorId ? guarantors.find(g => g.id === guarantorId) : undefined
+                    handleLoanChange('guarantor1Id', guarantorId || 0)
+                    handleLoanChange('guarantor1', guarantor ? `${guarantor.firstName} ${guarantor.lastName}` : '')
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                >
+                  <option value="">בחר ערב ראשון (אופציונלי)</option>
+                  {guarantors
+                    .filter(g => g.status === 'active') // רק ערבים פעילים
+                    .map(guarantor => (
+                      <option key={guarantor.id} value={guarantor.id}>
+                        {guarantor.firstName} {guarantor.lastName}
+                        {guarantor.phone && ` - ${guarantor.phone}`}
+                        {guarantor.activeGuarantees > 0 && ` (${guarantor.activeGuarantees} ערבויות)`}
+                      </option>
+                    ))
+                  }
+                </select>
+                {currentLoan.guarantor1Id && (() => {
+                  const guarantor = guarantors.find(g => g.id === currentLoan.guarantor1Id)
+                  return guarantor && (
+                    <small style={{
+                      display: 'block',
+                      marginTop: '5px',
+                      color: guarantor.status === 'at_risk' ? '#f39c12' : '#666',
+                      fontSize: '12px'
+                    }}>
+                      {guarantor.status === 'at_risk' && '⚠️ '}
+                      ערבויות פעילות: {guarantor.activeGuarantees} |
+                      סיכון: ₪{guarantor.totalRisk.toLocaleString()}
+                      {guarantor.status === 'at_risk' && ' (בסיכון גבוה)'}
+                    </small>
+                  )
+                })()}
               </div>
               <div className="form-group">
-                <label>ערב 2:</label>
-                <input
-                  type="text"
-                  value={currentLoan.guarantor2 || ''}
-                  onChange={(e) => handleLoanChange('guarantor2', e.target.value)}
-                />
+                <label>ערב שני:</label>
+                <select
+                  value={currentLoan.guarantor2Id || ''}
+                  onChange={(e) => {
+                    const guarantorId = e.target.value ? Number(e.target.value) : undefined
+                    const guarantor = guarantorId ? guarantors.find(g => g.id === guarantorId) : undefined
+                    handleLoanChange('guarantor2Id', guarantorId || 0)
+                    handleLoanChange('guarantor2', guarantor ? `${guarantor.firstName} ${guarantor.lastName}` : '')
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                >
+                  <option value="">בחר ערב שני (אופציונלי)</option>
+                  {guarantors
+                    .filter(g => g.status === 'active' && g.id !== currentLoan.guarantor1Id) // רק ערבים פעילים ושונים מהערב הראשון
+                    .map(guarantor => (
+                      <option key={guarantor.id} value={guarantor.id}>
+                        {guarantor.firstName} {guarantor.lastName}
+                        {guarantor.phone && ` - ${guarantor.phone}`}
+                        {guarantor.activeGuarantees > 0 && ` (${guarantor.activeGuarantees} ערבויות)`}
+                      </option>
+                    ))
+                  }
+                </select>
+                {currentLoan.guarantor2Id && (() => {
+                  const guarantor = guarantors.find(g => g.id === currentLoan.guarantor2Id)
+                  return guarantor && (
+                    <small style={{
+                      display: 'block',
+                      marginTop: '5px',
+                      color: guarantor.status === 'at_risk' ? '#f39c12' : '#666',
+                      fontSize: '12px'
+                    }}>
+                      {guarantor.status === 'at_risk' && '⚠️ '}
+                      ערבויות פעילות: {guarantor.activeGuarantees} |
+                      סיכון: ₪{guarantor.totalRisk.toLocaleString()}
+                      {guarantor.status === 'at_risk' && ' (בסיכון גבוה)'}
+                    </small>
+                  )
+                })()}
               </div>
             </div>
 
@@ -4807,6 +5598,34 @@ function LoansPage() {
           </div>
         )
       }
+
+      {/* מנהל רשימה שחורה */}
+      <BlacklistManager
+        isOpen={showBlacklistManager}
+        onClose={() => setShowBlacklistManager(false)}
+        onUpdate={() => {
+          loadData()
+          loadGuarantors()
+        }}
+      />
+
+      {/* מנהל מכתבי התראה */}
+      {showWarningLetterGenerator && (
+        <WarningLetterGenerator
+          onClose={() => setShowWarningLetterGenerator(false)}
+          selectedLoanId={selectedLoanId || undefined}
+        />
+      )}
+
+      {/* מנהל רשימה שחורה */}
+      <BlacklistManager
+        isOpen={showBlacklistManager}
+        onClose={() => setShowBlacklistManager(false)}
+        onUpdate={() => {
+          loadData()
+          loadGuarantors()
+        }}
+      />
     </div >
   )
 }

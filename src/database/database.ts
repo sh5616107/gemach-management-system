@@ -9,6 +9,7 @@ export interface DatabaseBorrower {
   address: string
   email: string
   idNumber: string // מספר זהות - שדה חובה ויחודי
+  notes?: string // הערות על הלווה (אופציונלי)
 }
 
 export interface DatabaseLoan {
@@ -32,8 +33,10 @@ export interface DatabaseLoan {
   loanPaymentDetails?: string // פרטי אמצעי התשלום (JSON string)
   paymentDetailsComplete?: boolean // האם פרטי התשלום הושלמו (למעקב אמצעי תשלום)
   notes: string
-  guarantor1: string
-  guarantor2: string
+  guarantor1: string           // שמירה לתאימות לאחור
+  guarantor2: string           // שמירה לתאימות לאחור
+  guarantor1Id?: number        // ID ערב ראשון (חדש)
+  guarantor2Id?: number        // ID ערב שני (חדש)
   status: 'active' | 'completed' | 'overdue' | 'reminder_sent'
 }
 
@@ -107,6 +110,51 @@ export interface DatabaseWithdrawal {
   notes?: string
 }
 
+export interface DatabaseGuarantor {
+  id: number
+  firstName: string
+  lastName: string
+  idNumber: string              // מספר זהות (חובה אם מופעל בהגדרות)
+  phone: string                 // טלפון (חובה)
+  email?: string               // אימייל (אופציונלי)
+  address?: string             // כתובת (אופציונלי)
+  notes?: string               // הערות (אופציונלי)
+  status: 'active' | 'blacklisted' | 'at_risk'
+  blacklistReason?: string     // סיבת חסימה
+  blacklistDate?: string       // תאריך חסימה
+  blacklistBy?: string         // מי חסם
+  createdDate: string          // תאריך יצירה
+  lastUpdated: string          // תאריך עדכון אחרון
+  activeGuarantees: number     // מספר ערבויות פעילות (מחושב)
+  totalRisk: number           // סיכון כולל בש"ח (מחושב)
+}
+
+export interface DatabaseBlacklistEntry {
+  id: number
+  type: 'borrower' | 'guarantor'
+  personId: number             // ID של הלווה או הערב
+  reason: string               // סיבת החסימה
+  blockedDate: string          // תאריך חסימה
+  blockedBy: string           // מי חסם
+  removedDate?: string        // תאריך הסרה (אם הוסר)
+  removedBy?: string          // מי הסיר
+  removalReason?: string      // סיבת הסרה
+  isActive: boolean           // האם החסימה פעילה
+}
+
+export interface DatabaseWarningLetter {
+  id: number
+  loanId: number              // הלוואה שעליה המכתב
+  type: 'borrower' | 'guarantor' | 'both'
+  recipientType: 'borrower' | 'guarantor'
+  recipientId: number         // ID של הנמען
+  content: string             // תוכן המכתב
+  sentDate: string           // תאריך שליחה
+  sentBy: string             // מי שלח
+  method: 'print' | 'email' | 'sms' | 'phone'
+  notes?: string             // הערות נוספות
+}
+
 export interface DatabaseDonation {
   id: number
   donorName: string
@@ -119,6 +167,51 @@ export interface DatabaseDonation {
   address: string
   notes: string
   needsReceipt: boolean
+}
+
+export interface DatabaseGuarantor {
+  id: number
+  firstName: string
+  lastName: string
+  idNumber: string              // מספר זהות (חובה אם מופעל בהגדרות)
+  phone: string                 // טלפון (חובה)
+  email?: string               // אימייל (אופציונלי)
+  address?: string             // כתובת (אופציונלי)
+  notes?: string               // הערות (אופציונלי)
+  status: 'active' | 'blacklisted' | 'at_risk'
+  blacklistReason?: string     // סיבת חסימה
+  blacklistDate?: string       // תאריך חסימה
+  blacklistBy?: string         // מי חסם
+  createdDate: string          // תאריך יצירה
+  lastUpdated: string          // תאריך עדכון אחרון
+  activeGuarantees: number     // מספר ערבויות פעילות (מחושב)
+  totalRisk: number           // סיכון כולל בש"ח (מחושב)
+}
+
+export interface DatabaseBlacklistEntry {
+  id: number
+  type: 'borrower' | 'guarantor'
+  personId: number             // ID של הלווה או הערב
+  reason: string               // סיבת החסימה
+  blockedDate: string          // תאריך חסימה
+  blockedBy: string           // מי חסם
+  removedDate?: string        // תאריך הסרה (אם הוסר)
+  removedBy?: string          // מי הסיר
+  removalReason?: string      // סיבת הסרה
+  isActive: boolean           // האם החסימה פעילה
+}
+
+export interface DatabaseWarningLetter {
+  id: number
+  loanId: number              // הלוואה שעליה המכתב
+  type: 'borrower' | 'guarantor' | 'both'
+  recipientType: 'borrower' | 'guarantor'
+  recipientId: number         // ID של הנמען
+  content: string             // תוכן המכתב
+  sentDate: string           // תאריך שליחה
+  sentBy: string             // מי שלח
+  method: 'print' | 'email' | 'sms' | 'phone'
+  notes?: string             // הערות נוספות
 }
 
 export interface DatabaseSettings {
@@ -151,6 +244,9 @@ interface DatabaseFile {
   donations: DatabaseDonation[]
   payments: DatabasePayment[]
   withdrawals: DatabaseWithdrawal[] // טבלת משיכות חדשה
+  guarantors: DatabaseGuarantor[] // טבלת ערבים חדשה
+  blacklist: DatabaseBlacklistEntry[] // טבלת רשימה שחורה
+  warningLetters: DatabaseWarningLetter[] // טבלת מכתבי התראה
   lastUpdated: string
   gemachName: string
   settings: DatabaseSettings
@@ -164,6 +260,9 @@ class GemachDatabase {
     donations: [],
     payments: [],
     withdrawals: [],
+    guarantors: [],
+    blacklist: [],
+    warningLetters: [],
     lastUpdated: new Date().toISOString(),
     gemachName: 'נר שרה',
     settings: {
@@ -197,6 +296,7 @@ class GemachDatabase {
     this.cleanupTemporaryIdNumbers() // נקה מספרי זהות זמניים אם לא חובה
     this.migrateRequireIdNumberSetting()
     this.updateTextsToNewDefaults() // עדכון טקסטים לברירות מחדל חדשות
+    this.migrateLoansToGuarantors() // מיגרציה של ערבים מהלוואות קיימות
   }
 
   private loadData(): void {
@@ -208,6 +308,9 @@ class GemachDatabase {
       const donations = localStorage.getItem('gemach_donations')
       const payments = localStorage.getItem('gemach_payments')
       const withdrawals = localStorage.getItem('gemach_withdrawals')
+      const guarantors = localStorage.getItem('gemach_guarantors')
+      const blacklist = localStorage.getItem('gemach_blacklist')
+      const warningLetters = localStorage.getItem('gemach_warning_letters')
 
       const gemachName = localStorage.getItem('gemach_name')
       const settings = localStorage.getItem('gemach_settings')
@@ -219,6 +322,9 @@ class GemachDatabase {
         donations: donations ? JSON.parse(donations) : [],
         payments: payments ? JSON.parse(payments) : [],
         withdrawals: withdrawals ? JSON.parse(withdrawals) : [],
+        guarantors: guarantors ? JSON.parse(guarantors) : [],
+        blacklist: blacklist ? JSON.parse(blacklist) : [],
+        warningLetters: warningLetters ? JSON.parse(warningLetters) : [],
         lastUpdated: new Date().toISOString(),
         gemachName: gemachName || 'נר שרה',
         settings: settings ? JSON.parse(settings) : {
@@ -263,6 +369,9 @@ class GemachDatabase {
       localStorage.setItem('gemach_donations', JSON.stringify(this.dataFile.donations))
       localStorage.setItem('gemach_payments', JSON.stringify(this.dataFile.payments))
       localStorage.setItem('gemach_withdrawals', JSON.stringify(this.dataFile.withdrawals))
+      localStorage.setItem('gemach_guarantors', JSON.stringify(this.dataFile.guarantors))
+      localStorage.setItem('gemach_blacklist', JSON.stringify(this.dataFile.blacklist))
+      localStorage.setItem('gemach_warning_letters', JSON.stringify(this.dataFile.warningLetters))
       localStorage.setItem('gemach_name', this.dataFile.gemachName)
       localStorage.setItem('gemach_settings', JSON.stringify(this.dataFile.settings))
 
@@ -275,7 +384,10 @@ class GemachDatabase {
         deposits: this.dataFile.deposits.length,
         donations: this.dataFile.donations.length,
         payments: this.dataFile.payments.length,
-        withdrawals: this.dataFile.withdrawals.length
+        withdrawals: this.dataFile.withdrawals.length,
+        guarantors: this.dataFile.guarantors.length,
+        blacklist: this.dataFile.blacklist.length,
+        warningLetters: this.dataFile.warningLetters.length
       })
     } catch (error) {
       console.error('שגיאה בשמירת נתונים:', error)
@@ -304,6 +416,9 @@ class GemachDatabase {
         donations: importedData.donations || [],
         payments: importedData.payments || [],
         withdrawals: importedData.withdrawals || [],
+        guarantors: importedData.guarantors || [],
+        blacklist: importedData.blacklist || [],
+        warningLetters: importedData.warningLetters || [],
         lastUpdated: new Date().toISOString(),
         gemachName: importedData.gemachName || 'נר שרה',
         settings: importedData.settings || {
@@ -557,29 +672,33 @@ class GemachDatabase {
 
     // אם מעדכנים מספר זהות, בדוק תקינות וכפילות
     if (updates.idNumber !== undefined) {
-      if (!updates.idNumber || updates.idNumber.trim() === '') {
-        return { success: false, error: 'מספר זהות הוא שדה חובה' }
+      // בדוק אם מספר זהות חובה רק אם ההגדרה מפעילה את זה
+      if (this.dataFile.settings.requireIdNumber && (!updates.idNumber || updates.idNumber.trim() === '')) {
+        return { success: false, error: 'מספר זהות הוא שדה חובה (ניתן לשנות בהגדרות)' }
       }
 
-      if (!this.validateIsraeliId(updates.idNumber)) {
+      // בדוק תקינות רק אם יש מספר זהות
+      if (updates.idNumber && updates.idNumber.trim() !== '' && !this.validateIsraeliId(updates.idNumber)) {
         return { success: false, error: 'מספר זהות לא תקין' }
       }
 
-      // בדוק אם מספר הזהות כבר קיים אצל לווה אחר
-      const cleanNewId = updates.idNumber.replace(/[\s-]/g, '')
-      const existingBorrower = this.dataFile.borrowers.find(b =>
-        b.id !== id && b.idNumber.replace(/[\s-]/g, '') === cleanNewId
-      )
+      // בדוק כפילות רק אם יש מספר זהות
+      if (updates.idNumber && updates.idNumber.trim() !== '') {
+        const cleanNewId = updates.idNumber.replace(/[\s-]/g, '')
+        const existingBorrower = this.dataFile.borrowers.find(b =>
+          b.id !== id && b.idNumber && b.idNumber.replace(/[\s-]/g, '') === cleanNewId
+        )
 
-      if (existingBorrower) {
-        return {
-          success: false,
-          error: `מספר זהות זה כבר קיים אצל: ${existingBorrower.firstName} ${existingBorrower.lastName}`
+        if (existingBorrower) {
+          return {
+            success: false,
+            error: `מספר זהות זה כבר קיים אצל: ${existingBorrower.firstName} ${existingBorrower.lastName}`
+          }
         }
-      }
 
-      // נקה את מספר הזהות
-      updates.idNumber = cleanNewId
+        // נקה את מספר הזהות
+        updates.idNumber = cleanNewId
+      }
     }
 
     this.dataFile.borrowers[index] = { ...this.dataFile.borrowers[index], ...updates }
@@ -688,13 +807,20 @@ class GemachDatabase {
     return loan.amount - totalPaid
   }
 
+  getTotalPaidAmount(loanId: number): number {
+    const payments = this.getPaymentsByLoanId(loanId)
+    return payments
+      .filter(p => p.type === 'payment')
+      .reduce((sum, p) => sum + p.amount, 0)
+  }
+
   // חישוב יתרת חוב אחרי פרעון ספציפי (לשוברי פרעון)
   getLoanBalanceAfterPayment(loanId: number, specificPayment: DatabasePayment): number {
     const loan = this.dataFile.loans.find(l => l.id === loanId)
     if (!loan) return 0
 
     const payments = this.getPaymentsByLoanId(loanId)
-    
+
     // חשב את סך הפרעונות עד התאריך של הפרעון הספציפי (כולל)
     const totalPaidUntilPayment = payments
       .filter(p => p.type === 'payment')
@@ -702,12 +828,12 @@ class GemachDatabase {
         // כלול פרעונות שהיו לפני או באותו תאריך
         const paymentDate = new Date(p.date)
         const specificDate = new Date(specificPayment.date)
-        
+
         // אם זה אותו תאריך, כלול רק פרעונות עד ה-ID של הפרעון הספציפי
         if (paymentDate.getTime() === specificDate.getTime()) {
           return p.id <= specificPayment.id
         }
-        
+
         return paymentDate <= specificDate
       })
       .reduce((sum, p) => sum + p.amount, 0)
@@ -718,19 +844,19 @@ class GemachDatabase {
   // קבלת פרעונות קודמים לפרעון ספציפי (לשוברי פרעון)
   getPreviousPayments(loanId: number, specificPayment: DatabasePayment): DatabasePayment[] {
     const payments = this.getPaymentsByLoanId(loanId)
-    
+
     return payments
       .filter(p => p.type === 'payment')
       .filter(p => {
         // כלול רק פרעונות שהיו לפני הפרעון הספציפי
         const paymentDate = new Date(p.date)
         const specificDate = new Date(specificPayment.date)
-        
+
         // אם זה אותו תאריך, כלול רק פרעונות עם ID קטן יותר
         if (paymentDate.getTime() === specificDate.getTime()) {
           return p.id < specificPayment.id
         }
-        
+
         return paymentDate < specificDate
       })
       .sort((a, b) => {
@@ -915,7 +1041,7 @@ class GemachDatabase {
     if (deposit && deposit.status === 'active') {
       const currentWithdrawn = this.getTotalWithdrawnAmount(id)
       const newTotalWithdrawn = currentWithdrawn + amount
-      
+
       if (newTotalWithdrawn <= deposit.amount) {
         // יצירת רשומת משיכה חדשה
         const newWithdrawal: DatabaseWithdrawal = {
@@ -928,9 +1054,9 @@ class GemachDatabase {
           paymentDetailsComplete: true,
           notes: ''
         }
-        
+
         this.dataFile.withdrawals.push(newWithdrawal)
-        
+
         // עדכון ההפקדה (לתאימות לאחור)
         deposit.withdrawnAmount = newTotalWithdrawn
         deposit.withdrawnDate = new Date().toISOString().split('T')[0]
@@ -940,7 +1066,7 @@ class GemachDatabase {
         if (newTotalWithdrawn === deposit.amount) {
           deposit.status = 'withdrawn'
         }
-        
+
         this.saveData()
         return true
       }
@@ -1163,6 +1289,9 @@ class GemachDatabase {
       donations: [],
       payments: [],
       withdrawals: [],
+      guarantors: [],
+      blacklist: [],
+      warningLetters: [],
       lastUpdated: new Date().toISOString(),
       gemachName: 'נר שרה',
       settings: {
@@ -2098,7 +2227,7 @@ class GemachDatabase {
   }
 
   // פונקציות למעקב השלמת פרטי תשלום
-  
+
   // קבלת הלוואות שדורשות השלמת פרטי תשלום
   getLoansRequiringPaymentDetails(): DatabaseLoan[] {
     const settings = this.getSettings()
@@ -2106,8 +2235,8 @@ class GemachDatabase {
       return []
     }
 
-    return this.dataFile.loans.filter(loan => 
-      loan.status === 'active' && 
+    return this.dataFile.loans.filter(loan =>
+      loan.status === 'active' &&
       loan.paymentDetailsComplete !== true &&
       (loan.loanPaymentMethod === 'transfer' || loan.loanPaymentMethod === 'check' || !loan.loanPaymentMethod)
     )
@@ -2120,8 +2249,8 @@ class GemachDatabase {
       return []
     }
 
-    return this.dataFile.payments.filter(payment => 
-      payment.type === 'payment' && 
+    return this.dataFile.payments.filter(payment =>
+      payment.type === 'payment' &&
       payment.paymentDetailsComplete !== true &&
       (payment.paymentMethod === 'transfer' || payment.paymentMethod === 'check' || !payment.paymentMethod)
     )
@@ -2206,7 +2335,7 @@ class GemachDatabase {
     returnDate.setMonth(returnDate.getMonth() + 1)
 
     const settings = this.getSettings()
-    
+
     const newLoan = this.addLoan({
       borrowerId: originalLoan.borrowerId,
       amount: originalLoan.amount,
@@ -2284,6 +2413,402 @@ class GemachDatabase {
     }
 
     return true
+  }
+
+  // ===== פונקציות ניהול ערבים =====
+
+  // קבלת כל הערבים
+  getGuarantors(): DatabaseGuarantor[] {
+    return this.dataFile.guarantors.sort((a, b) => a.firstName.localeCompare(b.firstName))
+  }
+
+  // קבלת ערב לפי ID
+  getGuarantor(id: number): DatabaseGuarantor | undefined {
+    return this.dataFile.guarantors.find(g => g.id === id)
+  }
+
+  // הוספת ערב חדש
+  addGuarantor(guarantor: Omit<DatabaseGuarantor, 'id' | 'createdDate' | 'lastUpdated' | 'activeGuarantees' | 'totalRisk'>): DatabaseGuarantor | { error: string } {
+    // בדיקת שדות חובה
+    if (!guarantor.firstName || !guarantor.lastName || !guarantor.phone) {
+      return { error: 'שם מלא וטלפון הם שדות חובה' }
+    }
+
+    // בדיקת מספר זהות אם נדרש
+    if (this.dataFile.settings.requireIdNumber && (!guarantor.idNumber || !this.validateIsraeliId(guarantor.idNumber))) {
+      return { error: 'מספר זהות תקין הוא שדה חובה' }
+    }
+
+    // בדיקת ייחודיות מספר זהות
+    if (guarantor.idNumber && this.dataFile.guarantors.some(g => g.idNumber === guarantor.idNumber)) {
+      return { error: 'מספר זהות כבר קיים במערכת' }
+    }
+
+    const newGuarantor: DatabaseGuarantor = {
+      ...guarantor,
+      id: this.getNextId(this.dataFile.guarantors),
+      createdDate: new Date().toISOString(),
+      lastUpdated: new Date().toISOString(),
+      activeGuarantees: 0,
+      totalRisk: 0,
+      status: guarantor.status || 'active'
+    }
+
+    this.dataFile.guarantors.push(newGuarantor)
+    this.saveData()
+    this.updateGuarantorStats(newGuarantor.id) // עדכון סטטיסטיקות
+    return newGuarantor
+  }
+
+  // עדכון ערב
+  updateGuarantor(id: number, updates: Partial<DatabaseGuarantor>): boolean {
+    const guarantorIndex = this.dataFile.guarantors.findIndex(g => g.id === id)
+    if (guarantorIndex === -1) return false
+
+    // בדיקת ייחודיות מספר זהות אם משנים אותו
+    if (updates.idNumber && updates.idNumber !== this.dataFile.guarantors[guarantorIndex].idNumber) {
+      if (this.dataFile.guarantors.some(g => g.id !== id && g.idNumber === updates.idNumber)) {
+        return false // מספר זהות כבר קיים
+      }
+    }
+
+    this.dataFile.guarantors[guarantorIndex] = {
+      ...this.dataFile.guarantors[guarantorIndex],
+      ...updates,
+      lastUpdated: new Date().toISOString()
+    }
+
+    this.saveData()
+    this.updateGuarantorStats(id) // עדכון סטטיסטיקות
+    return true
+  }
+
+  // מחיקת ערב
+  deleteGuarantor(id: number): boolean {
+    // בדוק אם יש ערבויות פעילות
+    const activeLoans = this.dataFile.loans.filter(loan =>
+      loan.status === 'active' && (loan.guarantor1Id === id || loan.guarantor2Id === id)
+    )
+
+    if (activeLoans.length > 0) {
+      return false // לא ניתן למחוק ערב עם ערבויות פעילות
+    }
+
+    const guarantorIndex = this.dataFile.guarantors.findIndex(g => g.id === id)
+    if (guarantorIndex === -1) return false
+
+    this.dataFile.guarantors.splice(guarantorIndex, 1)
+    this.saveData()
+    return true
+  }
+
+  // עדכון סטטיסטיקות ערב
+  updateGuarantorStats(guarantorId: number): void {
+    const guarantor = this.dataFile.guarantors.find(g => g.id === guarantorId)
+    if (!guarantor) return
+
+    const activeLoans = this.dataFile.loans.filter(loan =>
+      loan.status === 'active' && (loan.guarantor1Id === guarantorId || loan.guarantor2Id === guarantorId)
+    )
+
+    guarantor.activeGuarantees = activeLoans.length
+    guarantor.totalRisk = activeLoans.reduce((sum, loan) => sum + this.getLoanBalance(loan.id), 0)
+
+    // עדכון סטטוס לפי רמת סיכון
+    if (guarantor.status !== 'blacklisted') {
+      if (guarantor.totalRisk > 50000 || guarantor.activeGuarantees > 5) {
+        guarantor.status = 'at_risk'
+      } else {
+        guarantor.status = 'active'
+      }
+    }
+
+    this.saveData()
+  }
+
+  // עדכון כל הסטטיסטיקות של ערבים
+  updateAllGuarantorStats(): void {
+    this.dataFile.guarantors.forEach(guarantor => {
+      this.updateGuarantorStats(guarantor.id)
+    })
+  }
+
+  // קבלת ערבים פעילים בלבד
+  getActiveGuarantors(): DatabaseGuarantor[] {
+    return this.dataFile.guarantors.filter(g => g.status === 'active')
+  }
+
+  // חיפוש ערבים
+  searchGuarantors(query: string): DatabaseGuarantor[] {
+    const lowerQuery = query.toLowerCase()
+    return this.dataFile.guarantors.filter(g =>
+      g.firstName.toLowerCase().includes(lowerQuery) ||
+      g.lastName.toLowerCase().includes(lowerQuery) ||
+      g.phone.includes(query) ||
+      (g.idNumber && g.idNumber.includes(query))
+    )
+  }
+
+  // ===== פונקציות רשימה שחורה =====
+
+  // הוספה לרשימה שחורה
+  addToBlacklist(type: 'borrower' | 'guarantor', personId: number, reason: string, blockedBy: string = 'מנהל'): boolean {
+    // בדוק אם כבר חסום
+    const existingEntry = this.dataFile.blacklist.find(entry =>
+      entry.type === type && entry.personId === personId && entry.isActive
+    )
+    if (existingEntry) return false
+
+    const newEntry: DatabaseBlacklistEntry = {
+      id: this.getNextId(this.dataFile.blacklist),
+      type,
+      personId,
+      reason,
+      blockedDate: new Date().toISOString(),
+      blockedBy,
+      isActive: true
+    }
+
+    this.dataFile.blacklist.push(newEntry)
+
+    // עדכון סטטוס האדם
+    if (type === 'guarantor') {
+      const guarantor = this.dataFile.guarantors.find(g => g.id === personId)
+      if (guarantor) {
+        guarantor.status = 'blacklisted'
+        guarantor.blacklistReason = reason
+        guarantor.blacklistDate = newEntry.blockedDate
+        guarantor.blacklistBy = blockedBy
+      }
+    }
+
+    this.saveData()
+    return true
+  }
+
+  // הסרה מרשימה שחורה
+  removeFromBlacklist(type: 'borrower' | 'guarantor', personId: number, removalReason: string, removedBy: string = 'מנהל'): boolean {
+    const entry = this.dataFile.blacklist.find(entry =>
+      entry.type === type && entry.personId === personId && entry.isActive
+    )
+    if (!entry) return false
+
+    entry.isActive = false
+    entry.removedDate = new Date().toISOString()
+    entry.removedBy = removedBy
+    entry.removalReason = removalReason
+
+    // עדכון סטטוס האדם
+    if (type === 'guarantor') {
+      const guarantor = this.dataFile.guarantors.find(g => g.id === personId)
+      if (guarantor) {
+        guarantor.status = 'active'
+        guarantor.blacklistReason = undefined
+        guarantor.blacklistDate = undefined
+        guarantor.blacklistBy = undefined
+      }
+    }
+
+    this.saveData()
+    return true
+  }
+
+  // בדיקה אם אדם חסום
+  isBlacklisted(type: 'borrower' | 'guarantor', personId: number): boolean {
+    return this.dataFile.blacklist.some(entry =>
+      entry.type === type && entry.personId === personId && entry.isActive
+    )
+  }
+
+  // קבלת רשימה שחורה פעילה
+  getActiveBlacklist(): DatabaseBlacklistEntry[] {
+    return this.dataFile.blacklist.filter(entry => entry.isActive)
+  }
+
+  // ===== פונקציות מכתבי התראה =====
+
+  // הוספת מכתב התראה
+  addWarningLetter(letter: Omit<DatabaseWarningLetter, 'id'>): DatabaseWarningLetter {
+    const newLetter: DatabaseWarningLetter = {
+      ...letter,
+      id: this.getNextId(this.dataFile.warningLetters)
+    }
+
+    this.dataFile.warningLetters.push(newLetter)
+    this.saveData()
+    return newLetter
+  }
+
+  // קבלת מכתבי התראה לפי הלוואה
+  getWarningLettersByLoan(loanId: number): DatabaseWarningLetter[] {
+    return this.dataFile.warningLetters.filter(letter => letter.loanId === loanId)
+  }
+
+  // קבלת כל מכתבי ההתראה
+  getWarningLetters(): DatabaseWarningLetter[] {
+    return this.dataFile.warningLetters.sort((a, b) =>
+      new Date(b.sentDate).getTime() - new Date(a.sentDate).getTime()
+    )
+  }
+
+  // יצירת מכתב התראה (alias ל-addWarningLetter)
+  createWarningLetter(
+    loanId: number, 
+    type: 'borrower' | 'guarantor' | 'both',
+    recipientType: 'borrower' | 'guarantor',
+    recipientId: number,
+    method: 'print' | 'email' | 'sms' | 'phone' = 'print',
+    customContent?: string
+  ): DatabaseWarningLetter | null {
+    const loan = this.dataFile.loans.find(l => l.id === loanId)
+    if (!loan) return null
+
+    const borrower = this.dataFile.borrowers.find(b => b.id === loan.borrowerId)
+    if (!borrower) return null
+
+    // יצירת תוכן המכתב
+    let content = customContent
+    if (!content) {
+      const overdueDays = Math.floor((new Date().getTime() - new Date(loan.returnDate).getTime()) / (1000 * 60 * 60 * 24))
+      const paidAmount = this.getTotalPaidAmount(loanId)
+      const remainingAmount = loan.amount - paidAmount
+
+      if (recipientType === 'borrower') {
+        content = `
+שלום ${borrower.firstName} ${borrower.lastName},
+
+אנו פונים אליך בנוגע להלוואה מספר ${loanId} בסכום ${loan.amount.toLocaleString()} ש"ח.
+
+תאריך החזרה שנקבע: ${new Date(loan.returnDate).toLocaleDateString('he-IL')}
+ימי איחור: ${overdueDays > 0 ? overdueDays : 'טרם פג תוקף'}
+סכום שנותר להחזרה: ${remainingAmount.toLocaleString()} ש"ח
+
+אנא פנה אלינו להסדרת ההחזרה בהקדם האפשרי.
+
+בברכה,
+גמ"ח ${this.getGemachName()}
+        `.trim()
+      } else {
+        const guarantor = this.dataFile.guarantors.find(g => g.id === recipientId)
+        if (!guarantor) return null
+
+        content = `
+שלום ${guarantor.firstName} ${guarantor.lastName},
+
+אנו פונים אליך כערב להלוואה מספר ${loanId} של ${borrower.firstName} ${borrower.lastName}.
+
+פרטי ההלוואה:
+סכום: ${loan.amount.toLocaleString()} ש"ח
+תאריך החזרה: ${new Date(loan.returnDate).toLocaleDateString('he-IL')}
+ימי איחור: ${overdueDays > 0 ? overdueDays : 'טרם פג תוקף'}
+סכום שנותר: ${remainingAmount.toLocaleString()} ש"ח
+
+כערב להלוואה זו, אנו מבקשים את עזרתך ביצירת קשר עם הלווה להסדרת ההחזרה.
+
+בברכה,
+גמ"ח ${this.getGemachName()}
+        `.trim()
+      }
+    }
+
+    const warningLetter: DatabaseWarningLetter = {
+      id: this.getNextId(this.dataFile.warningLetters),
+      loanId,
+      type,
+      recipientType,
+      recipientId,
+      content,
+      sentDate: new Date().toISOString().split('T')[0],
+      sentBy: 'מנהל המערכת',
+      method
+    }
+
+    this.dataFile.warningLetters.push(warningLetter)
+    this.saveData()
+
+    return warningLetter
+  }
+
+  // מיגרציה של ערבים מהלוואות קיימות
+  migrateLoansToGuarantors(): void {
+    let migratedCount = 0
+
+    this.dataFile.loans.forEach(loan => {
+      // מיגרציה של ערב ראשון
+      if (loan.guarantor1 && !loan.guarantor1Id) {
+        const guarantorName = loan.guarantor1.trim()
+        if (guarantorName) {
+          let guarantor = this.dataFile.guarantors.find(g =>
+            `${g.firstName} ${g.lastName}`.trim() === guarantorName
+          )
+
+          if (!guarantor) {
+            // יצירת ערב חדש
+            const nameParts = guarantorName.split(' ')
+            const firstName = nameParts[0] || ''
+            const lastName = nameParts.slice(1).join(' ') || ''
+
+            guarantor = {
+              id: this.getNextId(this.dataFile.guarantors),
+              firstName,
+              lastName,
+              idNumber: '',
+              phone: '',
+              status: 'active',
+              createdDate: new Date().toISOString().split('T')[0],
+              lastUpdated: new Date().toISOString().split('T')[0],
+              activeGuarantees: 0,
+              totalRisk: 0
+            }
+
+            this.dataFile.guarantors.push(guarantor)
+            migratedCount++
+          }
+
+          loan.guarantor1Id = guarantor.id
+        }
+      }
+
+      // מיגרציה של ערב שני
+      if (loan.guarantor2 && !loan.guarantor2Id) {
+        const guarantorName = loan.guarantor2.trim()
+        if (guarantorName) {
+          let guarantor = this.dataFile.guarantors.find(g =>
+            `${g.firstName} ${g.lastName}`.trim() === guarantorName
+          )
+
+          if (!guarantor) {
+            // יצירת ערב חדש
+            const nameParts = guarantorName.split(' ')
+            const firstName = nameParts[0] || ''
+            const lastName = nameParts.slice(1).join(' ') || ''
+
+            guarantor = {
+              id: this.getNextId(this.dataFile.guarantors),
+              firstName,
+              lastName,
+              idNumber: '',
+              phone: '',
+              status: 'active',
+              createdDate: new Date().toISOString().split('T')[0],
+              lastUpdated: new Date().toISOString().split('T')[0],
+              activeGuarantees: 0,
+              totalRisk: 0
+            }
+
+            this.dataFile.guarantors.push(guarantor)
+            migratedCount++
+          }
+
+          loan.guarantor2Id = guarantor.id
+        }
+      }
+    })
+
+    if (migratedCount > 0) {
+      this.saveData()
+      console.log(`🔄 מיגרציה הושלמה: ${migratedCount} ערבים חדשים נוצרו`)
+    }
   }
 
 

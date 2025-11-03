@@ -2625,6 +2625,13 @@ class GemachDatabase {
     return this.dataFile.blacklist.filter(entry => entry.isActive)
   }
 
+  // קבלת היסטוריה מלאה של רשימה שחורה (כולל מוסרים)
+  getBlacklistHistory(): DatabaseBlacklistEntry[] {
+    return this.dataFile.blacklist.sort((a, b) => 
+      new Date(b.blockedDate).getTime() - new Date(a.blockedDate).getTime()
+    )
+  }
+
   // ===== פונקציות מכתבי התראה =====
 
   // הוספת מכתב התראה

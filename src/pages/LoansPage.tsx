@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { db, DatabaseLoan, DatabasePayment, DatabaseBorrower, DatabaseGuarantor } from '../database/database'
 import NumberInput from '../components/NumberInput'
-import BlacklistManager from '../components/BlacklistManager'
-import WarningLetterGenerator from '../components/WarningLetterGenerator'
+
+
 import { formatCombinedDate, formatHebrewDateOnly } from '../utils/hebrewDate'
 import { israeliBanks, getBankByCode, formatBankOption } from '../utils/israeliBanks'
 
@@ -105,8 +105,9 @@ function LoansPage() {
   const [selectedBorrowerId, setSelectedBorrowerId] = useState<number | null>(null)
   const [editingGuarantorId, setEditingGuarantorId] = useState<number | null>(null)
   const [guarantorSearchTerm, setGuarantorSearchTerm] = useState('')
-  const [showBlacklistManager, setShowBlacklistManager] = useState(false)
-  const [showWarningLetterGenerator, setShowWarningLetterGenerator] = useState(false)
+  // הכפתורים הועברו לדף "כלים מתקדמים"
+
+
   const [mode, setMode] = useState<'borrower' | 'guarantor' | 'loan' | 'payment-details'>('borrower')
   const [isAdvancedEditMode, setIsAdvancedEditMode] = useState(false)
 
@@ -2422,65 +2423,12 @@ function LoansPage() {
               </button>
             )
           })()}
-          <button
-            className="btn"
-            onClick={() => {
-              loadData()
-              showNotification(`🔄 נתונים נטענו מחדש<br>לווים: ${borrowers.length}, הלוואות: ${loans.length}`, 'info')
-            }}
-            style={{ backgroundColor: '#f39c12', color: 'white', marginRight: '10px' }}
-          >
-            🔄 רענן
-          </button>
+
         </div>
 
         {mode === 'borrower' && (
           <div className="form-container">
             <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>ניהול לווים</h3>
-
-            {/* כפתורי פעולות מתקדמות */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: '15px',
-              marginBottom: '20px'
-            }}>
-              <button
-                onClick={() => setShowBlacklistManager(true)}
-                style={{
-                  background: 'linear-gradient(135deg, #e74c3c, #c0392b)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 20px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  boxShadow: '0 2px 10px rgba(231, 76, 60, 0.3)'
-                }}
-              >
-                🚫 ניהול רשימה שחורה
-              </button>
-              <button
-                onClick={() => {
-                  // TODO: פתח מנהל מכתבי התראה
-                  showNotification('🚧 מכתבי התראה יתווספו בקרוב', 'info')
-                }}
-                style={{
-                  background: 'linear-gradient(135deg, #f39c12, #e67e22)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 20px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  boxShadow: '0 2px 10px rgba(243, 156, 18, 0.3)'
-                }}
-              >
-                📧 מכתבי התראה
-              </button>
-            </div>
 
             <div className="form-row">
               <div className="form-group">
@@ -2784,50 +2732,6 @@ function LoansPage() {
                 </h3>
                 <p style={{ margin: 0, fontSize: '14px' }}>ערבויות פעילות</p>
               </div>
-            </div>
-
-            {/* כפתורי פעולות מתקדמות */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: '15px',
-              marginBottom: '20px'
-            }}>
-              <button
-                onClick={() => setShowBlacklistManager(true)}
-                style={{
-                  background: 'linear-gradient(135deg, #e74c3c, #c0392b)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 20px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  boxShadow: '0 2px 10px rgba(231, 76, 60, 0.3)'
-                }}
-              >
-                🚫 ניהול רשימה שחורה
-              </button>
-              <button
-                onClick={() => {
-                  // TODO: פתח מנהל מכתבי התראה
-                  showNotification('🚧 מכתבי התראה יתווספו בקרוב', 'info')
-                }}
-                style={{
-                  background: 'linear-gradient(135deg, #f39c12, #e67e22)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 20px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  boxShadow: '0 2px 10px rgba(243, 156, 18, 0.3)'
-                }}
-              >
-                📧 מכתבי התראה
-              </button>
             </div>
 
             {/* חיפוש */}
@@ -3156,50 +3060,6 @@ function LoansPage() {
         {mode === 'loan' && (
           <div className="form-container">
             <h3 style={{ textAlign: 'center', marginBottom: '20px' }}>ניהול הלוואות</h3>
-
-            {/* כפתורי פעולות מתקדמות */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: '15px',
-              marginBottom: '20px'
-            }}>
-              <button
-                onClick={() => setShowBlacklistManager(true)}
-                style={{
-                  background: 'linear-gradient(135deg, #e74c3c, #c0392b)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 20px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  boxShadow: '0 2px 10px rgba(231, 76, 60, 0.3)'
-                }}
-              >
-                🚫 ניהול רשימה שחורה
-              </button>
-              <button
-                onClick={() => {
-                  // TODO: פתח מנהל מכתבי התראה
-                  showNotification('🚧 מכתבי התראה יתווספו בקרוב', 'info')
-                }}
-                style={{
-                  background: 'linear-gradient(135deg, #f39c12, #e67e22)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 20px',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 'bold',
-                  boxShadow: '0 2px 10px rgba(243, 156, 18, 0.3)'
-                }}
-              >
-                📧 מכתבי התראה
-              </button>
-            </div>
 
             <div className="form-row">
               <div className="form-group">
@@ -5599,33 +5459,7 @@ function LoansPage() {
         )
       }
 
-      {/* מנהל רשימה שחורה */}
-      <BlacklistManager
-        isOpen={showBlacklistManager}
-        onClose={() => setShowBlacklistManager(false)}
-        onUpdate={() => {
-          loadData()
-          loadGuarantors()
-        }}
-      />
 
-      {/* מנהל מכתבי התראה */}
-      {showWarningLetterGenerator && (
-        <WarningLetterGenerator
-          onClose={() => setShowWarningLetterGenerator(false)}
-          selectedLoanId={selectedLoanId || undefined}
-        />
-      )}
-
-      {/* מנהל רשימה שחורה */}
-      <BlacklistManager
-        isOpen={showBlacklistManager}
-        onClose={() => setShowBlacklistManager(false)}
-        onUpdate={() => {
-          loadData()
-          loadGuarantors()
-        }}
-      />
     </div >
   )
 }

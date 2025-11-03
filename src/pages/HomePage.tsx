@@ -304,42 +304,7 @@ function HomePage() {
     return () => clearInterval(interval)
   }, [isEditingName, isEditingHeader, isEditingFooter, isEditingContact, stats.lastUpdated])
 
-  const exportData = () => {
-    const data = db.exportData()
-    const blob = new Blob([data], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `gemach-backup-${new Date().toISOString().split('T')[0]}.json`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-    showNotification('✅ הנתונים יוצאו בהצלחה!')
-  }
 
-  const importData = () => {
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = '.json'
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
-      if (file) {
-        const reader = new FileReader()
-        reader.onload = (e) => {
-          const content = e.target?.result as string
-          if (db.importData(content)) {
-            loadStats()
-            showNotification('✅ הנתונים יובאו בהצלחה!')
-          } else {
-            showNotification('❌ שגיאה בייבוא הנתונים', 'error')
-          }
-        }
-        reader.readAsText(file)
-      }
-    }
-    input.click()
-  }
 
   return (
     <div>
@@ -826,15 +791,17 @@ function HomePage() {
             <h2 className="category-title">תרומות והפקדות</h2>
           </div>
 
+          <div className="category" onClick={() => navigate('/admin-tools')}>
+            <div className="category-image">🛠️</div>
+            <h2 className="category-title">כלים מתקדמים</h2>
+          </div>
+
           <div className="category" onClick={() => navigate('/settings')}>
             <div className="category-image">⚙️</div>
             <h2 className="category-title">הגדרות</h2>
           </div>
 
-          <div className="category" onClick={() => navigate('/statistics')}>
-            <div className="category-image">📊</div>
-            <h2 className="category-title">סטטיסטיקות</h2>
-          </div>
+
 
           <div className="category" onClick={() => navigate('/help')}>
             <div className="category-image">📖</div>
@@ -1087,12 +1054,7 @@ function HomePage() {
         </div>
 
         <div style={{ marginTop: '20px', display: 'flex', gap: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button className="btn btn-primary" onClick={exportData}>
-            📤 ייצוא נתונים
-          </button>
-          <button className="btn btn-primary" onClick={importData}>
-            📥 ייבוא נתונים
-          </button>
+
           <div data-search-container style={{ position: 'relative' }}>
             {!showSearchBox ? (
               // כפתור פתיחת חיפוש

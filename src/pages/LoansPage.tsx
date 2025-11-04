@@ -2734,23 +2734,7 @@ function LoansPage() {
               </div>
             </div>
 
-            {/* חיפוש */}
-            <div style={{ marginBottom: '20px' }}>
-              <input
-                type="text"
-                placeholder="🔍 חפש ערב לפי שם, טלפון או מספר זהות..."
-                value={guarantorSearchTerm}
-                onChange={(e) => setGuarantorSearchTerm(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  fontSize: '16px',
-                  border: '2px solid #ddd',
-                  borderRadius: '8px',
-                  marginBottom: '10px'
-                }}
-              />
-            </div>
+
 
             <div className="form-container" style={{ marginBottom: '30px' }}>
               <h3 style={{ marginBottom: '20px', color: '#2c3e50', textAlign: 'center' }}>
@@ -2889,6 +2873,64 @@ function LoansPage() {
                   </button>
                 )}
               </div>
+            </div>
+
+            {/* תיבת חיפוש לסינון הטבלה */}
+            <div style={{
+              marginBottom: '20px',
+              background: '#f8f9fa',
+              padding: '15px',
+              borderRadius: '8px',
+              border: '1px solid #dee2e6'
+            }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  placeholder="🔍 חפש ערב (שם מלא, ת.ז, טלפון, אימייל, כתובת)..."
+                  value={guarantorSearchTerm}
+                  onChange={(e) => setGuarantorSearchTerm(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setGuarantorSearchTerm('')
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    fontSize: '16px',
+                    border: guarantorSearchTerm ? '2px solid #3498db' : '2px solid #ddd',
+                    borderRadius: '8px',
+                    transition: 'border-color 0.2s ease'
+                  }}
+                />
+                {guarantorSearchTerm && (
+                  <button
+                    onClick={() => setGuarantorSearchTerm('')}
+                    style={{
+                      background: '#95a5a6',
+                      color: 'white',
+                      border: 'none',
+                      padding: '12px 15px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                    title="נקה חיפוש"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              {guarantorSearchTerm && (
+                <div style={{
+                  fontSize: '14px',
+                  color: '#666',
+                  marginTop: '5px',
+                  textAlign: 'center'
+                }}>
+                  נמצאו {filteredGuarantors.length} ערבים מתוך {guarantors.length}
+                </div>
+              )}
             </div>
 
             {filteredGuarantors.length > 0 && (
@@ -4602,7 +4644,7 @@ function LoansPage() {
         )}
 
         {/* הלוואות פעילות של הלווה הנבחר */}
-        {selectedBorrowerId && (() => {
+        {selectedBorrowerId && mode !== 'payment-details' && (() => {
           const activeLoans = loans.filter(loan =>
             loan.borrowerId === selectedBorrowerId &&
             loan.status === 'active' &&
@@ -4682,7 +4724,7 @@ function LoansPage() {
         })()}
 
         {/* הלוואות עתידיות של הלווה הנבחר */}
-        {selectedBorrowerId && (() => {
+        {selectedBorrowerId && mode !== 'payment-details' && (() => {
           const futureLoans = db.getFutureLoansWithBorrowers().filter(loan => loan.borrowerId === selectedBorrowerId)
 
 

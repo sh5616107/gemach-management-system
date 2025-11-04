@@ -1,4 +1,5 @@
 // מודול לטיפול בנתוני סניפי בנקים
+import { bankBranchesRawData } from '../data/bankBranchesData'
 
 export interface BankBranch {
     bankCode: string
@@ -25,16 +26,12 @@ export const loadBankBranches = async (): Promise<Bank[]> => {
     }
 
     try {
-        console.log('🔄 מנסה לטעון קובץ CSV...')
-        const response = await fetch('/snifim_he.csv')
-        console.log('📡 תגובת שרת:', response.status, response.statusText)
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
-        }
-
-        const bankBranchesData = await response.text()
-        console.log('📄 נתוני CSV נטענו, אורך:', bankBranchesData.length, 'תווים')
+        console.log('🔄 טוען נתוני סניפי בנקים...')
+        
+        // שימוש בנתונים מקובץ TypeScript במקום fetch
+        const bankBranchesData = bankBranchesRawData
+        console.log('📄 נתוני בנקים נטענו, אורך:', bankBranchesData.length, 'תווים')
+        
         const lines = bankBranchesData.split('\n')
         console.log('📋 מספר שורות:', lines.length)
         const branches: BankBranch[] = []

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { db, DatabaseDeposit, DatabaseWithdrawal } from '../database/database'
 import NumberInput from '../components/NumberInput'
 import { formatCombinedDate } from '../utils/hebrewDate'
+import BankBranchSelector from '../components/BankBranchSelector'
 
 function DepositsPage() {
   const navigate = useNavigate()
@@ -1541,34 +1542,29 @@ function DepositsPage() {
                           value={db.parsePaymentDetails('check', newDeposit.depositPaymentDetails)?.checkNumber || ''}
                         />
                       </div>
-                      <div className="form-group">
-                        <label>בנק:</label>
-                        <select
-                          onChange={(e) => {
+                      <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                        <BankBranchSelector
+                          selectedBankCode={db.parsePaymentDetails('check', newDeposit.depositPaymentDetails)?.bankCode || ''}
+                          selectedBranchCode={db.parsePaymentDetails('check', newDeposit.depositPaymentDetails)?.branchCode || ''}
+                          onBankChange={(bankCode, bankName) => {
                             const details = db.parsePaymentDetails('check', newDeposit.depositPaymentDetails) || {}
-                            const selectedBankCode = e.target.value
-                            const selectedBankName = e.target.selectedOptions[0]?.text?.split(' - ')[1] || ''
-                            details.bankCode = selectedBankCode
-                            details.bankName = selectedBankName
+                            details.bankCode = bankCode
+                            details.bankName = bankName
+                            details.branchCode = ''
+                            details.branchName = ''
                             handleInputChange('depositPaymentDetails', JSON.stringify(details))
                           }}
-                          value={db.parsePaymentDetails('check', newDeposit.depositPaymentDetails)?.bankCode || ''}
-                        >
-                          <option value="">בחר בנק</option>
-                          <option value="10">10 - בנק לאומי</option>
-                          <option value="11">11 - בנק דיסקונט</option>
-                          <option value="12">12 - בנק הפועלים</option>
-                          <option value="13">13 - בנק איגוד</option>
-                          <option value="14">14 - בנק אוצר החייל</option>
-                          <option value="15">15 - בנק ירושלים</option>
-                          <option value="16">16 - בנק מרכנתיל</option>
-                          <option value="17">17 - בנק מזרחי טפחות</option>
-                          <option value="18">18 - בנק הבינלאומי</option>
-                          <option value="19">19 - בנק יהב</option>
-                          <option value="20">20 - בנק מסד</option>
-                          <option value="31">31 - בנק הדואר</option>
-                          <option value="99">99 - בנק אחר</option>
-                        </select>
+                          onBranchChange={(branchCode, branchName, branchAddress, city) => {
+                            const details = db.parsePaymentDetails('check', newDeposit.depositPaymentDetails) || {}
+                            details.branchCode = branchCode
+                            details.branchName = branchName
+                            details.branchAddress = branchAddress
+                            details.city = city
+                            details.branch = `${branchName} (${city})`
+                            handleInputChange('depositPaymentDetails', JSON.stringify(details))
+                          }}
+                          showLabels={false}
+                        />
                       </div>
                     </div>
                     <div className="form-row">
@@ -1618,50 +1614,32 @@ function DepositsPage() {
                           value={db.parsePaymentDetails('transfer', newDeposit.depositPaymentDetails)?.referenceNumber || ''}
                         />
                       </div>
-                      <div className="form-group">
-                        <label>בנק:</label>
-                        <select
-                          onChange={(e) => {
+                      <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                        <BankBranchSelector
+                          selectedBankCode={db.parsePaymentDetails('transfer', newDeposit.depositPaymentDetails)?.bankCode || ''}
+                          selectedBranchCode={db.parsePaymentDetails('transfer', newDeposit.depositPaymentDetails)?.branchCode || ''}
+                          onBankChange={(bankCode, bankName) => {
                             const details = db.parsePaymentDetails('transfer', newDeposit.depositPaymentDetails) || {}
-                            details.bankCode = e.target.value
-                            details.bankName = e.target.selectedOptions[0]?.text?.split(' - ')[1] || ''
+                            details.bankCode = bankCode
+                            details.bankName = bankName
+                            details.branchCode = ''
+                            details.branchName = ''
                             handleInputChange('depositPaymentDetails', JSON.stringify(details))
                           }}
-                          value={db.parsePaymentDetails('transfer', newDeposit.depositPaymentDetails)?.bankCode || ''}
-                          style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                        >
-                          <option value="">בחר בנק</option>
-                          <option value="10">10 - בנק לאומי</option>
-                          <option value="11">11 - בנק דיסקונט</option>
-                          <option value="12">12 - בנק הפועלים</option>
-                          <option value="13">13 - בנק איגוד</option>
-                          <option value="14">14 - בנק אוצר החייל</option>
-                          <option value="15">15 - בנק ירושלים</option>
-                          <option value="16">16 - בנק מרכנתיל</option>
-                          <option value="17">17 - בנק מזרחי טפחות</option>
-                          <option value="18">18 - בנק הבינלאומי</option>
-                          <option value="19">19 - בנק יהב</option>
-                          <option value="20">20 - בנק מסד</option>
-                          <option value="31">31 - בנק הדואר</option>
-                          <option value="99">99 - בנק אחר</option>
-                        </select>
+                          onBranchChange={(branchCode, branchName, branchAddress, city) => {
+                            const details = db.parsePaymentDetails('transfer', newDeposit.depositPaymentDetails) || {}
+                            details.branchCode = branchCode
+                            details.branchName = branchName
+                            details.branchAddress = branchAddress
+                            details.city = city
+                            details.branchNumber = branchCode
+                            handleInputChange('depositPaymentDetails', JSON.stringify(details))
+                          }}
+                          showLabels={false}
+                        />
                       </div>
                     </div>
                     <div className="form-row">
-                      <div className="form-group">
-                        <label>מספר סניף:</label>
-                        <input
-                          type="text"
-                          placeholder="מספר סניף"
-                          maxLength={3}
-                          onChange={(e) => {
-                            const details = db.parsePaymentDetails('transfer', newDeposit.depositPaymentDetails) || {}
-                            details.branchNumber = e.target.value
-                            handleInputChange('depositPaymentDetails', JSON.stringify(details))
-                          }}
-                          value={db.parsePaymentDetails('transfer', newDeposit.depositPaymentDetails)?.branchNumber || ''}
-                        />
-                      </div>
                       <div className="form-group">
                         <label>מספר חשבון:</label>
                         <input

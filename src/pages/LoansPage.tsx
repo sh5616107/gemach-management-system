@@ -5,7 +5,7 @@ import NumberInput from '../components/NumberInput'
 
 
 import { formatCombinedDate, formatHebrewDateOnly } from '../utils/hebrewDate'
-import { israeliBanks, getBankByCode, formatBankOption } from '../utils/israeliBanks'
+import BankBranchSelector from '../components/BankBranchSelector'
 
 function LoansPage() {
   const navigate = useNavigate()
@@ -156,6 +156,10 @@ function LoansPage() {
     referenceNumber: '',
     bankCode: '',
     bankName: '',
+    branchCode: '',
+    branchName: '',
+    branchAddress: '',
+    city: '',
     branchNumber: '',
     accountNumber: '',
     transferDate: '',
@@ -461,6 +465,7 @@ function LoansPage() {
   }
 
   const handleLoanChange = (field: keyof DatabaseLoan, value: string | number | boolean) => {
+    console.log('🔄 LoansPage: handleLoanChange נקרא עם:', field, value)
 
 
 
@@ -2202,16 +2207,7 @@ function LoansPage() {
             ...details
           }))
 
-          // אם יש קוד בנק, וודא שגם שם הבנק מעודכן
-          if (details.bankCode && !details.bankName) {
-            const selectedBank = getBankByCode(details.bankCode)
-            if (selectedBank) {
-              setPaymentDetailsForm(prev => ({
-                ...prev,
-                bankName: selectedBank.name
-              }))
-            }
-          }
+
         } catch (error) {
           console.log('שגיאה בפענוח פרטי תשלום:', error)
           // אם יש שגיאה בפענוח, לפחות נשמור את אמצעי התשלום
@@ -2228,6 +2224,10 @@ function LoansPage() {
         referenceNumber: '',
         bankCode: '',
         bankName: '',
+        branchCode: '',
+        branchName: '',
+        branchAddress: '',
+        city: '',
         branchNumber: '',
         accountNumber: '',
         transferDate: getTodayString(),
@@ -2260,14 +2260,7 @@ function LoansPage() {
     }))
   }
 
-  const handleBankSelection = (bankCode: string) => {
-    const selectedBank = getBankByCode(bankCode)
-    setPaymentDetailsForm(prev => ({
-      ...prev,
-      bankCode: bankCode,
-      bankName: selectedBank ? selectedBank.name : ''
-    }))
-  }
+
 
   const savePaymentDetails = () => {
     if (!paymentDetailsModal) return
@@ -3699,50 +3692,46 @@ function LoansPage() {
                           value={db.parsePaymentDetails('check', currentLoan.loanPaymentDetails)?.checkNumber || ''}
                         />
                       </div>
-                      <div className="form-group">
-                        <label>בנק:</label>
-                        <select
-                          onChange={(e) => {
+                      <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                        <BankBranchSelector
+                          key="check-bank-selector"
+                          selectedBankCode={(() => {
+                            const code = db.parsePaymentDetails('check', currentLoan.loanPaymentDetails)?.bankCode || ''
+                            console.log('🏦 LoansPage: selectedBankCode לצ\'ק:', code)
+                            return code
+                          })()}
+                          selectedBranchCode={(() => {
+                            const code = db.parsePaymentDetails('check', currentLoan.loanPaymentDetails)?.branchCode || ''
+                            console.log('🏢 LoansPage: selectedBranchCode לצ\'ק:', code)
+                            return code
+                          })()}
+                          onBankChange={(bankCode, bankName) => {
+                            console.log('🏦 LoansPage: onBankChange נקרא עם:', bankCode, bankName)
                             const details = db.parsePaymentDetails('check', currentLoan.loanPaymentDetails) || {}
-                            const selectedBankCode = e.target.value
-                            const selectedBankName = e.target.selectedOptions[0]?.text?.split(' - ')[1] || ''
-                            details.bankCode = selectedBankCode
-                            details.bankName = selectedBankName
+                            console.log('🏦 LoansPage: פרטים נוכחיים:', details)
+                            details.bankCode = bankCode
+                            details.bankName = bankName
+                            details.branchCode = ''
+                            details.branchName = ''
+                            const newDetails = JSON.stringify(details)
+                            console.log('🏦 LoansPage: פרטים חדשים:', newDetails)
+                            handleLoanChange('loanPaymentDetails', newDetails)
+                          }}
+                          onBranchChange={(branchCode, branchName, branchAddress, city) => {
+                            const details = db.parsePaymentDetails('check', currentLoan.loanPaymentDetails) || {}
+                            details.branchCode = branchCode
+                            details.branchName = branchName
+                            details.branchAddress = branchAddress
+                            details.city = city
+                            details.branch = `${branchName} (${city})` // תאימות לאחור
                             handleLoanChange('loanPaymentDetails', JSON.stringify(details))
                           }}
-                          value={db.parsePaymentDetails('check', currentLoan.loanPaymentDetails)?.bankCode || ''}
-                        >
-                          <option value="">בחר בנק</option>
-                          <option value="10">10 - בנק לאומי</option>
-                          <option value="11">11 - בנק דיסקונט</option>
-                          <option value="12">12 - בנק הפועלים</option>
-                          <option value="13">13 - בנק איגוד</option>
-                          <option value="14">14 - בנק אוצר החייל</option>
-                          <option value="15">15 - בנק ירושלים</option>
-                          <option value="16">16 - בנק מרכנתיל</option>
-                          <option value="17">17 - בנק מזרחי טפחות</option>
-                          <option value="18">18 - בנק הבינלאומי</option>
-                          <option value="19">19 - בנק יהב</option>
-                          <option value="20">20 - בנק מסד</option>
-                          <option value="31">31 - בנק הדואר</option>
-                          <option value="99">99 - בנק אחר</option>
-                        </select>
+                          showLabels={false}
+                        />
                       </div>
                     </div>
                     <div className="form-row">
-                      <div className="form-group">
-                        <label>סניף:</label>
-                        <input
-                          type="text"
-                          placeholder="מספר סניף"
-                          onChange={(e) => {
-                            const details = db.parsePaymentDetails('check', currentLoan.loanPaymentDetails) || {}
-                            details.branch = e.target.value
-                            handleLoanChange('loanPaymentDetails', JSON.stringify(details))
-                          }}
-                          value={db.parsePaymentDetails('check', currentLoan.loanPaymentDetails)?.branch || ''}
-                        />
-                      </div>
+
                       <div className="form-group">
                         <label>תאריך פדיון:</label>
                         <input
@@ -3776,50 +3765,32 @@ function LoansPage() {
                           value={db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails)?.referenceNumber || ''}
                         />
                       </div>
-                      <div className="form-group">
-                        <label>בנק:</label>
-                        <select
-                          onChange={(e) => {
+                      <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                        <BankBranchSelector
+                          selectedBankCode={db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails)?.bankCode || ''}
+                          selectedBranchCode={db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails)?.branchCode || ''}
+                          onBankChange={(bankCode, bankName) => {
                             const details = db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails) || {}
-                            details.bankCode = e.target.value
-                            details.bankName = e.target.selectedOptions[0]?.text?.split(' - ')[1] || ''
+                            details.bankCode = bankCode
+                            details.bankName = bankName
+                            details.branchCode = ''
+                            details.branchName = ''
                             handleLoanChange('loanPaymentDetails', JSON.stringify(details))
                           }}
-                          value={db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails)?.bankCode || ''}
-                          style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                        >
-                          <option value="">בחר בנק</option>
-                          <option value="10">10 - בנק לאומי</option>
-                          <option value="11">11 - בנק דיסקונט</option>
-                          <option value="12">12 - בנק הפועלים</option>
-                          <option value="13">13 - בנק איגוד</option>
-                          <option value="14">14 - בנק אוצר החייל</option>
-                          <option value="15">15 - בנק ירושלים</option>
-                          <option value="16">16 - בנק מרכנתיל</option>
-                          <option value="17">17 - בנק מזרחי טפחות</option>
-                          <option value="18">18 - בנק הבינלאומי</option>
-                          <option value="19">19 - בנק יהב</option>
-                          <option value="20">20 - בנק מסד</option>
-                          <option value="31">31 - בנק הדואר</option>
-                          <option value="99">99 - בנק אחר</option>
-                        </select>
+                          onBranchChange={(branchCode, branchName, branchAddress, city) => {
+                            const details = db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails) || {}
+                            details.branchCode = branchCode
+                            details.branchName = branchName
+                            details.branchAddress = branchAddress
+                            details.city = city
+                            details.branchNumber = branchCode // תאימות לאחור
+                            handleLoanChange('loanPaymentDetails', JSON.stringify(details))
+                          }}
+                          showLabels={false}
+                        />
                       </div>
                     </div>
                     <div className="form-row">
-                      <div className="form-group">
-                        <label>מספר סניף:</label>
-                        <input
-                          type="text"
-                          placeholder="מספר סניף"
-                          maxLength={3}
-                          onChange={(e) => {
-                            const details = db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails) || {}
-                            details.branchNumber = e.target.value
-                            handleLoanChange('loanPaymentDetails', JSON.stringify(details))
-                          }}
-                          value={db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails)?.branchNumber || ''}
-                        />
-                      </div>
                       <div className="form-group">
                         <label>מספר חשבון:</label>
                         <input
@@ -4035,21 +4006,20 @@ function LoansPage() {
               <button className="btn btn-primary" onClick={newLoan} style={{ marginRight: '10px' }}>
                 הלוואה חדשה
               </button>
-              <button
-                className="btn btn-primary"
-                onClick={addPayment}
-                disabled={selectedLoanId ? db.getLoanBalance(selectedLoanId) <= 0 : false}
-                style={{
-                  marginRight: '10px',
-                  backgroundColor: selectedLoanId && db.getLoanBalance(selectedLoanId) <= 0 ? '#95a5a6' :
-                    !selectedLoanId ? '#f39c12' : undefined
-                }}
-                title={!selectedLoanId ? 'שמור את ההלוואה תחילה כדי לרשום פרעון' :
-                  selectedLoanId && db.getLoanBalance(selectedLoanId) <= 0 ? 'ההלוואה כבר נפרעה במלואה' : 'הוסף פרעון להלוואה'}
-              >
-                {!selectedLoanId ? '⚠️ שמור תחילה' :
-                  selectedLoanId && db.getLoanBalance(selectedLoanId) <= 0 ? '✅ נפרע במלואה' : 'הוסף פרעון'}
-              </button>
+              {selectedLoanId && (
+                <button
+                  className="btn btn-primary"
+                  onClick={addPayment}
+                  disabled={db.getLoanBalance(selectedLoanId) <= 0}
+                  style={{
+                    marginRight: '10px',
+                    backgroundColor: db.getLoanBalance(selectedLoanId) <= 0 ? '#95a5a6' : undefined
+                  }}
+                  title={db.getLoanBalance(selectedLoanId) <= 0 ? 'ההלוואה כבר נפרעה במלואה' : 'הוסף פרעון להלוואה'}
+                >
+                  {db.getLoanBalance(selectedLoanId) <= 0 ? '✅ נפרע במלואה' : 'הוסף פרעון'}
+                </button>
+              )}
 
               {selectedBorrowerId && (
                 <button
@@ -4343,26 +4313,24 @@ function LoansPage() {
                   💰 פרעון מרובה
                 </button>
               )}
-              <button
-                className="btn"
-                onClick={generateLoanDocument}
-                style={{
-                  backgroundColor: !selectedLoanId ? '#f39c12' :
-                    selectedLoanId && db.getLoanBalance(selectedLoanId) <= 0 ? '#27ae60' : '#9b59b6',
-                  color: 'white',
-                  marginRight: '10px'
-                }}
-                title={!selectedLoanId ? 'שמור את ההלוואה תחילה כדי להפיק שטר' :
-                  selectedLoanId && db.getLoanBalance(selectedLoanId) <= 0 ? 'הדפס שטר הלוואה (נפרע)' : 'הדפס שטר הלוואה'}
-              >
-                {!selectedLoanId ? '⚠️ שמור תחילה' :
-                  selectedLoanId && db.getLoanBalance(selectedLoanId) <= 0 ? '📄 שטר (נפרע)' : '📄 הפק שטר הלוואה'}
-              </button>
-              {(window as any).electronAPI && (
+              {selectedLoanId && (
                 <button
                   className="btn"
-                  onClick={() => selectedLoanId && handlePrintToPDF(selectedLoanId)}
-                  disabled={!selectedLoanId}
+                  onClick={generateLoanDocument}
+                  style={{
+                    backgroundColor: db.getLoanBalance(selectedLoanId) <= 0 ? '#27ae60' : '#9b59b6',
+                    color: 'white',
+                    marginRight: '10px'
+                  }}
+                  title={db.getLoanBalance(selectedLoanId) <= 0 ? 'הדפס שטר הלוואה (נפרע)' : 'הדפס שטר הלוואה'}
+                >
+                  {db.getLoanBalance(selectedLoanId) <= 0 ? '📄 שטר (נפרע)' : '📄 הפק שטר הלוואה'}
+                </button>
+              )}
+              {(window as any).electronAPI && selectedLoanId && (
+                <button
+                  className="btn"
+                  onClick={() => handlePrintToPDF(selectedLoanId)}
                   style={{
                     backgroundColor: '#e67e22',
                     color: 'white',
@@ -5071,48 +5039,36 @@ function LoansPage() {
                 </div>
 
                 <div style={{ marginBottom: '15px' }}>
-                  <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                    בנק:
-                  </label>
-                  <select
-                    value={paymentDetailsForm.bankCode}
-                    onChange={(e) => handleBankSelection(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      border: '2px solid #ddd',
-                      borderRadius: '5px',
-                      fontSize: '14px'
+                  <BankBranchSelector
+                    selectedBankCode={paymentDetailsForm.bankCode}
+                    selectedBranchCode={paymentDetailsForm.branchCode}
+                    onBankChange={(bankCode, bankName) => {
+                      setPaymentDetailsForm(prev => ({
+                        ...prev,
+                        bankCode,
+                        bankName,
+                        branchCode: '',
+                        branchName: '',
+                        branchAddress: '',
+                        city: ''
+                      }))
                     }}
-                  >
-                    <option value="">בחר בנק</option>
-                    {israeliBanks.map(bank => (
-                      <option key={bank.code} value={bank.code}>
-                        {formatBankOption(bank)}
-                      </option>
-                    ))}
-                  </select>
+                    onBranchChange={(branchCode, branchName, branchAddress, city) => {
+                      setPaymentDetailsForm(prev => ({
+                        ...prev,
+                        branchCode,
+                        branchName,
+                        branchAddress,
+                        city,
+                        branchNumber: branchCode // עדכן גם את branchNumber לתאימות לאחור
+                      }))
+                    }}
+                    bankLabel="בנק:"
+                    branchLabel="סניף:"
+                  />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '15px' }}>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                      מספר סניף:
-                    </label>
-                    <input
-                      type="text"
-                      value={paymentDetailsForm.branchNumber}
-                      onChange={(e) => handlePaymentDetailsFormChange('branchNumber', e.target.value)}
-                      placeholder="למשל: 456"
-                      style={{
-                        width: '100%',
-                        padding: '10px',
-                        border: '2px solid #ddd',
-                        borderRadius: '5px',
-                        fontSize: '14px'
-                      }}
-                    />
-                  </div>
+                <div style={{ marginTop: '15px' }}>
                   <div>
                     <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
                       מספר חשבון:
@@ -5181,45 +5137,36 @@ function LoansPage() {
                   <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
                     בנק:
                   </label>
-                  <select
-                    value={paymentDetailsForm.bankCode}
-                    onChange={(e) => handleBankSelection(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '10px',
-                      border: '2px solid #ddd',
-                      borderRadius: '5px',
-                      fontSize: '14px'
+                  <BankBranchSelector
+                    selectedBankCode={paymentDetailsForm.bankCode}
+                    selectedBranchCode={paymentDetailsForm.branchCode}
+                    onBankChange={(bankCode, bankName) => {
+                      setPaymentDetailsForm(prev => ({
+                        ...prev,
+                        bankCode,
+                        bankName,
+                        branchCode: '',
+                        branchName: '',
+                        branchAddress: '',
+                        city: ''
+                      }))
                     }}
-                  >
-                    <option value="">בחר בנק</option>
-                    {israeliBanks.map(bank => (
-                      <option key={bank.code} value={bank.code}>
-                        {formatBankOption(bank)}
-                      </option>
-                    ))}
-                  </select>
+                    onBranchChange={(branchCode, branchName, branchAddress, city) => {
+                      setPaymentDetailsForm(prev => ({
+                        ...prev,
+                        branchCode,
+                        branchName,
+                        branchAddress,
+                        city,
+                        branch: `${branchName} (${city})` // עדכן גם את branch לתאימות לאחור
+                      }))
+                    }}
+                    bankLabel="בנק:"
+                    branchLabel="סניף:"
+                  />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '15px' }}>
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-                      סניף:
-                    </label>
-                    <input
-                      type="text"
-                      value={paymentDetailsForm.branch}
-                      onChange={(e) => handlePaymentDetailsFormChange('branch', e.target.value)}
-                      placeholder="למשל: 456"
-                      style={{
-                        width: '100%',
-                        padding: '10px',
-                        border: '2px solid #ddd',
-                        borderRadius: '5px',
-                        fontSize: '14px'
-                      }}
-                    />
-                  </div>
+                <div style={{ marginTop: '15px' }}>
                   <div>
                     <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
                       תאריך פדיון:

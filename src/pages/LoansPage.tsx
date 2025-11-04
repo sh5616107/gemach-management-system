@@ -1378,11 +1378,11 @@ function LoansPage() {
             <div style="display: flex; justify-content: space-between; margin-top: 40px;">
               <div>
                 <p>חתימת הלווה:</p>
-                <div style="border-bottom: 1px solid #000; width: 150px; margin-top: 10px;"></div>
+                <div style="border-bottom: 1px solid #000; width: 150px; margin-top: 30px;"></div>
               </div>
               <div>
                 <p>חתימת הערב:</p>
-                <div style="border-bottom: 1px solid #000; width: 150px; margin-top: 10px;"></div>
+                <div style="border-bottom: 1px solid #000; width: 150px; margin-top: 30px;"></div>
               </div>
             </div>
           </div>
@@ -1503,18 +1503,18 @@ function LoansPage() {
               <div style="display: flex; justify-content: space-between; margin-top: 40px; flex-wrap: wrap; gap: 20px;">
                 <div>
                   <p>חתימת הלווה:</p>
-                  <div style="border-bottom: 1px solid #000; width: 150px; margin-top: 10px;"></div>
+                  <div style="border-bottom: 1px solid #000; width: 150px; margin-top: 30px;"></div>
                 </div>
                 ${loan.guarantor1 ? `
                   <div>
                     <p>חתימת ערב ראשון:</p>
-                    <div style="border-bottom: 1px solid #000; width: 150px; margin-top: 10px;"></div>
+                    <div style="border-bottom: 1px solid #000; width: 150px; margin-top: 30px;"></div>
                   </div>
                 ` : ''}
                 ${loan.guarantor2 ? `
                   <div>
                     <p>חתימת ערב שני:</p>
-                    <div style="border-bottom: 1px solid #000; width: 150px; margin-top: 10px;"></div>
+                    <div style="border-bottom: 1px solid #000; width: 150px; margin-top: 30px;"></div>
                   </div>
                 ` : ''}
               </div>
@@ -1613,7 +1613,7 @@ function LoansPage() {
                 .signature-line {
                   border-bottom: 1px solid #000;
                   width: 150px;
-                  margin-top: 10px;
+                  margin-top: 30px;
                 }
                 .print-buttons {
                   text-align: center;

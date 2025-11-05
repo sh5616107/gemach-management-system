@@ -1,4 +1,5 @@
 // מודול לטיפול בנתוני סניפי בנקים
+import { bankBranchesData } from '../data/bankBranchesData'
 
 export interface BankBranch {
     bankCode: string
@@ -32,24 +33,16 @@ export const loadBankBranches = async (): Promise<Bank[]> => {
     }
 
     try {
-        console.log('🔄 טוען נתוני סניפי בנקים מקובץ JSON...')
+        console.log('🔄 טוען נתוני סניפי בנקים מובנים...')
         
-        // טעינת הקובץ JSON המלא
-        const response = await fetch('/snifim_he.json')
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`)
-        }
-        
-        const jsonData = await response.json()
-        console.log('📄 נתוני JSON נטענו:', jsonData.length, 'רשומות')
-        
-        const branches: BankBranch[] = jsonData.map((item: any) => ({
-            bankCode: item.Bank_Code?.toString() || '',
-            bankName: item.Bank_Name || '',
-            branchCode: item.Branch_Code?.toString() || '',
-            branchName: item.Branch_Name || '',
-            branchAddress: item.Branch_Address || '',
-            city: item.City || ''
+        // שימוש בנתונים מובנים מקובץ TypeScript
+        const branches: BankBranch[] = bankBranchesData.map(item => ({
+            bankCode: item.bankCode,
+            bankName: item.bankName,
+            branchCode: item.branchCode,
+            branchName: item.branchName,
+            branchAddress: item.branchAddress,
+            city: item.city
         }))
         
         console.log('📊 סה"כ סניפים נטענו:', branches.length)

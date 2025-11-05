@@ -7,5 +7,5 @@ export default defineConfig({
   build: {
     outDir: 'dist'
   },
-  assetsInclude: ['**/*.csv']
+  assetsInclude: ['**/*.csv', '**/*.json']
 })

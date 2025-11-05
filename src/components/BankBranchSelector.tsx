@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { getAllBanks, getBankBranches, formatBankDisplay, formatBranchDisplay, Bank, BankBranch } from '../utils/bankBranches'
+import { getAllBanks, getBankBranches, formatBankDisplay, formatBranchDisplay, Bank, BankBranch, resetCache } from '../utils/bankBranches'
 
 interface BankBranchSelectorProps {
   selectedBankCode?: string
@@ -32,8 +32,11 @@ const BankBranchSelector = ({
     const loadBanks = async () => {
       try {
         console.log('🚀 BankBranchSelector: מתחיל לטעון בנקים...')
+        // איפוס קאש לפיתוח
+        resetCache()
         const allBanks = await getAllBanks()
         console.log('📋 BankBranchSelector: קיבל', allBanks.length, 'בנקים')
+        console.log('🔍 BankBranchSelector: דוגמת בנקים:', allBanks.slice(0, 3).map(b => `${b.code} - ${b.name}`))
         setBanks(allBanks)
         setLoading(false)
       } catch (error) {

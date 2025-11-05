@@ -1,5 +1,4 @@
 // מודול לטיפול בנתוני סניפי בנקים
-import { bankBranchesRawData } from '../data/bankBranchesData'
 
 export interface BankBranch {
     bankCode: string
@@ -19,6 +18,13 @@ export interface Bank {
 let banksData: Bank[] = []
 let isLoaded = false
 
+// איפוס קאש (לפיתוח)
+export const resetCache = () => {
+    banksData = []
+    isLoaded = false
+    console.log('🔄 קאש נתוני בנקים אופס')
+}
+
 // פונקציה לטעינת נתוני הסניפים
 export const loadBankBranches = async (): Promise<Bank[]> => {
     if (isLoaded) {
@@ -26,34 +32,27 @@ export const loadBankBranches = async (): Promise<Bank[]> => {
     }
 
     try {
-        console.log('🔄 טוען נתוני סניפי בנקים...')
+        console.log('🔄 טוען נתוני סניפי בנקים מקובץ JSON...')
         
-        // שימוש בנתונים מקובץ TypeScript במקום fetch
-        const bankBranchesData = bankBranchesRawData
-        console.log('📄 נתוני בנקים נטענו, אורך:', bankBranchesData.length, 'תווים')
-        
-        const lines = bankBranchesData.split('\n')
-        console.log('📋 מספר שורות:', lines.length)
-        const branches: BankBranch[] = []
-
-        // דלג על השורה הראשונה (כותרות)
-        for (let i = 1; i < lines.length; i++) {
-            const line = lines[i].trim()
-            if (!line) continue
-
-            // פרסור CSV - התמודדות עם מרכאות
-            const columns = parseCSVLine(line)
-            if (columns.length >= 6) {
-                branches.push({
-                    bankCode: columns[0],
-                    bankName: columns[1],
-                    branchCode: columns[2],
-                    branchName: columns[3],
-                    branchAddress: columns[4],
-                    city: columns[5]
-                })
-            }
+        // טעינת הקובץ JSON המלא
+        const response = await fetch('/snifim_he.json')
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
         }
+        
+        const jsonData = await response.json()
+        console.log('📄 נתוני JSON נטענו:', jsonData.length, 'רשומות')
+        
+        const branches: BankBranch[] = jsonData.map((item: any) => ({
+            bankCode: item.Bank_Code?.toString() || '',
+            bankName: item.Bank_Name || '',
+            branchCode: item.Branch_Code?.toString() || '',
+            branchName: item.Branch_Name || '',
+            branchAddress: item.Branch_Address || '',
+            city: item.City || ''
+        }))
+        
+        console.log('📊 סה"כ סניפים נטענו:', branches.length)
 
         // קיבוץ לפי בנקים
         const bankMap = new Map<string, Bank>()
@@ -81,37 +80,7 @@ export const loadBankBranches = async (): Promise<Bank[]> => {
     }
 }
 
-// פונקציה לפרסור שורת CSV עם התמודדות עם מרכאות
-const parseCSVLine = (line: string): string[] => {
-    const result: string[] = []
-    let current = ''
-    let inQuotes = false
 
-    for (let i = 0; i < line.length; i++) {
-        const char = line[i]
-
-        if (char === '"') {
-            if (inQuotes && line[i + 1] === '"') {
-                // מרכאות כפולות - הוסף מרכאה אחת
-                current += '"'
-                i++ // דלג על המרכאה השנייה
-            } else {
-                // החלף מצב מרכאות
-                inQuotes = !inQuotes
-            }
-        } else if (char === ',' && !inQuotes) {
-            // פסיק מחוץ למרכאות - סוף עמודה
-            result.push(current.trim())
-            current = ''
-        } else {
-            current += char
-        }
-    }
-
-    // הוסף את העמודה האחרונה
-    result.push(current.trim())
-    return result
-}
 
 // פונקציה לקבלת כל הבנקים
 export const getAllBanks = async (): Promise<Bank[]> => {
@@ -141,6 +110,8 @@ export const getBranchByCode = async (bankCode: string, branchCode: string): Pro
 export const formatBranchDisplay = (branch: BankBranch): string => {
     return `${branch.branchCode} - ${branch.branchName} (${branch.city})`
 }
+
+
 
 // פונקציה לפורמט תצוגה של בנק
 export const formatBankDisplay = (bank: Bank): string => {

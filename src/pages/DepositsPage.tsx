@@ -79,7 +79,8 @@ function DepositsPage() {
   const [deposits, setDeposits] = useState<DatabaseDeposit[]>([])
   const [editingId, setEditingId] = useState<number | null>(null)
   const [newDeposit, setNewDeposit] = useState<{
-    depositorName: string
+    depositorFirstName: string
+    depositorLastName: string
     idNumber: string
     amount: number
     depositDate: string
@@ -94,7 +95,8 @@ function DepositsPage() {
     withdrawalPaymentMethod?: string
     withdrawalPaymentDetails?: string
   }>({
-    depositorName: '',
+    depositorFirstName: '',
+    depositorLastName: '',
     idNumber: '',
     amount: 0,
     depositDate: '',
@@ -389,8 +391,8 @@ function DepositsPage() {
   }
 
   const saveDeposit = () => {
-    if (!newDeposit.depositorName || !newDeposit.amount) {
-      showNotification('⚠️ אנא מלא את השדות החובה: שם המפקיד וסכום', 'error')
+    if (!newDeposit.depositorFirstName || !newDeposit.depositorLastName || !newDeposit.amount) {
+      showNotification('⚠️ אנא מלא את השדות החובה: שם פרטי, שם משפחה וסכום', 'error')
       return
     }
 
@@ -466,15 +468,17 @@ function DepositsPage() {
       // עדכון הפקדה קיימת
       const updatedDeposit = {
         ...newDeposit,
+        depositorName: `${newDeposit.depositorFirstName} ${newDeposit.depositorLastName}`.trim(),
         status: (newDeposit.withdrawnAmount && newDeposit.withdrawnAmount >= newDeposit.amount) ? 'withdrawn' : 'active'
       }
-      db.updateDeposit(editingId, updatedDeposit as DatabaseDeposit)
+      db.updateDeposit(editingId, updatedDeposit as unknown as DatabaseDeposit)
       setEditingId(null)
       showNotification('✅ ההפקדה עודכנה בהצלחה!')
     } else {
       // הפקדה חדשה
       const result = db.addDeposit({
         ...newDeposit,
+        depositorName: `${newDeposit.depositorFirstName} ${newDeposit.depositorLastName}`.trim(),
         depositPaymentMethod: newDeposit.depositPaymentMethod as 'cash' | 'transfer' | 'check' | 'credit' | 'other' | undefined,
         withdrawalPaymentMethod: newDeposit.withdrawalPaymentMethod as 'cash' | 'transfer' | 'check' | 'credit' | 'other' | undefined
       })
@@ -488,7 +492,8 @@ function DepositsPage() {
     
     loadDeposits()
     setNewDeposit({
-      depositorName: '',
+      depositorFirstName: '',
+      depositorLastName: '',
       idNumber: '',
       amount: 0,
       depositDate: '',
@@ -1364,13 +1369,24 @@ function DepositsPage() {
             
             <div className="form-row">
               <div className="form-group">
-                <label>שם המפקיד:</label>
+                <label>שם פרטי:</label>
                 <input 
                   type="text" 
-                  value={newDeposit.depositorName}
-                  onChange={(e) => handleInputChange('depositorName', e.target.value)}
+                  value={newDeposit.depositorFirstName}
+                  onChange={(e) => handleInputChange('depositorFirstName', e.target.value)}
                 />
               </div>
+              <div className="form-group">
+                <label>שם משפחה:</label>
+                <input 
+                  type="text" 
+                  value={newDeposit.depositorLastName}
+                  onChange={(e) => handleInputChange('depositorLastName', e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
               <div className="form-group">
                 <label>
                   מספר זהות: {db.getSettings().requireIdNumber && <span style={{ color: '#e74c3c' }}>*</span>}
@@ -1770,7 +1786,8 @@ function DepositsPage() {
                   onClick={() => {
                     setEditingId(null)
                     setNewDeposit({
-                      depositorName: '',
+                      depositorFirstName: '',
+                      depositorLastName: '',
                       idNumber: '',
                       amount: 0,
                       depositDate: '',
@@ -2033,8 +2050,11 @@ function DepositsPage() {
                       <td>
                         <button
                           onClick={() => {
+                            const nameParts = (deposit.depositorName || '').split(' ')
                             setNewDeposit({
                               ...deposit,
+                              depositorFirstName: nameParts[0] || '',
+                              depositorLastName: nameParts.slice(1).join(' ') || '',
                               reminderDays: deposit.reminderDays || 30,
                               withdrawnAmount: deposit.withdrawnAmount || 0,
                               withdrawnDate: deposit.withdrawnDate || ''

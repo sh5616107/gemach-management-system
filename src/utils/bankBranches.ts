@@ -61,11 +61,11 @@ export const loadBankBranches = async (): Promise<Bank[]> => {
             bankMap.get(branch.bankCode)!.branches.push(branch)
         })
 
-        banksData = Array.from(bankMap.values()).sort((a, b) => a.name.localeCompare(b.name, 'he'))
+        banksData = Array.from(bankMap.values()).sort((a, b) => parseInt(a.code) - parseInt(b.code))
         isLoaded = true
 
         console.log('✅ נטענו נתוני סניפי בנקים:', banksData.length, 'בנקים')
-        console.log('🏦 דוגמת בנקים:', banksData.slice(0, 3).map(b => `${b.code} - ${b.name} (${b.branches.length} סניפים)`))
+        console.log('🏦 כל הבנקים:', banksData.map(b => `${b.code} - ${b.name} (${b.branches.length} סניפים)`))
         return banksData
     } catch (error) {
         console.error('❌ שגיאה בטעינת נתוני סניפי בנקים:', error)

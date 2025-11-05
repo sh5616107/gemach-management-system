@@ -117,20 +117,15 @@ const BankBranchSelector = ({
 
 
   return (
-    <div style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
-      <div style={{ minWidth: '200px' }}>
-        {showLabels && <label style={{ display: 'block', marginBottom: '5px' }}>{bankLabel}</label>}
+    <>
+      <div className="form-group">
+        {showLabels && <label>{bankLabel}</label>}
         <select
           value={internalBankCode}
           onChange={handleBankChange}
           disabled={disabled}
           onClick={() => console.log('🖱️ BankBranchSelector: לחיצה על select')}
           style={{
-            width: '100%',
-            padding: '8px',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            fontSize: '14px',
             cursor: disabled ? 'not-allowed' : 'pointer',
             zIndex: 1000
           }}
@@ -145,19 +140,12 @@ const BankBranchSelector = ({
       </div>
 
       {internalBankCode && branches.length > 0 && (
-        <div style={{ minWidth: '250px' }}>
-          {showLabels && <label style={{ display: 'block', marginBottom: '5px' }}>{branchLabel}</label>}
+        <div className="form-group">
+          {showLabels && <label>{branchLabel}</label>}
           <select
             value={internalBranchCode}
             onChange={handleBranchChange}
             disabled={disabled}
-            style={{
-              width: '100%',
-              padding: '8px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              fontSize: '14px'
-            }}
           >
             <option value="">בחר סניף</option>
             {branches.map(branch => (
@@ -168,7 +156,7 @@ const BankBranchSelector = ({
           </select>
         </div>
       )}
-    </div>
+    </>
   )
 }
 

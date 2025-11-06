@@ -14,7 +14,7 @@ function HelpPage() {
                     <h2 className="form-title">📖 מדריך שימוש במערכת</h2>
 
                     <div style={{ background: '#e8f5e8', padding: '15px', borderRadius: '8px', margin: '20px 0', textAlign: 'center', border: '2px solid #27ae60' }}>
-                        <h3 style={{ color: '#27ae60', margin: '0 0 10px 0' }}>🆕 גרסה 2.9.1 - מה חדש?</h3>
+                        <h3 style={{ color: '#27ae60', margin: '0 0 10px 0' }}>🆕 גרסה 2.9.3 - מה חדש?</h3>
                         <div style={{ textAlign: 'right', fontSize: '14px' }}>
                             <ul style={{ margin: '10px 0', paddingRight: '20px' }}>
                                 <li><strong>טעינה מהירה ללא הבהובים</strong> - פתרון מלא לבעיית ההבהוב</li>

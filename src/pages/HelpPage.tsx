@@ -370,6 +370,24 @@ function HelpPage() {
                                     <li><strong>קיצור מקלדת:</strong> Alt → עזרה → בדוק עדכונים</li>
                                 </ul>
 
+                                <h4 style={{ marginTop: '15px' }}>🔍 איך לבדוק מיקום קבצים:</h4>
+                                <div style={{ background: '#f0f8ff', padding: '10px', borderRadius: '5px', margin: '10px 0' }}>
+                                    <ol>
+                                        <li><strong>פתח Run:</strong> לחץ Windows + R</li>
+                                        <li><strong>הקלד:</strong> <code>%LOCALAPPDATA%</code> ולחץ Enter</li>
+                                        <li><strong>חפש תיקיה:</strong> <code>gemach-management-system-updater</code></li>
+                                        <li><strong>או הקלד ישירות:</strong> <code>%LOCALAPPDATA%\gemach-management-system-updater</code></li>
+                                    </ol>
+                                    
+                                    <p><strong>💡 טיפים:</strong></p>
+                                    <ul>
+                                        <li>התיקיה נוצרת רק אחרי עדכון ראשון</li>
+                                        <li>אם אין עדכונים - התיקיה עשויה להיות ריקה</li>
+                                        <li>ניתן למחוק את התיקיה בבטחה אם נדרש</li>
+                                        <li>הקבצים נמחקים אוטומטית אחרי התקנה מוצלחת</li>
+                                    </ul>
+                                </div>
+
                                 <h4 style={{ marginTop: '15px' }}>📋 תהליך בדיקת עדכונים מתקדם:</h4>
                                 <div style={{ background: '#e8f4fd', padding: '10px', borderRadius: '5px', margin: '10px 0' }}>
                                     <ol>
@@ -389,6 +407,32 @@ function HelpPage() {
                                         <li>⚠️ טיפול חכם בשגיאות עם הצעות פתרון</li>
                                         <li>⏰ אפשרות לדחיית התקנה ללא איבוד העדכון</li>
                                     </ul>
+                                    
+                                    <h4 style={{ marginTop: '15px' }}>📁 איפה העדכונים נשמרים:</h4>
+                                    <div style={{ background: '#f0f8ff', padding: '10px', borderRadius: '5px', margin: '10px 0' }}>
+                                        <p><strong>📂 מיקומי קבצים:</strong></p>
+                                        <ul>
+                                            <li><strong>Windows:</strong> <code>%LOCALAPPDATA%\gemach-management-system-updater\</code></li>
+                                            <li><strong>נתיב מלא:</strong> <code>C:\Users\[שם משתמש]\AppData\Local\gemach-management-system-updater\</code></li>
+                                            <li><strong>קבצי עדכון זמניים:</strong> <code>%TEMP%\</code></li>
+                                            <li><strong>לוגים:</strong> <code>%USERPROFILE%\AppData\Roaming\gemach-management-system\logs\</code></li>
+                                        </ul>
+                                        
+                                        <p><strong>🗂️ מה נשמר שם:</strong></p>
+                                        <ul>
+                                            <li>קבצי עדכון שהורדו</li>
+                                            <li>מטא-דאטה של גרסאות</li>
+                                            <li>לוגים של תהליך העדכון</li>
+                                            <li>קבצי גיבוי זמניים</li>
+                                        </ul>
+                                        
+                                        <p><strong>🧹 ניקוי קבצים:</strong></p>
+                                        <ul>
+                                            <li>הקבצים נמחקים אוטומטית אחרי התקנה מוצלחת</li>
+                                            <li>ניתן למחוק ידנית את התיקיות אם נדרש</li>
+                                            <li>הלוגים נשמרים לצורכי דיבוג</li>
+                                        </ul>
+                                    </div>
                                     
                                     <p><strong>💡 טיפ:</strong> העדכונים אוטומטיים זמינים רק בגרסת ה-EXE. בדפדפן תצטרך להוריד גרסה חדשה ידנית מהאתר.</p>
                                 </div>

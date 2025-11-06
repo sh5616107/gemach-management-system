@@ -441,6 +441,41 @@ function createWindow() {
             checkForUpdates()
           }
         },
+        {
+          label: 'הצג מיקום קבצי עדכון',
+          click: () => {
+            const { shell } = require('electron')
+            const os = require('os')
+            const path = require('path')
+            
+            const updatePath = path.join(os.homedir(), 'AppData', 'Local', 'gemach-management-system-updater')
+            const logsPath = path.join(os.homedir(), 'AppData', 'Roaming', 'gemach-management-system', 'logs')
+            
+            dialog.showMessageBox(mainWindow, {
+              type: 'info',
+              title: '📁 מיקום קבצי עדכון',
+              message: 'מיקומי קבצים במערכת',
+              detail: `📂 קבצי עדכון:
+${updatePath}
+
+📋 קבצי לוג:
+${logsPath}
+
+💡 לחץ "פתח תיקיה" כדי לפתוח את מיקום קבצי העדכון`,
+              buttons: ['פתח תיקיה', 'סגור'],
+              defaultId: 0,
+              cancelId: 1
+            }).then((result) => {
+              if (result.response === 0) {
+                // פתח את תיקיית העדכונים
+                shell.openPath(updatePath).catch(() => {
+                  // אם התיקיה לא קיימת, פתח את התיקיה הראשית
+                  shell.openPath(path.join(os.homedir(), 'AppData', 'Local'))
+                })
+              }
+            })
+          }
+        },
         { type: 'separator' },
         {
           label: 'אודות מערכת ניהול גמ"ח',
@@ -449,7 +484,7 @@ function createWindow() {
               type: 'info',
               title: 'אודות',
               message: 'מערכת ניהול גמ"ח',
-              detail: 'גרסה 2.9.1\nמערכת מקיפה לניהול גמילות חסדים\nכולל: הלוואות, פקדונות, תרומות ודוחות\nעם ניהול ערבים, רשימה שחורה ומכתבי התראה\nטעינה מהירה ללא הבהובים + מסך טעינה מקצועי\nתמיכה מלאה בתאריכים עבריים ועדכונים אוטומטיים!\nפותח עבור קהילת הגמ"חים בישראל 🇮🇱'
+              detail: 'גרסה 2.9.2\nמערכת מקיפה לניהול גמילות חסדים\nכולל: הלוואות, פקדונות, תרומות ודוחות\nעם ניהול ערבים, רשימה שחורה ומכתבי התראה\nטעינה מהירה ללא הבהובים + מסך טעינה מקצועי\nמדריך התקנה מפורט ומיקום קבצי עדכון\nתמיכה מלאה בתאריכים עבריים ועדכונים אוטומטיים!\nפותח עבור קהילת הגמ"חים בישראל 🇮🇱'
             })
           }
         }

@@ -1,6 +1,6 @@
 {
   "name": "gemach-management-system",
-  "version": "2.9.1",
+  "version": "2.9.2",
   "description": "Comprehensive Gemach Management System for loans, deposits and donations",
   "main": "electron.js",
   "homepage": "./",
@@ -46,7 +46,9 @@
         }
       ],
       "icon": "assets/icon.ico",
-      "requestedExecutionLevel": "asInvoker"
+      "requestedExecutionLevel": "asInvoker",
+      "publisherName": "Gemach System Developer",
+      "verifyUpdateCodeSignature": false
     },
     "nsis": {
       "oneClick": false,
@@ -63,7 +65,9 @@
       "displayLanguageSelector": false,
       "installerLanguages": ["he"],
       "language": "1037",
-      "artifactName": "Gemach.Management.System.Setup.${version}.exe"
+      "artifactName": "Gemach.Management.System.Setup.${version}.exe",
+      "warningsAsErrors": false,
+      "allowElevation": true
     },
     "mac": {
       "target": "dmg",

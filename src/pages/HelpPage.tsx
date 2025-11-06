@@ -446,6 +446,48 @@ function HelpPage() {
                         </section>
 
                         <section style={{ marginBottom: '30px' }}>
+                            <h3 style={{ color: '#f39c12', borderBottom: '2px solid #f39c12', paddingBottom: '10px' }}>
+                                � התקנה  ואזהרות Windows
+                            </h3>
+                            <div style={{ background: '#fff9e6', padding: '15px', borderRadius: '8px', margin: '10px 0' }}>
+                                <h4>🛡️ אזהרת Windows Defender:</h4>
+                                <div style={{ background: '#ffeaa7', padding: '10px', borderRadius: '5px', margin: '10px 0' }}>
+                                    <p><strong>אם Windows מציג אזהרה "Windows protected your PC":</strong></p>
+                                    <ol>
+                                        <li><strong>לחץ על "More info"</strong> (פרטים נוספים)</li>
+                                        <li><strong>לחץ על "Run anyway"</strong> (הרץ בכל זאת)</li>
+                                        <li><strong>או:</strong> לחץ ימין על הקובץ → Properties → Unblock</li>
+                                    </ol>
+                                    
+                                    <p><strong>💡 למה זה קורה?</strong></p>
+                                    <ul>
+                                        <li>התוכנה לא חתומה דיגיטלית (חתימה עולה כסף)</li>
+                                        <li>זה נורמלי לתוכנות קוד פתוח</li>
+                                        <li>התוכנה בטוחה לחלוטין - קוד פתוח ב-GitHub</li>
+                                        <li>Windows מזהיר מכל תוכנה לא חתומה</li>
+                                    </ul>
+                                </div>
+
+                                <h4>📥 הוראות התקנה:</h4>
+                                <ol>
+                                    <li>הורד את קובץ ה-Setup.exe מ-GitHub Releases</li>
+                                    <li>אם מופיעה אזהרה - עקוב אחרי ההוראות למעלה</li>
+                                    <li>הפעל את קובץ ההתקנה</li>
+                                    <li>בחר תיקיית התקנה (או השאר ברירת מחדל)</li>
+                                    <li>המתן להתקנה להסתיים</li>
+                                    <li>התוכנה תיפתח אוטומטית</li>
+                                </ol>
+
+                                <h4>🔧 פתרון בעיות התקנה:</h4>
+                                <ul>
+                                    <li><strong>ההתקנה נכשלת?</strong> → הפעל כמנהל (Run as Administrator)</li>
+                                    <li><strong>אנטי-וירוס חוסם?</strong> → הוסף חריגה לתיקיית ההתקנה</li>
+                                    <li><strong>שגיאת הרשאות?</strong> → בדוק שיש מקום פנוי בדיסק</li>
+                                </ul>
+                            </div>
+                        </section>
+
+                        <section style={{ marginBottom: '30px' }}>
                             <h3 style={{ color: '#e67e22', borderBottom: '2px solid #e67e22', paddingBottom: '10px' }}>
                                 🔒 אבטחת מידע
                             </h3>

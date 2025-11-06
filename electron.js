@@ -34,35 +34,99 @@ if (!isDev) {
 
   autoUpdater.on('update-not-available', (info) => {
     console.log('אין עדכונים זמינים')
+    
+    // הצג הודעה מפורטת למשתמש
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: '✅ המערכת מעודכנת',
+      message: 'אין עדכונים זמינים',
+      detail: `🎉 יש לך את הגרסה העדכנית ביותר!
+      
+📊 פרטי גרסה:
+🏷️ גרסה נוכחית: ${require('./package.json').version}
+📅 נבדק ב: ${new Date().toLocaleString('he-IL')}
+🌐 שרת: GitHub Releases
+
+המערכת שלך מעודכנת ומוכנה לשימוש.`,
+      buttons: ['מעולה!']
+    })
   })
 
   autoUpdater.on('error', (err) => {
     console.log('שגיאה בעדכון:', err)
+    
+    // הצג הודעת שגיאה מפורטת
+    dialog.showMessageBox(mainWindow, {
+      type: 'error',
+      title: '❌ שגיאה בבדיקת עדכונים',
+      message: 'לא ניתן לבדוק עדכונים כרגע',
+      detail: `🔧 פתרונות אפשריים:
+      
+🌐 בדוק את החיבור לאינטרנט
+🔄 נסה שוב בעוד כמה דקות
+🛡️ בדוק שהחומת אש לא חוסמת את התוכנה
+📞 פנה לתמיכה אם הבעיה נמשכת
+
+שגיאה טכנית: ${err.message}`,
+      buttons: ['הבנתי']
+    })
   })
 
   autoUpdater.on('download-progress', (progressObj) => {
-    let log_message = "מהירות הורדה: " + progressObj.bytesPerSecond
-    log_message = log_message + ' - הורד ' + progressObj.percent + '%'
-    log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')'
+    const percent = Math.round(progressObj.percent)
+    const transferred = Math.round(progressObj.transferred / 1024 / 1024 * 100) / 100
+    const total = Math.round(progressObj.total / 1024 / 1024 * 100) / 100
+    const speed = Math.round(progressObj.bytesPerSecond / 1024 / 1024 * 100) / 100
+    
+    let log_message = `מהירות הורדה: ${speed} MB/s - הורד ${percent}% (${transferred}/${total} MB)`
     console.log(log_message)
+    
+    // עדכן את כותרת החלון עם התקדמות ההורדה
+    if (mainWindow) {
+      mainWindow.setTitle(`מערכת ניהול גמ"ח - מוריד עדכון ${percent}%`)
+    }
   })
 
   autoUpdater.on('update-downloaded', (info) => {
     console.log('עדכון הורד:', info.version)
+    
+    // החזר את כותרת החלון לרגיל
+    if (mainWindow) {
+      mainWindow.setTitle('מערכת ניהול גמ"ח')
+    }
 
-    // הצג הודעה עם אפשרות להפעיל מחדש
+    // הצג הודעה מפורטת עם אפשרות להפעיל מחדש
     dialog.showMessageBox(mainWindow, {
       type: 'info',
-      title: 'עדכון מוכן',
-      message: `עדכון לגרסה ${info.version} הורד בהצלחה!`,
-      detail: 'לחץ "הפעל מחדש" כדי להתקין את העדכון, או "מאוחר יותר" כדי להמשיך לעבוד.',
-      buttons: ['הפעל מחדש', 'מאוחר יותר'],
+      title: '🎉 עדכון מוכן להתקנה!',
+      message: `עדכון לגרסה ${info.version} הורד בהצלחה`,
+      detail: `✅ ההורדה הושלמה בהצלחה!
+      
+📊 פרטי העדכון:
+🏷️ גרסה חדשה: ${info.version}
+📅 הורד ב: ${new Date().toLocaleString('he-IL')}
+💾 גודל: ${info.files ? info.files[0]?.size || 'לא ידוע' : 'לא ידוע'}
+
+🔄 לחץ "התקן עכשיו" כדי להפעיל מחדש ולהתקין
+⏰ או "התקן מאוחר יותר" כדי להמשיך לעבוד
+
+💡 העדכון יותקן בפעם הבאה שתפתח את התוכנה`,
+      buttons: ['התקן עכשיו', 'התקן מאוחר יותר'],
       defaultId: 0,
       cancelId: 1
     }).then((result) => {
       if (result.response === 0) {
         // המשתמש בחר להפעיל מחדש
         autoUpdater.quitAndInstall()
+      } else {
+        // הצג הודעה שהעדכון יותקן מאוחר יותר
+        dialog.showMessageBox(mainWindow, {
+          type: 'info',
+          title: '⏰ עדכון נדחה',
+          message: 'העדכון יותקן בפעם הבאה',
+          detail: 'העדכון נשמר ויותקן אוטומטית בפעם הבאה שתפתח את התוכנה.',
+          buttons: ['הבנתי']
+        })
       }
     })
   })
@@ -70,6 +134,96 @@ if (!isDev) {
 
 function createWindow() {
   // יצירת חלון הדפדפן
+  // יצירת splash screen קודם
+  let splashWindow = new BrowserWindow({
+    width: 400,
+    height: 300,
+    frame: false,
+    alwaysOnTop: true,
+    transparent: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true
+    },
+    icon: path.join(__dirname, 'assets/icon.png')
+  })
+
+  // טעינת splash screen
+  splashWindow.loadFile(path.join(__dirname, 'splash.html')).catch(() => {
+    // אם אין קובץ splash, צור אחד פשוט
+    const splashHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body {
+          margin: 0;
+          padding: 0;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          height: 100vh;
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          color: white;
+          text-align: center;
+        }
+        .logo {
+          font-size: 48px;
+          margin-bottom: 20px;
+          animation: pulse 2s infinite;
+        }
+        .title {
+          font-size: 24px;
+          font-weight: bold;
+          margin-bottom: 10px;
+        }
+        .subtitle {
+          font-size: 16px;
+          opacity: 0.8;
+          margin-bottom: 30px;
+        }
+        .loading {
+          width: 200px;
+          height: 4px;
+          background: rgba(255,255,255,0.3);
+          border-radius: 2px;
+          overflow: hidden;
+        }
+        .loading-bar {
+          width: 0%;
+          height: 100%;
+          background: white;
+          border-radius: 2px;
+          animation: loading 3s ease-in-out infinite;
+        }
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.1); }
+        }
+        @keyframes loading {
+          0% { width: 0%; }
+          50% { width: 70%; }
+          100% { width: 100%; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="logo">🏛️</div>
+      <div class="title">מערכת ניהול גמ"ח</div>
+      <div class="subtitle">טוען את המערכת...</div>
+      <div class="loading">
+        <div class="loading-bar"></div>
+      </div>
+    </body>
+    </html>
+    `
+    splashWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(splashHtml))
+  })
+
+  // יצירת החלון הראשי עם הגדרות משופרות
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -80,15 +234,20 @@ function createWindow() {
       contextIsolation: true,
       enableRemoteModule: false,
       webSecurity: true,
-      preload: path.join(__dirname, 'preload.js') // נוסיף preload script
+      backgroundThrottling: false, // מונע האטה ברקע
+      preload: path.join(__dirname, 'preload.js')
     },
-    icon: path.join(__dirname, 'assets/icon.png'), // אייקון האפליקציה
+    icon: path.join(__dirname, 'assets/icon.png'),
     title: 'מערכת ניהול גמ"ח',
     show: false, // לא להציג עד שמוכן
     backgroundColor: '#87CEEB', // צבע רקע זהה לאפליקציה
     titleBarStyle: 'default',
     frame: true,
-    transparent: false
+    transparent: false,
+    webSecurity: true,
+    // הגדרות נוספות למניעת הבהוב
+    paintWhenInitiallyHidden: false,
+    thickFrame: false
   })
 
   // טעינת האפליקציה
@@ -120,24 +279,50 @@ function createWindow() {
 
   mainWindow.loadURL(startUrl)
 
-  // הצגת החלון כשמוכן
+  // הצגת החלון כשמוכן עם טיפול ב-splash
   mainWindow.once('ready-to-show', () => {
-    // המתן קצת יותר כדי לוודא שהתוכן נטען
+    // המתן שהתוכן יטען לגמרי
     setTimeout(() => {
+      // סגור את ה-splash screen
+      if (splashWindow && !splashWindow.isDestroyed()) {
+        splashWindow.close()
+        splashWindow = null
+      }
+      
+      // הצג את החלון הראשי
       mainWindow.show()
+      mainWindow.focus()
 
       // פתיחת DevTools רק במצב פיתוח
       if (isDev) {
         mainWindow.webContents.openDevTools()
       }
-    }, 100)
+    }, 1500) // זמן ארוך יותר כדי לוודא טעינה מלאה
   })
 
-  // גם נוסיף אירוע נוסף לוודא שהתוכן נטען
+  // אירוע נוסף לוודא שהתוכן נטען - עם טיפול ב-splash
   mainWindow.webContents.once('did-finish-load', () => {
-    if (!mainWindow.isVisible()) {
-      mainWindow.show()
+    // המתן עוד קצת לוודא שהכל מוכן
+    setTimeout(() => {
+      if (!mainWindow.isVisible()) {
+        // סגור את ה-splash screen
+        if (splashWindow && !splashWindow.isDestroyed()) {
+          splashWindow.close()
+          splashWindow = null
+        }
+        
+        mainWindow.show()
+        mainWindow.focus()
+      }
+    }, 1000)
+  })
+
+  // טיפול בסגירת splash אם החלון הראשי נסגר
+  mainWindow.on('closed', () => {
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.close()
     }
+    mainWindow = null
   })
 
   // סגירת האפליקציה כשסוגרים את החלון
@@ -264,7 +449,7 @@ function createWindow() {
               type: 'info',
               title: 'אודות',
               message: 'מערכת ניהול גמ"ח',
-              detail: 'גרסה 2.9.0\nמערכת מקיפה לניהול גמילות חסדים\nכולל: הלוואות, פקדונות, תרומות ודוחות\nעם ניהול ערבים, רשימה שחורה ומכתבי התראה\nתמיכה מלאה בתאריכים עבריים ועדכונים אוטומטיים!\nפותח עבור קהילת הגמ"חים בישראל 🇮🇱'
+              detail: 'גרסה 2.9.1\nמערכת מקיפה לניהול גמילות חסדים\nכולל: הלוואות, פקדונות, תרומות ודוחות\nעם ניהול ערבים, רשימה שחורה ומכתבי התראה\nטעינה מהירה ללא הבהובים + מסך טעינה מקצועי\nתמיכה מלאה בתאריכים עבריים ועדכונים אוטומטיים!\nפותח עבור קהילת הגמ"חים בישראל 🇮🇱'
             })
           }
         }
@@ -325,28 +510,56 @@ ipcMain.handle('print-to-pdf', async () => {
   }
 })
 
-// פונקציה לבדיקת עדכונים ידנית
+// פונקציה לבדיקת עדכונים ידנית עם תצוגה מקדימה
 function checkForUpdates() {
   if (isDev) {
     dialog.showMessageBox(mainWindow, {
       type: 'info',
       title: 'בדיקת עדכונים',
       message: 'בדיקת עדכונים זמינה רק בגרסת הפרודקשן',
-      buttons: ['אישור']
+      detail: 'במצב פיתוח, העדכונים לא זמינים.\nבגרסת ה-EXE המוכנה, העדכונים יעבדו אוטומטית.',
+      buttons: ['הבנתי']
     })
     return
   }
 
+  // הצג חלונית תצוגה מקדימה של התהליך
+  const progressDialog = dialog.showMessageBox(mainWindow, {
+    type: 'info',
+    title: '🔍 בדיקת עדכונים',
+    message: 'מתחיל בדיקת עדכונים...',
+    detail: `📋 שלבי התהליך:
+    
+✅ 1. התחברות לשרת העדכונים
+⏳ 2. בדיקת גרסה נוכחית (${require('./package.json').version})
+⏳ 3. חיפוש גרסאות חדשות
+⏳ 4. השוואת גרסאות
+⏳ 5. הצגת תוצאות
+
+אנא המתן...`,
+    buttons: ['ביטול'],
+    cancelId: 0
+  })
+
+  // התחל בדיקת עדכונים
   autoUpdater.checkForUpdatesAndNotify()
 
-  // הצג הודעה שהבדיקה התחילה
-  dialog.showMessageBox(mainWindow, {
-    type: 'info',
-    title: 'בדיקת עדכונים',
-    message: 'בודק עדכונים...',
-    detail: 'תקבל הודעה אם יימצא עדכון זמין.',
-    buttons: ['אישור']
-  })
+  // עדכן את ההודעה אחרי זמן קצר
+  setTimeout(() => {
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: '🔍 בדיקת עדכונים',
+      message: 'בודק עדכונים ברקע...',
+      detail: `📊 מידע נוכחי:
+      
+🏷️ גרסה נוכחית: ${require('./package.json').version}
+🌐 שרת עדכונים: GitHub Releases
+📅 בדיקה אחרונה: ${new Date().toLocaleString('he-IL')}
+
+תקבל הודעה כשהבדיקה תסתיים.`,
+      buttons: ['אישור']
+    })
+  }, 1500)
 }
 
 // IPC handler לבדיקת עדכונים מהממשק

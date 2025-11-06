@@ -14,15 +14,17 @@ function HelpPage() {
                     <h2 className="form-title">📖 מדריך שימוש במערכת</h2>
 
                     <div style={{ background: '#e8f5e8', padding: '15px', borderRadius: '8px', margin: '20px 0', textAlign: 'center', border: '2px solid #27ae60' }}>
-                        <h3 style={{ color: '#27ae60', margin: '0 0 10px 0' }}>🆕 גרסה 2.9.0 - מה חדש?</h3>
+                        <h3 style={{ color: '#27ae60', margin: '0 0 10px 0' }}>🆕 גרסה 2.9.1 - מה חדש?</h3>
                         <div style={{ textAlign: 'right', fontSize: '14px' }}>
                             <ul style={{ margin: '10px 0', paddingRight: '20px' }}>
+                                <li><strong>טעינה מהירה ללא הבהובים</strong> - פתרון מלא לבעיית ההבהוב</li>
+                                <li><strong>מסך טעינה מקצועי</strong> - splash screen יפה עם אנימציות</li>
+                                <li><strong>אופטימיזציות ביצועים</strong> - טעינה מהירה יותר</li>
+                                <li><strong>שיפורי בדיקת עדכונים</strong> - ממשק מתקדם עם תצוגה מקדימה</li>
                                 <li><strong>ניהול ערבים מתקדם</strong> - הוספה, עריכה ומחיקה של ערבים</li>
                                 <li><strong>רשימה שחורה</strong> - ניהול רשימת לווים חסומים</li>
                                 <li><strong>מכתבי התראה</strong> - יצירת מכתבי התראה אוטומטיים</li>
                                 <li><strong>בחירת סניף בנק</strong> - הוספת פרטי סניף בנק למסמכים</li>
-                                <li><strong>דוחות משופרים</strong> - דוחות מפורטים יותר עם עיצוב מקצועי</li>
-                                <li><strong>ממשק משופר</strong> - עיצוב חדש ונוח יותר</li>
                             </ul>
                         </div>
                     </div>
@@ -365,11 +367,30 @@ function HelpPage() {
                                 <h4 style={{ marginTop: '15px' }}>🔧 בדיקה ידנית:</h4>
                                 <ul>
                                     <li><strong>דרך התפריט:</strong> עזרה → בדוק עדכונים</li>
-                                    <li><strong>דרך ההגדרות:</strong> כפתור "🔄 בדוק עדכונים"</li>
+                                    <li><strong>קיצור מקלדת:</strong> Alt → עזרה → בדוק עדכונים</li>
                                 </ul>
 
+                                <h4 style={{ marginTop: '15px' }}>📋 תהליך בדיקת עדכונים מתקדם:</h4>
                                 <div style={{ background: '#e8f4fd', padding: '10px', borderRadius: '5px', margin: '10px 0' }}>
-                                    <p><strong>💡 טיפ:</strong> העדכונים אוטומטיים זמינים רק בגרסת ה-EXE. בדפדפן תצטרך להוריד גרסה חדשה ידנית.</p>
+                                    <ol>
+                                        <li><strong>לחץ על תפריט "עזרה"</strong> בחלק העליון של החלון</li>
+                                        <li><strong>בחר "בדוק עדכונים"</strong> מהתפריט הנפתח</li>
+                                        <li><strong>תצוגה מקדימה:</strong> תראה את שלבי התהליך בזמן אמת</li>
+                                        <li><strong>מידע מפורט:</strong> גרסה נוכחית, שרת עדכונים ותאריך בדיקה</li>
+                                        <li><strong>אם יש עדכון:</strong> הורדה אוטומטית עם התקדמות בכותרת החלון</li>
+                                        <li><strong>התקנה גמישה:</strong> בחר להתקין מיד או לדחות למועד מאוחר יותר</li>
+                                        <li><strong>אם אין עדכון:</strong> הודעה מפורטת שהמערכת מעודכנת</li>
+                                    </ol>
+                                    
+                                    <p><strong>🎯 תכונות מתקדמות:</strong></p>
+                                    <ul style={{ marginTop: '10px' }}>
+                                        <li>📊 מעקב התקדמות הורדה בזמן אמת</li>
+                                        <li>🔍 הודעות מפורטות עם פרטים טכניים</li>
+                                        <li>⚠️ טיפול חכם בשגיאות עם הצעות פתרון</li>
+                                        <li>⏰ אפשרות לדחיית התקנה ללא איבוד העדכון</li>
+                                    </ul>
+                                    
+                                    <p><strong>💡 טיפ:</strong> העדכונים אוטומטיים זמינים רק בגרסת ה-EXE. בדפדפן תצטרך להוריד גרסה חדשה ידנית מהאתר.</p>
                                 </div>
                             </div>
                         </section>

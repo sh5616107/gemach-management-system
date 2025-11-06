@@ -23,6 +23,31 @@ function ScrollToTop() {
 }
 
 function App() {
+  // אופטימיזציה לטעינה באלקטרון
+  useEffect(() => {
+    // סמן שהאפליקציה נטענה
+    document.body.classList.add('loaded')
+    
+    // אופטימיזציה לאלקטרון
+    if ((window as any).electronAPI) {
+      (window as any).electronAPI.onDOMReady(() => {
+        // הכל מוכן
+        console.log('App loaded successfully')
+      })
+    }
+    
+    // טעינת תמונות עם מניעת הבהוב
+    const images = document.querySelectorAll('img')
+    images.forEach(img => {
+      if (img.complete) {
+        img.classList.add('loaded')
+      } else {
+        img.addEventListener('load', () => img.classList.add('loaded'))
+        img.addEventListener('error', () => img.classList.add('loaded'))
+      }
+    })
+  }, [])
+
   return (
     <div className="App">
       <ScrollToTop />

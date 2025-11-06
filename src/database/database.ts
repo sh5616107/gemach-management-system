@@ -235,6 +235,8 @@ export interface DatabaseSettings {
   showDateWarnings: boolean // הצגת אזהרות חגים ושבתות
   // הגדרות מעקב אמצעי תשלום
   trackPaymentMethods: boolean // מעקב אחרי אמצעי תשלום
+  // הגדרות כפתורי פעולות מהירות
+  quickActions: string[] // רשימת כפתורי הפעולות המהירות שיוצגו
 }
 
 interface DatabaseFile {
@@ -283,7 +285,8 @@ class GemachDatabase {
       requireIdNumber: false, // כברירת מחדל לא חובה - מתאים לשימוש אישי
       showHebrewDates: false,
       showDateWarnings: true,
-      trackPaymentMethods: true
+      trackPaymentMethods: true,
+      quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools']
     }
   }
 
@@ -1311,7 +1314,8 @@ class GemachDatabase {
         requireIdNumber: false,
         showHebrewDates: false,
         showDateWarnings: true,
-        trackPaymentMethods: true
+        trackPaymentMethods: true,
+        quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools']
       }
     }
     this.saveData()

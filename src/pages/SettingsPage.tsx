@@ -81,7 +81,8 @@ function SettingsPage() {
     requireIdNumber: false,
     showHebrewDates: false,
     showDateWarnings: true,
-    trackPaymentMethods: false
+    trackPaymentMethods: false,
+    quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools']
   })
 
   useEffect(() => {
@@ -106,7 +107,13 @@ function SettingsPage() {
   }, [settings.theme, settings.customBackgroundColor])
 
   const loadSettings = () => {
-    setSettings(db.getSettings())
+    const currentSettings = db.getSettings()
+    // וודא שיש quickActions - אם לא, הוסף ברירת מחדל
+    if (!currentSettings.quickActions) {
+      currentSettings.quickActions = ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools']
+      db.updateSettings(currentSettings)
+    }
+    setSettings(currentSettings)
   }
 
   const handleSettingChange = (key: keyof DatabaseSettings, value: any) => {
@@ -160,7 +167,8 @@ function SettingsPage() {
           requireIdNumber: false,
           showHebrewDates: false,
           showDateWarnings: true,
-          trackPaymentMethods: false
+          trackPaymentMethods: false,
+          quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools']
         }
         setSettings(defaultSettings)
         db.updateSettings(defaultSettings)
@@ -409,23 +417,161 @@ function SettingsPage() {
 
           </div>
 
+          {/* כפתורי פעולות מהירות */}
+          <div className="info-section" style={{ marginBottom: '30px' }}>
+            <h3 className="info-title">⚡ כפתורי פעולות מהירות</h3>
+            <p style={{ marginBottom: '15px', color: '#666' }}>
+              בחר איזה כפתורים יופיעו בתפריט הפעולות המהירות בדף הבית
+            </p>
+            
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+              gap: '10px',
+              marginTop: '15px'
+            }}>
+              {[
+                { id: 'loans', name: '💰 הלוואות', description: 'ניהול הלוואות חדשות וקיימות' },
+                { id: 'deposits', name: '🏦 הפקדות', description: 'ניהול הפקדות חדשות וקיימות' },
+                { id: 'donations', name: '❤️ תרומות', description: 'ניהול תרומות חדשות וקיימות' },
+                { id: 'statistics', name: '📊 סטטיסטיקות', description: 'צפייה בנתונים וגרפים' },
+                { id: 'borrower-report', name: '📋 דוח לווה', description: 'יצירת דוחות מפורטים ללווים' },
+                { id: 'admin-tools', name: '🔧 כלים מנהליים', description: 'כלים מתקדמים לניהול המערכת' }
+              ].map(action => (
+                <label key={action.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '10px',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  backgroundColor: (settings.quickActions || []).includes(action.id) ? 'rgba(52, 152, 219, 0.1)' : 'transparent'
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={(settings.quickActions || []).includes(action.id)}
+                    onChange={(e) => {
+                      const currentQuickActions = settings.quickActions || ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools']
+                      const newQuickActions = e.target.checked
+                        ? [...currentQuickActions, action.id]
+                        : currentQuickActions.filter(id => id !== action.id)
+                      
+                      const newSettings = { ...settings, quickActions: newQuickActions }
+                      setSettings(newSettings)
+                      db.updateSettings(newSettings)
+                      showNotification('✅ הגדרות כפתורי פעולות מהירות נשמרו')
+                    }}
+                    style={{ transform: 'scale(1.2)' }}
+                  />
+                  <div>
+                    <div style={{ fontWeight: 'bold' }}>{action.name}</div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>{action.description}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+            
+            <div style={{
+              marginTop: '15px',
+              padding: '10px',
+              backgroundColor: 'rgba(52, 152, 219, 0.1)',
+              borderRadius: '5px',
+              fontSize: '14px'
+            }}>
+              💡 <strong>טיפ:</strong> כפתורים שלא נבחרו לא יופיעו בתפריט הצף בדף הבית
+            </div>
+          </div>
+
           {/* תצוגה נוכחית */}
           <div className="info-section" style={{ marginBottom: '30px' }}>
             <h3 className="info-title">📊 תצוגה נוכחית</h3>
             <div style={{
-              padding: '20px',
-              background: 'rgba(52, 152, 219, 0.1)',
-              borderRadius: '8px',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+              gap: '20px',
               marginTop: '15px'
             }}>
-              <p><strong>מטבע:</strong> {settings.currency === 'ILS' ? 'שקל ישראלי' : 'דולר אמריקאי'}</p>
-              <p><strong>דוגמה:</strong> {settings.currencySymbol}1,000</p>
-              <p><strong>תקופת הלוואה ברירת מחדל:</strong> {settings.defaultLoanPeriod} חודשים</p>
-              <p><strong>התראות איחור:</strong> {settings.showOverdueWarnings ? 'מופעל' : 'כבוי'}</p>
-              <p><strong>ייצוא אוטומטי:</strong> {settings.autoExport ? `מופעל (${settings.exportFrequency})` : 'כבוי'}</p>
-              <p><strong>הלוואות מחזוריות:</strong> {settings.enableRecurringLoans ? 'מופעל' : 'כבוי'}</p>
-              <p><strong>פרעונות מחזוריים:</strong> {settings.enableRecurringPayments ? 'מופעל' : 'כבוי'}</p>
-              <p><strong>חובת מספר זהות:</strong> {settings.requireIdNumber ? 'חובה' : 'אופציונלי'}</p>
+              {/* הגדרות כלליות */}
+              <div style={{
+                padding: '15px',
+                background: 'rgba(52, 152, 219, 0.1)',
+                borderRadius: '8px'
+              }}>
+                <h4 style={{ marginBottom: '10px', color: '#2c3e50' }}>💰 הגדרות כלליות</h4>
+                <p><strong>מטבע:</strong> {settings.currency === 'ILS' ? 'שקל ישראלי' : 'דולר אמריקאי'}</p>
+                <p><strong>סמל מטבע:</strong> {settings.currencySymbol}</p>
+                <p><strong>דוגמה:</strong> {settings.currencySymbol}1,000</p>
+                <p><strong>תקופת הלוואה ברירת מחדל:</strong> {settings.defaultLoanPeriod} חודשים</p>
+                <p><strong>התראות איחור:</strong> {settings.showOverdueWarnings ? '✅ מופעל' : '❌ כבוי'}</p>
+              </div>
+
+              {/* הגדרות פונקציות מתקדמות */}
+              <div style={{
+                padding: '15px',
+                background: 'rgba(155, 89, 182, 0.1)',
+                borderRadius: '8px'
+              }}>
+                <h4 style={{ marginBottom: '10px', color: '#2c3e50' }}>⚙️ פונקציות מתקדמות</h4>
+                <p><strong>הלוואות מחזוריות:</strong> {settings.enableRecurringLoans ? '✅ מופעל' : '❌ כבוי'}</p>
+                <p><strong>פרעונות מחזוריים:</strong> {settings.enableRecurringPayments ? '✅ מופעל' : '❌ כבוי'}</p>
+                <p><strong>חובת מספר זהות:</strong> {settings.requireIdNumber ? '🔒 חובה' : '🔓 אופציונלי'}</p>
+                <p><strong>תאריכים עבריים:</strong> {settings.showHebrewDates ? '✅ מופעל' : '❌ כבוי'}</p>
+                <p><strong>אזהרות חגים ושבתות:</strong> {settings.showDateWarnings ? '✅ מופעל' : '❌ כבוי'}</p>
+                <p><strong>מעקב אמצעי תשלום:</strong> {settings.trackPaymentMethods ? '✅ מופעל' : '❌ כבוי'}</p>
+              </div>
+
+              {/* הגדרות ייצוא ותצוגה */}
+              <div style={{
+                padding: '15px',
+                background: 'rgba(39, 174, 96, 0.1)',
+                borderRadius: '8px'
+              }}>
+                <h4 style={{ marginBottom: '10px', color: '#2c3e50' }}>💾 ייצוא ותצוגה</h4>
+                <p><strong>ייצוא אוטומטי:</strong> {settings.autoExport ? `✅ מופעל (${
+                  settings.exportFrequency === 'daily' ? 'יומי' :
+                  settings.exportFrequency === 'weekly' ? 'שבועי' : 'חודשי'
+                })` : '❌ כבוי'}</p>
+                <p><strong>ערכת נושא:</strong> {
+                  settings.theme === 'light' ? '☀️ בהיר' :
+                  settings.theme === 'dark' ? '🌙 כהה' : '🎨 מותאם אישית'
+                }</p>
+                {settings.theme === 'custom' && (
+                  <p><strong>צבע רקע מותאם:</strong> <span style={{
+                    display: 'inline-block',
+                    width: '20px',
+                    height: '20px',
+                    backgroundColor: settings.customBackgroundColor,
+                    border: '1px solid #ccc',
+                    borderRadius: '3px',
+                    verticalAlign: 'middle',
+                    marginLeft: '5px'
+                  }}></span> {settings.customBackgroundColor}</p>
+                )}
+              </div>
+
+              {/* כפתורי פעולות מהירות */}
+              <div style={{
+                padding: '15px',
+                background: 'rgba(243, 156, 18, 0.1)',
+                borderRadius: '8px'
+              }}>
+                <h4 style={{ marginBottom: '10px', color: '#2c3e50' }}>⚡ פעולות מהירות</h4>
+                <p><strong>כפתורים פעילים:</strong> {(settings.quickActions || []).length} מתוך 6</p>
+                <div style={{ fontSize: '12px', marginTop: '5px' }}>
+                  {(settings.quickActions || []).map(actionId => {
+                    const actionNames: { [key: string]: string } = {
+                      'loans': '💰 הלוואות',
+                      'deposits': '🏦 הפקדות',
+                      'donations': '❤️ תרומות',
+                      'statistics': '📊 סטטיסטיקות',
+                      'borrower-report': '📋 דוח לווה',
+                      'admin-tools': '🔧 כלים מנהליים'
+                    }
+                    return actionNames[actionId] || actionId
+                  }).join(', ')}
+                </div>
+              </div>
             </div>
           </div>
 

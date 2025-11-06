@@ -408,6 +408,7 @@ function BorrowerReportPage() {
         <div>
             <header className="header">
                 <h1>📊 דו"ח לווה</h1>
+                <button className="close-btn" onClick={() => navigate('/')}>×</button>
             </header>
 
             <main className="main-content">

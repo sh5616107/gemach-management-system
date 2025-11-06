@@ -462,4 +462,32 @@ body.dark-theme .table tbody tr:nth-child(even):hover {
 
 .details-button.donation {
   background: #9b59b6;
+}/* 
+אנימציה לכפתור הפעולות המהירות */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* אנימציה לכפתור FAB */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  }
+  50% {
+    box-shadow: 0 8px 25px rgba(52, 152, 219, 0.5);
+  }
+  100% {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  }
+}
+
+.fab-button {
+  animation: pulse 2s infinite;
 }

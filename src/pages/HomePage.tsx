@@ -97,12 +97,20 @@ function HomePage() {
   const [showSearchBox, setShowSearchBox] = useState(false)
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [searchResults, setSearchResults] = useState<any[]>([])
+  const [isFabOpen, setIsFabOpen] = useState(false)
+  const [quickActions, setQuickActions] = useState<string[]>(['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'])
 
 
 
   useEffect(() => {
     loadStats()
+    loadQuickActionsSettings()
   }, [])
+
+  const loadQuickActionsSettings = () => {
+    const settings = db.getSettings()
+    setQuickActions(settings.quickActions || ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'])
+  }
 
   // סגירת חיפוש כשלוחצים מחוץ לאזור
   useEffect(() => {
@@ -447,6 +455,8 @@ function HomePage() {
             </h1>
           )}
         </div>
+
+
 
         {/* התראות הלוואות עתידיות שצריכות להיות מופעלות */}
         {(() => {
@@ -1568,6 +1578,149 @@ function HomePage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* כפתור פעולות מהירות צף */}
+      {quickActions.length > 0 && (
+        <div style={{
+          position: 'fixed',
+          bottom: '30px',
+          left: '30px',
+          zIndex: 1000
+        }}>
+        {/* כפתורי הפעולות */}
+        {isFabOpen && (
+          <div style={{
+            position: 'absolute',
+            bottom: '80px',
+            left: '0',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '15px',
+            animation: 'fadeInUp 0.3s ease-out'
+          }}>
+            {(() => {
+              const actionButtons = [
+                {
+                  id: 'loans',
+                  icon: '💰',
+                  text: 'הלוואה חדשה',
+                  route: '/loans',
+                  gradient: 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
+                  shadow: 'rgba(52, 152, 219, 0.4)'
+                },
+                {
+                  id: 'deposits',
+                  icon: '🏦',
+                  text: 'הפקדה חדשה',
+                  route: '/deposits',
+                  gradient: 'linear-gradient(135deg, #27ae60 0%, #229954 100%)',
+                  shadow: 'rgba(39, 174, 96, 0.4)'
+                },
+                {
+                  id: 'donations',
+                  icon: '❤️',
+                  text: 'תרומה חדשה',
+                  route: '/donations',
+                  gradient: 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)',
+                  shadow: 'rgba(231, 76, 60, 0.4)'
+                },
+                {
+                  id: 'statistics',
+                  icon: '📊',
+                  text: 'סטטיסטיקות',
+                  route: '/statistics',
+                  gradient: 'linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%)',
+                  shadow: 'rgba(155, 89, 182, 0.4)'
+                },
+                {
+                  id: 'borrower-report',
+                  icon: '📋',
+                  text: 'דוח לווה',
+                  route: '/borrower-report',
+                  gradient: 'linear-gradient(135deg, #f39c12 0%, #e67e22 100%)',
+                  shadow: 'rgba(243, 156, 18, 0.4)'
+                },
+                {
+                  id: 'admin-tools',
+                  icon: '🔧',
+                  text: 'כלים מנהליים',
+                  route: '/admin-tools',
+                  gradient: 'linear-gradient(135deg, #34495e 0%, #2c3e50 100%)',
+                  shadow: 'rgba(52, 73, 94, 0.4)'
+                }
+              ]
+
+              return actionButtons
+                .filter(action => quickActions.includes(action.id))
+                .map(action => (
+                  <button
+                    key={action.id}
+                    onClick={() => {
+                      navigate(action.route)
+                      setIsFabOpen(false)
+                    }}
+                    style={{
+                      background: action.gradient,
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '50px',
+                      padding: '12px 20px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      boxShadow: `0 4px 15px ${action.shadow}`,
+                      whiteSpace: 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      transition: 'transform 0.2s'
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+                    onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                  >
+                    {action.icon} {action.text}
+                  </button>
+                ))
+            })()}
+          </div>
+        )}
+
+        {/* הכפתור הראשי */}
+        <button
+          onClick={() => setIsFabOpen(!isFabOpen)}
+          style={{
+            width: '60px',
+            height: '60px',
+            borderRadius: '50%',
+            background: isFabOpen 
+              ? 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)'
+              : 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)',
+            color: 'white',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '24px',
+            boxShadow: '0 6px 20px rgba(0,0,0,0.3)',
+            transition: 'all 0.3s ease',
+            transform: isFabOpen ? 'rotate(45deg)' : 'rotate(0deg)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+          onMouseOver={(e) => {
+            if (!isFabOpen) {
+              e.currentTarget.style.transform = 'scale(1.1)'
+            }
+          }}
+          onMouseOut={(e) => {
+            if (!isFabOpen) {
+              e.currentTarget.style.transform = 'scale(1)'
+            }
+          }}
+        >
+          {isFabOpen ? '✕' : '+'}
+        </button>
         </div>
       )}
     </div>

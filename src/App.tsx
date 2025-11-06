@@ -1,4 +1,5 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import HomePage from './pages/HomePage'
 import LoansPage from './pages/LoansPage'
 import DepositsPage from './pages/DepositsPage'
@@ -10,9 +11,21 @@ import HelpPage from './pages/HelpPage'
 import BorrowerReportPage from './pages/BorrowerReportPage'
 import StatisticsPage from './pages/StatisticsPage'
 
+// קומפוננט לאיפוס גלילה בכל מעבר דף
+function ScrollToTop() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+
+  return null
+}
+
 function App() {
   return (
     <div className="App">
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/loans" element={<LoansPage />} />

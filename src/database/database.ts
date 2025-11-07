@@ -2438,6 +2438,11 @@ class GemachDatabase {
       return { error: 'שם מלא וטלפון הם שדות חובה' }
     }
 
+    // בדיקת ייחודיות מספר טלפון
+    if (this.dataFile.guarantors.some(g => g.phone === guarantor.phone)) {
+      return { error: 'מספר טלפון כבר קיים במערכת' }
+    }
+
     // בדיקת מספר זהות אם נדרש
     if (this.dataFile.settings.requireIdNumber && (!guarantor.idNumber || !this.validateIsraeliId(guarantor.idNumber))) {
       return { error: 'מספר זהות תקין הוא שדה חובה' }

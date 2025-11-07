@@ -1,6 +1,6 @@
 {
   "name": "gemach-management-system",
-  "version": "2.9.4",
+  "version": "2.9.5",
   "description": "Comprehensive Gemach Management System for loans, deposits and donations",
   "main": "electron.js",
   "homepage": "./",

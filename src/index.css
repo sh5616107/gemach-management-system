@@ -455,7 +455,7 @@ body.custom-theme .form-container {
 
 .form-row {
   display: flex;
-  gap: 20px;
+  gap: 10px;
   margin-bottom: 20px;
   align-items: center;
 }
@@ -464,11 +464,11 @@ body.custom-theme .form-container {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .form-group label {
-  min-width: 100px;
+  min-width: 60px;
   font-weight: bold;
   color: #2c3e50;
 }
@@ -496,9 +496,9 @@ body.custom-theme .form-container {
 .form-group textarea:focus {
   outline: none;
   border: 2px solid var(--primary-color);
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15), var(--shadow-md);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
   background-color: var(--bg-white) !important;
-  transform: translateY(-2px) scale(1.01);
+  transform: none;
 }
 
 .form-group input:focus::placeholder,
@@ -538,18 +538,18 @@ body.custom-theme .form-container {
 }
 
 .btn:hover {
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: var(--shadow-lg);
-}
-
-.btn:active {
-  transform: translateY(-1px) scale(0.98);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
 
+.btn:active {
+  transform: translateY(0px);
+  box-shadow: var(--shadow-sm);
+}
+
 .btn:active::after {
-  width: 300px;
-  height: 300px;
+  width: 0;
+  height: 0;
 }
 
 .btn-primary {
@@ -1870,7 +1870,7 @@ body {
 
 /* Smooth Scrolling - גלילה חלקה */
 html {
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   scroll-padding-top: 80px;
 }
 

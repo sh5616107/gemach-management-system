@@ -118,29 +118,26 @@ const BankBranchSelector = ({
 
   return (
     <>
-      <div className="form-group">
-        {showLabels && <label>{bankLabel}</label>}
-        <select
-          value={internalBankCode}
-          onChange={handleBankChange}
-          disabled={disabled}
-          onClick={() => console.log('🖱️ BankBranchSelector: לחיצה על select')}
-          style={{
-            cursor: disabled ? 'not-allowed' : 'pointer',
-            zIndex: 1000
-          }}
-        >
-          <option value="">בחר בנק</option>
-          {banks.map(bank => (
-            <option key={bank.code} value={bank.code}>
-              {formatBankDisplay(bank)}
-            </option>
-          ))}
-        </select>
-      </div>
+      {showLabels && <label>{bankLabel}</label>}
+      <select
+        value={internalBankCode}
+        onChange={handleBankChange}
+        disabled={disabled}
+        onClick={() => console.log('🖱️ BankBranchSelector: לחיצה על select')}
+        style={{
+          cursor: disabled ? 'not-allowed' : 'pointer'
+        }}
+      >
+        <option value="">בחר בנק</option>
+        {banks.map(bank => (
+          <option key={bank.code} value={bank.code}>
+            {formatBankDisplay(bank)}
+          </option>
+        ))}
+      </select>
 
       {internalBankCode && branches.length > 0 && (
-        <div className="form-group">
+        <>
           {showLabels && <label>{branchLabel}</label>}
           <select
             value={internalBranchCode}
@@ -154,7 +151,7 @@ const BankBranchSelector = ({
               </option>
             ))}
           </select>
-        </div>
+        </>
       )}
     </>
   )

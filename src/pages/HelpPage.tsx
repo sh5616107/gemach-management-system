@@ -14,21 +14,22 @@ function HelpPage() {
                     <h2 className="form-title">📖 מדריך שימוש במערכת</h2>
 
                     <div style={{ background: '#e8f5e8', padding: '15px', borderRadius: '8px', margin: '20px 0', textAlign: 'center', border: '2px solid #27ae60' }}>
-                        <h3 style={{ color: '#27ae60', margin: '0 0 10px 0' }}>🆕 גרסה 2.9.4 - מה חדש?</h3>
+                        <h3 style={{ color: '#27ae60', margin: '0 0 10px 0' }}>🆕 גרסה 2.9.5 - מה חדש?</h3>
                         <div style={{ textAlign: 'right', fontSize: '14px' }}>
                             <ul style={{ margin: '10px 0', paddingRight: '20px' }}>
-                                <li><strong>שיפורים בעיצוב</strong> - תיקון כפתורים מוטים וחתוכים</li>
-                                <li><strong>תיקון טבלאות</strong> - הסרת קווים מפרידים מיותרים</li>
-                                <li><strong>שיפור אפקטי Hover</strong> - אנימציות חלקות יותר</li>
-                                <li><strong>אופטימיזציית מרווחים</strong> - תצוגה נקייה ומסודרת יותר</li>
+                                <li><strong>תיקון כפתורים</strong> - הסרת אפקטים מוגזמים בלחיצה</li>
+                                <li><strong>תיקון גלילה</strong> - גלילה מהירה ורספונסיבית</li>
+                                <li><strong>תיקון רשימות נפתחות</strong> - הסרת רטט ואנימציות מיותרות</li>
+                                <li><strong>תיקון בחירת סניף</strong> - הסניף נשאר בשורה</li>
+                                <li><strong>תיקון ניקוי טופס</strong> - הלוואה חדשה מתחילה עם שדות ריקים</li>
+                                <li><strong>עדכון אייקון</strong> - אייקון חדש ומעודכן</li>
                             </ul>
                             <div style={{ marginTop: '15px', padding: '10px', background: 'rgba(255,255,255,0.5)', borderRadius: '5px' }}>
-                                <strong>גרסה 2.9.3 כללה:</strong>
+                                <strong>גרסאות קודמות כללו:</strong>
                                 <ul style={{ margin: '5px 0', paddingRight: '20px', fontSize: '13px' }}>
-                                    <li>טעינה מהירה ללא הבהובים</li>
-                                    <li>ניהול ערבים מתקדם</li>
-                                    <li>רשימה שחורה ומכתבי התראה</li>
-                                    <li>בחירת סניף בנק</li>
+                                    <li>שיפורים בעיצוב וטבלאות (2.9.4)</li>
+                                    <li>ניהול ערבים ורשימה שחורה (2.9.3)</li>
+                                    <li>טעינה מהירה ללא הבהובים (2.9.3)</li>
                                 </ul>
                             </div>
                         </div>

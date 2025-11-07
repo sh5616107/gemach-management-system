@@ -586,21 +586,6 @@ function DonationsPage() {
                       <div>
                         <h5 style={{ margin: '0 0 10px 0', color: '#666', fontSize: '14px' }}>🏦 פרטי ההעברה</h5>
                         <div className="form-row">
-                          <div className="form-group">
-                            <label>מספר אסמכתא:</label>
-                            <input
-                              type="text"
-                              placeholder="מספר אסמכתא"
-                              maxLength={10}
-                              style={{ maxWidth: '150px' }}
-                              onChange={(e) => {
-                                const details = db.parsePaymentDetails('transfer', newDonation.paymentDetails) || {}
-                                details.referenceNumber = e.target.value
-                                handleInputChange('paymentDetails', JSON.stringify(details))
-                              }}
-                              value={db.parsePaymentDetails('transfer', newDonation.paymentDetails)?.referenceNumber || ''}
-                            />
-                          </div>
                           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                             <BankBranchSelector
                               selectedBankCode={db.parsePaymentDetails('transfer', newDonation.paymentDetails)?.bankCode || ''}
@@ -622,18 +607,19 @@ function DonationsPage() {
                                 details.branchNumber = branchCode
                                 handleInputChange('paymentDetails', JSON.stringify(details))
                               }}
-                              showLabels={false}
+                              showLabels={true}
+                              bankLabel="בנק:"
+                              branchLabel="סניף:"
                             />
                           </div>
                         </div>
                         <div className="form-row">
                           <div className="form-group">
-                            <label>מספר חשבון:</label>
+                            <label>חשבון:</label>
                             <input
                               type="text"
-                              placeholder="מספר חשבון"
+                              placeholder="חשבון"
                               maxLength={15}
-                              style={{ maxWidth: '180px' }}
                               onChange={(e) => {
                                 const details = db.parsePaymentDetails('transfer', newDonation.paymentDetails) || {}
                                 details.accountNumber = e.target.value
@@ -643,7 +629,21 @@ function DonationsPage() {
                             />
                           </div>
                           <div className="form-group">
-                            <label>תאריך העברה:</label>
+                            <label>אסמכתא:</label>
+                            <input
+                              type="text"
+                              placeholder="אסמכתא"
+                              maxLength={10}
+                              onChange={(e) => {
+                                const details = db.parsePaymentDetails('transfer', newDonation.paymentDetails) || {}
+                                details.referenceNumber = e.target.value
+                                handleInputChange('paymentDetails', JSON.stringify(details))
+                              }}
+                              value={db.parsePaymentDetails('transfer', newDonation.paymentDetails)?.referenceNumber || ''}
+                            />
+                          </div>
+                          <div className="form-group">
+                            <label>תאריך:</label>
                             <input
                               type="date"
                               max={new Date().toISOString().split('T')[0]}

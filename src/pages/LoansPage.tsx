@@ -79,7 +79,7 @@ function LoansPage() {
 
   const [currentLoan, setCurrentLoan] = useState<Partial<DatabaseLoan>>({
     borrowerId: 0,
-    amount: 0,
+    amount: undefined,
     loanDate: '',
     returnDate: '',
     loanType: 'fixed',
@@ -237,6 +237,33 @@ function LoansPage() {
     }
   }, [selectedBorrowerId, loans, selectedLoanId])
 
+  // נקה את טופס ההלוואה כשעוברים למצב loan ואין הלוואה נבחרת
+  useEffect(() => {
+    if (mode === 'loan' && !selectedLoanId && selectedBorrowerId) {
+      // אם אין הלוואה נבחרת, אפס את הטופס
+      setCurrentLoan({
+        borrowerId: selectedBorrowerId,
+        amount: undefined,
+        loanDate: '',
+        returnDate: '',
+        loanType: 'fixed',
+        isRecurring: false,
+        recurringDay: 1,
+        autoPayment: false,
+        autoPaymentAmount: 0,
+        autoPaymentDay: 1,
+        autoPaymentStartDate: '',
+        autoPaymentFrequency: 1,
+        notes: '',
+        guarantor1: '',
+        guarantor2: '',
+        guarantor1Id: undefined,
+        guarantor2Id: undefined
+      })
+      setPayments([])
+    }
+  }, [mode, selectedLoanId, selectedBorrowerId])
+
   const loadData = () => {
     const newBorrowers = db.getBorrowers()
     const newLoans = db.getLoans()
@@ -292,6 +319,17 @@ function LoansPage() {
     // בדוק מספר זהות רק אם זה חובה
     if (db.getSettings().requireIdNumber && (!newGuarantor.idNumber || newGuarantor.idNumber.trim() === '')) {
       showNotification('⚠️ מספר זהות הוא שדה חובה (ניתן לשנות בהגדרות)', 'error')
+      return
+    }
+
+    // בדוק כפילויות לפי מספר טלפון
+    const existingGuarantor = guarantors.find(g => 
+      g.phone === newGuarantor.phone && 
+      (!editingGuarantorId || g.id !== editingGuarantorId)
+    )
+    
+    if (existingGuarantor) {
+      showNotification(`⚠️ ערב עם מספר טלפון זה כבר קיים: ${existingGuarantor.firstName} ${existingGuarantor.lastName}`, 'error')
       return
     }
 
@@ -378,13 +416,12 @@ function LoansPage() {
         setCurrentLoan(activeLoan)
         setPayments(db.getPaymentsByLoanId(activeLoan.id))
       } else {
-        // אין הלוואות קיימות - צור הלוואה חדשה
-        const today = getTodayString()
+        // אין הלוואות קיימות - צור הלוואה חדשה עם שדות ריקים
         setCurrentLoan({
           borrowerId,
-          amount: 0,
-          loanDate: today,
-          returnDate: calculateDefaultReturnDate(today),
+          amount: undefined,
+          loanDate: '',
+          returnDate: '',
           loanType: 'fixed',
           isRecurring: false,
           recurringDay: 1,
@@ -591,12 +628,11 @@ function LoansPage() {
             // אין הלוואות קיימות - צור הלוואה חדשה
             setSelectedLoanId(null)
             setPayments([])
-            const today = getTodayString()
             setCurrentLoan({
               borrowerId: value,
-              amount: 0,
-              loanDate: today,
-              returnDate: calculateDefaultReturnDate(today),
+              amount: undefined,
+              loanDate: '',
+              returnDate: '',
               notes: '',
               guarantor1: '',
               guarantor2: '',
@@ -638,7 +674,26 @@ function LoansPage() {
         showNotification(`❌ ${result.error}`, 'error')
       } else {
         setSelectedBorrowerId(result.id)
-        setCurrentLoan(prev => ({ ...prev, borrowerId: result.id }))
+        // אפס את טופס ההלוואה עם הלווה החדש
+        setCurrentLoan({
+          borrowerId: result.id,
+          amount: undefined,
+          loanDate: '',
+          returnDate: '',
+          loanType: 'fixed',
+          isRecurring: false,
+          recurringDay: 1,
+          autoPayment: false,
+          autoPaymentAmount: 0,
+          autoPaymentDay: 1,
+          autoPaymentStartDate: '',
+          autoPaymentFrequency: 1,
+          notes: '',
+          guarantor1: '',
+          guarantor2: '',
+          guarantor1Id: undefined,
+          guarantor2Id: undefined
+        })
 
         showNotification('✅ לווה חדש נוסף בהצלחה!')
 
@@ -1203,18 +1258,17 @@ function LoansPage() {
       return
     }
 
-    // חישוב תאריכים ברירת מחדל
-    const today = getTodayString()
+    // איפוס טופס הלוואה חדשה
     setCurrentLoan({
       borrowerId: selectedBorrowerId,
-      amount: 0,
-      loanDate: today, // תאריך ההלוואה - היום כברירת מחדל
-      returnDate: calculateDefaultReturnDate(today),
+      amount: undefined,
+      loanDate: '',
+      returnDate: '',
       autoPayment: false,
       autoPaymentAmount: 0,
       autoPaymentDay: 1,
-      autoPaymentStartDate: today, // ברירת מחדל - התחלת פרעון מהיום
-      autoPaymentFrequency: 1, // ברירת מחדל - כל חודש
+      autoPaymentStartDate: '',
+      autoPaymentFrequency: 1,
       notes: '',
       guarantor1: '',
       guarantor2: '',
@@ -3752,19 +3806,6 @@ function LoansPage() {
                   <div style={{ marginTop: '15px' }}>
                     <h5 style={{ margin: '0 0 10px 0', color: '#666', fontSize: '14px' }}>🏦 פרטי ההעברה</h5>
                     <div className="form-row">
-                      <div className="form-group">
-                        <label>מספר אסמכתא:</label>
-                        <input
-                          type="text"
-                          placeholder="מספר אסמכתא"
-                          onChange={(e) => {
-                            const details = db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails) || {}
-                            details.referenceNumber = e.target.value
-                            handleLoanChange('loanPaymentDetails', JSON.stringify(details))
-                          }}
-                          value={db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails)?.referenceNumber || ''}
-                        />
-                      </div>
                       <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                         <BankBranchSelector
                           selectedBankCode={db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails)?.bankCode || ''}
@@ -3786,16 +3827,18 @@ function LoansPage() {
                             details.branchNumber = branchCode // תאימות לאחור
                             handleLoanChange('loanPaymentDetails', JSON.stringify(details))
                           }}
-                          showLabels={false}
+                          showLabels={true}
+                          bankLabel="בנק:"
+                          branchLabel="סניף:"
                         />
                       </div>
                     </div>
                     <div className="form-row">
                       <div className="form-group">
-                        <label>מספר חשבון:</label>
+                        <label>חשבון:</label>
                         <input
                           type="text"
-                          placeholder="מספר חשבון"
+                          placeholder="חשבון"
                           onChange={(e) => {
                             const details = db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails) || {}
                             details.accountNumber = e.target.value
@@ -3804,10 +3847,21 @@ function LoansPage() {
                           value={db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails)?.accountNumber || ''}
                         />
                       </div>
-                    </div>
-                    <div className="form-row">
                       <div className="form-group">
-                        <label>תאריך העברה:</label>
+                        <label>אסמכתא:</label>
+                        <input
+                          type="text"
+                          placeholder="אסמכתא"
+                          onChange={(e) => {
+                            const details = db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails) || {}
+                            details.referenceNumber = e.target.value
+                            handleLoanChange('loanPaymentDetails', JSON.stringify(details))
+                          }}
+                          value={db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails)?.referenceNumber || ''}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>תאריך:</label>
                         <input
                           type="date"
                           max={new Date().toISOString().split('T')[0]}
@@ -3818,9 +3872,6 @@ function LoansPage() {
                           }}
                           value={db.parsePaymentDetails('transfer', currentLoan.loanPaymentDetails)?.transferDate || ''}
                         />
-                      </div>
-                      <div className="form-group">
-                        {/* שדה ריק לאיזון */}
                       </div>
                     </div>
                   </div>
@@ -4384,13 +4435,11 @@ function LoansPage() {
 
                               // אפס את טופס ההלוואה לחלוטין
                               if (selectedBorrowerId) {
-                                const today = getTodayString()
-
                                 setCurrentLoan({
                                   borrowerId: selectedBorrowerId,
-                                  amount: 0,
-                                  loanDate: today,
-                                  returnDate: calculateDefaultReturnDate(today),
+                                  amount: undefined,
+                                  loanDate: '',
+                                  returnDate: '',
                                   loanType: 'fixed',
                                   isRecurring: false,
                                   recurringDay: 1,
@@ -4405,7 +4454,7 @@ function LoansPage() {
                                 // אם אין לווה נבחר, אפס הכל
                                 setCurrentLoan({
                                   borrowerId: 0,
-                                  amount: 0,
+                                  amount: undefined,
                                   loanDate: '',
                                   returnDate: '',
                                   loanType: 'fixed',

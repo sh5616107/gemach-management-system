@@ -14,18 +14,23 @@ function HelpPage() {
                     <h2 className="form-title">📖 מדריך שימוש במערכת</h2>
 
                     <div style={{ background: '#e8f5e8', padding: '15px', borderRadius: '8px', margin: '20px 0', textAlign: 'center', border: '2px solid #27ae60' }}>
-                        <h3 style={{ color: '#27ae60', margin: '0 0 10px 0' }}>🆕 גרסה 2.9.3 - מה חדש?</h3>
+                        <h3 style={{ color: '#27ae60', margin: '0 0 10px 0' }}>🆕 גרסה 2.9.4 - מה חדש?</h3>
                         <div style={{ textAlign: 'right', fontSize: '14px' }}>
                             <ul style={{ margin: '10px 0', paddingRight: '20px' }}>
-                                <li><strong>טעינה מהירה ללא הבהובים</strong> - פתרון מלא לבעיית ההבהוב</li>
-                                <li><strong>מסך טעינה מקצועי</strong> - splash screen יפה עם אנימציות</li>
-                                <li><strong>אופטימיזציות ביצועים</strong> - טעינה מהירה יותר</li>
-                                <li><strong>שיפורי בדיקת עדכונים</strong> - ממשק מתקדם עם תצוגה מקדימה</li>
-                                <li><strong>ניהול ערבים מתקדם</strong> - הוספה, עריכה ומחיקה של ערבים</li>
-                                <li><strong>רשימה שחורה</strong> - ניהול רשימת לווים חסומים</li>
-                                <li><strong>מכתבי התראה</strong> - יצירת מכתבי התראה אוטומטיים</li>
-                                <li><strong>בחירת סניף בנק</strong> - הוספת פרטי סניף בנק למסמכים</li>
+                                <li><strong>שיפורים בעיצוב</strong> - תיקון כפתורים מוטים וחתוכים</li>
+                                <li><strong>תיקון טבלאות</strong> - הסרת קווים מפרידים מיותרים</li>
+                                <li><strong>שיפור אפקטי Hover</strong> - אנימציות חלקות יותר</li>
+                                <li><strong>אופטימיזציית מרווחים</strong> - תצוגה נקייה ומסודרת יותר</li>
                             </ul>
+                            <div style={{ marginTop: '15px', padding: '10px', background: 'rgba(255,255,255,0.5)', borderRadius: '5px' }}>
+                                <strong>גרסה 2.9.3 כללה:</strong>
+                                <ul style={{ margin: '5px 0', paddingRight: '20px', fontSize: '13px' }}>
+                                    <li>טעינה מהירה ללא הבהובים</li>
+                                    <li>ניהול ערבים מתקדם</li>
+                                    <li>רשימה שחורה ומכתבי התראה</li>
+                                    <li>בחירת סניף בנק</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
 

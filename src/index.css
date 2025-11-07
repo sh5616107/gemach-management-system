@@ -4,16 +4,119 @@
   box-sizing: border-box;
 }
 
+/* משתנים גלובליים לצבעים - פלטה מודרנית */
+:root {
+  /* צבעים עיקריים */
+  --primary-color: #6366F1;
+  --primary-hover: #4F46E5;
+  --primary-light: #A5B4FC;
+  --secondary-color: #10B981;
+  --secondary-hover: #059669;
+  --secondary-light: #6EE7B7;
+  --danger-color: #EF4444;
+  --danger-hover: #DC2626;
+  --danger-light: #FCA5A5;
+  --warning-color: #F59E0B;
+  --warning-hover: #D97706;
+  --warning-light: #FCD34D;
+  --info-color: #3B82F6;
+  --info-hover: #2563EB;
+  --info-light: #93C5FD;
+  
+  /* צבעי טקסט */
+  --text-dark: #1F2937;
+  --text-medium: #4B5563;
+  --text-light: #9CA3AF;
+  --text-white: #FFFFFF;
+  
+  /* צבעי רקע */
+  --bg-light: #F9FAFB;
+  --bg-white: #FFFFFF;
+  --bg-gray: #F3F4F6;
+  
+  /* גבולות */
+  --border-color: #E5E7EB;
+  --border-light: #F3F4F6;
+  
+  /* צללים מודרניים */
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  
+  /* רדיוסים */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+  
+  /* מעברים */
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* גרדיאנטים */
+  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-success: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  --gradient-danger: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  --gradient-warning: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  --gradient-info: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+}
+
 /* מניעת הבהוב בטעינה */
 body {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   direction: rtl;
-  background: linear-gradient(135deg, #87CEEB 0%, #B0E0E6 100%);
+  background: var(--gradient-primary);
+  background-size: 200% 200%;
+  animation: gradientShift 15s ease infinite, fadeIn 0.5s ease-in-out 0.3s forwards;
   min-height: 100vh;
-  transition: all 0.3s ease;
-  /* מניעת הבהוב */
+  transition: all var(--transition-normal);
   opacity: 0;
-  animation: fadeIn 0.5s ease-in-out 0.3s forwards;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* אנימציית רקע מתנועעת */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* אפקט זכוכית מטושטשת לרקע */
+body::before {
+  content: '';
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  animation: rotate 30s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* אנימציית הופעה חלקה */
@@ -136,32 +239,44 @@ body.custom-theme .form-container {
 }
 
 .header {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 15px 30px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  padding: 18px 35px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .header h1 {
-  color: #2c3e50;
-  font-size: 24px;
-  font-weight: bold;
+  color: white;
+  font-size: 26px;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.5px;
 }
 
 .close-btn {
-  background: #e74c3c;
+  background: linear-gradient(135deg, var(--danger-color), var(--danger-hover));
   color: white;
   border: none;
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 18px;
+  font-size: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+}
+
+.close-btn:hover {
+  background: linear-gradient(135deg, var(--danger-hover), #A93226);
+  transform: rotate(90deg) scale(1.1);
+  box-shadow: var(--shadow-md);
 }
 
 .main-content {
@@ -170,10 +285,13 @@ body.custom-theme .form-container {
 }
 
 .main-title {
-  font-size: 48px;
-  color: #2c3e50;
+  font-size: 52px;
+  color: white;
   margin-bottom: 60px;
-  font-weight: bold;
+  font-weight: 800;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  letter-spacing: 1px;
+  animation: slideInLeft 0.6s ease;
 }
 
 .categories {
@@ -182,68 +300,157 @@ body.custom-theme .form-container {
   gap: 60px;
   margin-bottom: 60px;
   flex-wrap: wrap;
+  padding: 30px 20px;
 }
 
 .category {
   text-align: center;
   cursor: pointer;
-  transition: transform 0.3s ease;
+  transition: all var(--transition-normal);
+  position: relative;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
+}
+
+.category::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 140px;
+  height: 140px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.2) 0%, transparent 70%);
+  border-radius: 50%;
+  opacity: 0;
+  transition: all var(--transition-normal);
+  z-index: -1;
+}
+
+.category:hover::before {
+  opacity: 1;
+  width: 180px;
+  height: 180px;
 }
 
 .category:hover {
-  transform: translateY(-5px);
+  transform: translateY(-8px) scale(1.02);
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.2));
+}
+
+.category:hover .category-image {
+  box-shadow: var(--shadow-2xl);
+  transform: scale(1.05);
+  background: linear-gradient(135deg, #FFFFFF 0%, #F0F9FF 100%);
 }
 
 .category-image {
-  width: 120px;
-  height: 120px;
-  background: white;
-  border-radius: 10px;
-  margin: 0 auto 15px auto;
+  width: 140px;
+  height: 140px;
+  background: linear-gradient(135deg, var(--bg-white) 0%, #F9FAFB 100%);
+  border-radius: var(--radius-xl);
+  margin: 0 auto 24px auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  font-size: 48px;
+  box-shadow: var(--shadow-lg);
+  font-size: 64px;
+  transition: all var(--transition-normal);
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  position: relative;
+  overflow: hidden;
+}
+
+.category-image::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  transform: rotate(45deg);
+  transition: all 0.6s;
+}
+
+.category:hover .category-image::before {
+  left: 100%;
 }
 
 .category-title {
   font-size: 24px;
-  color: #2c3e50;
-  font-weight: bold;
-  text-decoration: underline;
+  color: white;
+  font-weight: 800;
+  text-decoration: none;
+  text-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.5px;
+  transition: all var(--transition-fast);
+}
+
+.category:hover .category-title {
+  transform: scale(1.05);
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .info-section {
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 10px;
-  padding: 30px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-lg);
+  padding: 35px;
   margin: 40px auto;
   max-width: 1000px;
   text-align: center;
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(10px);
+  transition: all var(--transition-normal);
+}
+
+.info-section:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-xl);
 }
 
 .info-title {
-  font-size: 20px;
-  color: #2c3e50;
-  margin-bottom: 20px;
-  text-decoration: underline;
+  font-size: 24px;
+  color: var(--text-dark);
+  margin-bottom: 24px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  position: relative;
+  display: inline-block;
+}
+
+.info-title::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+  border-radius: 2px;
 }
 
 .info-text {
-  color: #34495e;
-  line-height: 1.6;
+  color: var(--text-light);
+  line-height: 1.8;
   font-size: 16px;
 }
 
 .form-container {
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 15px;
-  padding: 30px;
+  background: var(--bg-white);
+  border-radius: var(--radius-lg);
+  padding: 35px;
   margin: 20px auto;
   max-width: 1000px;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-normal);
+  overflow: visible;
+}
+
+.form-container:hover {
+  box-shadow: var(--shadow-xl);
 }
 
 .form-row {
@@ -267,101 +474,240 @@ body.custom-theme .form-container {
 }
 
 .form-group input,
-.form-group select {
+.form-group select,
+.form-group textarea {
   flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #bdc3c7;
-  border-radius: 5px;
+  padding: 10px 14px;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
   font-size: 14px;
+  transition: all var(--transition-fast);
+  background: var(--bg-white);
+}
+
+.form-group input:hover,
+.form-group select:hover,
+.form-group textarea:hover {
+  border-color: var(--primary-color);
 }
 
 .form-group input:focus,
-.form-group select:focus {
+.form-group select:focus,
+.form-group textarea:focus {
   outline: none;
-  border: 2px solid #3498db;
-  box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
-  background-color: #ffffff !important;
+  border: 2px solid var(--primary-color);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15), var(--shadow-md);
+  background-color: var(--bg-white) !important;
+  transform: translateY(-2px) scale(1.01);
+}
+
+.form-group input:focus::placeholder,
+.form-group textarea:focus::placeholder {
+  color: var(--text-light);
+  transform: translateX(4px);
+  transition: all var(--transition-fast);
 }
 
 .btn {
-  padding: 10px 20px;
+  padding: 12px 28px;
   border: none;
-  border-radius: 5px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 16px;
-  font-weight: bold;
-  transition: background-color 0.3s ease;
+  font-size: 15px;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+  letter-spacing: 0.5px;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+  z-index: -1;
+}
+
+.btn:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn:active {
+  transform: translateY(-1px) scale(0.98);
+  box-shadow: var(--shadow-md);
+}
+
+.btn:active::after {
+  width: 300px;
+  height: 300px;
 }
 
 .btn-primary {
-  background: #3498db;
+  background: var(--gradient-info);
   color: white;
+  border: 2px solid transparent;
 }
 
 .btn-primary:hover {
-  background: #2980b9;
+  background: linear-gradient(135deg, var(--info-hover) 0%, #1D4ED8 100%);
+  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
 }
 
 .btn-success {
-  background: #27ae60;
+  background: var(--gradient-success);
   color: white;
+  border: 2px solid transparent;
 }
 
 .btn-success:hover {
-  background: #229954;
+  background: linear-gradient(135deg, var(--secondary-hover) 0%, #047857 100%);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+}
+
+.btn-danger {
+  background: var(--gradient-danger);
+  color: white;
+  border: 2px solid transparent;
+}
+
+.btn-danger:hover {
+  background: linear-gradient(135deg, var(--danger-hover) 0%, #B91C1C 100%);
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #6B7280 0%, #4B5563 100%);
+  color: white;
+  border: 2px solid transparent;
+}
+
+.btn-secondary:hover {
+  background: linear-gradient(135deg, #4B5563 0%, #374151 100%);
+  box-shadow: 0 8px 20px rgba(107, 114, 128, 0.4);
+}
+
+.btn-warning {
+  background: var(--gradient-warning);
+  color: white;
+  border: 2px solid transparent;
+}
+
+.btn-warning:hover {
+  background: linear-gradient(135deg, var(--warning-hover) 0%, #B45309 100%);
+  box-shadow: 0 8px 20px rgba(245, 158, 11, 0.4);
 }
 
 .table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   margin-top: 20px;
-  background: white;
-  border-radius: 8px;
+  background: var(--bg-white);
+  border-radius: var(--radius-md);
   overflow: hidden;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
   min-width: 800px;
 }
 
 .table-container {
   overflow-x: auto;
   width: 100%;
+  border-radius: var(--radius-md);
+  padding: 0 10px;
+  margin: 0 -10px;
 }
 
 .table th,
 .table td {
-  padding: 12px;
+  padding: 14px 16px;
   text-align: center;
-  border-bottom: 1px solid #ecf0f1;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .table th {
-  background: #34495e;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
   color: white;
-  font-weight: bold;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.table tr:hover {
-  background: #f8f9fa;
+.table tbody tr {
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+/* הוסר הקו המפריד בצד ימין של הטבלה */
+/* .table tbody tr::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 4px;
+  background: var(--primary-color);
+  transform: scaleY(0);
+  transition: transform var(--transition-fast);
+}
+
+.table tbody tr:hover::before {
+  transform: scaleY(1);
+} */
+
+.table tbody tr:hover {
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0.15) 50%, rgba(99, 102, 241, 0.08) 100%);
+  transform: translateX(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.table tbody tr:nth-child(even) {
+  background: rgba(249, 250, 251, 0.6);
+}
+
+.table tbody tr:nth-child(even):hover {
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.08) 0%, rgba(99, 102, 241, 0.15) 50%, rgba(99, 102, 241, 0.08) 100%);
 }
 
 .back-btn {
   position: fixed;
   bottom: 30px;
   right: 30px;
-  width: 60px;
-  height: 60px;
-  background: #3498db;
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
   color: white;
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 24px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  transition: background-color 0.3s ease;
+  font-size: 26px;
+  box-shadow: var(--shadow-lg);
+  transition: all var(--transition-normal);
+  z-index: 1000;
 }
 
 .back-btn:hover {
-  background: #2980b9;
+  background: linear-gradient(135deg, var(--primary-hover) 0%, #2E6DA4 100%);
+  transform: scale(1.1) rotate(-5deg);
+  box-shadow: var(--shadow-xl);
+}
+
+.back-btn:active {
+  transform: scale(1.05);
 }
 /*
  סטיילים לעמוד סטטיסטיקות */
@@ -525,3 +871,1103 @@ body.dark-theme .table tbody tr:nth-child(even):hover {
 .fab-button {
   animation: pulse 2s infinite;
 }
+
+/* אנימציות נוספות */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* שיפורים לסקרולבר */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-light);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  border-radius: 10px;
+  transition: all var(--transition-fast);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, var(--primary-hover), #2E6DA4);
+}
+
+/* שיפורים לסלקט */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%234A90E2' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 12px center;
+  padding-left: 36px;
+}
+
+/* שיפורים לצ'קבוקס */
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary-color);
+}
+
+/* שיפורים לרדיו */
+input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary-color);
+}
+
+/* אפקט ריפל לכפתורים */
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* שיפורים למודלים */
+.modal-overlay {
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+  animation: scaleIn 0.3s ease;
+}
+
+/* שיפורים לטפסים */
+.form-container {
+  animation: slideInRight 0.4s ease;
+}
+
+/* שיפורים לקטגוריות */
+.category {
+  animation: fadeInUp 0.5s ease backwards;
+}
+
+.category:nth-child(1) { animation-delay: 0.1s; }
+.category:nth-child(2) { animation-delay: 0.2s; }
+.category:nth-child(3) { animation-delay: 0.3s; }
+.category:nth-child(4) { animation-delay: 0.4s; }
+.category:nth-child(5) { animation-delay: 0.5s; }
+.category:nth-child(6) { animation-delay: 0.6s; }
+
+
+/* שיפורים לכותרות דפים */
+.page-header {
+  text-align: center;
+  margin-bottom: 35px;
+  animation: slideInLeft 0.5s ease;
+}
+
+.page-header h2 {
+  color: white;
+  font-size: 32px;
+  font-weight: 700;
+  text-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  margin-bottom: 12px;
+}
+
+.page-header p {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 16px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* שיפורים לכפתורי פעולה */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+/* שיפורים לתגיות סטטוס */
+.status-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  box-shadow: var(--shadow-sm);
+}
+
+.status-badge.active {
+  background: linear-gradient(135deg, #10B981, #059669);
+  color: white;
+}
+
+.status-badge.completed {
+  background: linear-gradient(135deg, #6B7280, #4B5563);
+  color: white;
+}
+
+.status-badge.overdue {
+  background: linear-gradient(135deg, #EF4444, #DC2626);
+  color: white;
+}
+
+.status-badge.warning {
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+  color: white;
+}
+
+/* שיפורים לכרטיסים */
+.card {
+  background: var(--bg-white);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-normal);
+  border: 1px solid var(--border-color);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-xl);
+}
+
+.card-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 16px;
+}
+
+.card-content {
+  color: var(--text-light);
+  line-height: 1.6;
+}
+
+/* שיפורים לאלרטים */
+.alert {
+  padding: 16px 20px;
+  border-radius: var(--radius-md);
+  margin: 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+  animation: slideInRight 0.4s ease;
+}
+
+.alert-success {
+  background: linear-gradient(135deg, #D1FAE5, #A7F3D0);
+  border-right: 4px solid #10B981;
+  color: #065F46;
+}
+
+.alert-error {
+  background: linear-gradient(135deg, #FEE2E2, #FECACA);
+  border-right: 4px solid #EF4444;
+  color: #991B1B;
+}
+
+.alert-warning {
+  background: linear-gradient(135deg, #FEF3C7, #FDE68A);
+  border-right: 4px solid #F59E0B;
+  color: #92400E;
+}
+
+.alert-info {
+  background: linear-gradient(135deg, #DBEAFE, #BFDBFE);
+  border-right: 4px solid #3B82F6;
+  color: #1E40AF;
+}
+
+/* שיפורים ללואדר */
+.loader {
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top: 4px solid var(--primary-color);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* שיפורים לטולטיפ */
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  background-color: rgba(44, 62, 80, 0.95);
+  color: white;
+  text-align: center;
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  position: absolute;
+  z-index: 1000;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  font-size: 13px;
+  white-space: nowrap;
+  box-shadow: var(--shadow-md);
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* שיפורים רספונסיביים */
+@media (max-width: 768px) {
+  .main-title {
+    font-size: 36px;
+  }
+  
+  .category-image {
+    width: 100px;
+    height: 100px;
+    font-size: 42px;
+  }
+  
+  .category-title {
+    font-size: 18px;
+  }
+  
+  .form-container {
+    padding: 20px;
+  }
+  
+  .btn {
+    padding: 10px 18px;
+    font-size: 14px;
+  }
+  
+  .table th,
+  .table td {
+    padding: 10px 8px;
+    font-size: 13px;
+  }
+}
+
+
+/* אפקטים מודרניים נוספים */
+
+/* אפקט זוהר לכפתורים חשובים */
+.btn-primary,
+.btn-success {
+  position: relative;
+}
+
+.btn-primary::before,
+.btn-success::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, var(--primary-light), var(--secondary-light), var(--primary-light));
+  border-radius: var(--radius-md);
+  opacity: 0;
+  z-index: -1;
+  transition: opacity var(--transition-normal);
+  filter: blur(8px);
+}
+
+.btn-primary:hover::before,
+.btn-success:hover::before {
+  opacity: 0.7;
+  animation: glow 2s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* אפקט גלים לכרטיסים */
+.card,
+.form-container,
+.info-section {
+  position: relative;
+  overflow: hidden;
+}
+
+.card::after,
+.form-container::after,
+.info-section::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+  pointer-events: none;
+}
+
+.card:hover::after,
+.form-container:hover::after,
+.info-section:hover::after {
+  width: 500px;
+  height: 500px;
+}
+
+/* אנימציית טעינה מודרנית */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s ease-in-out infinite;
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* אפקט פרלקס קל לכותרות */
+.main-title,
+.page-header h2 {
+  transform-style: preserve-3d;
+  transition: transform var(--transition-fast);
+}
+
+.main-title:hover,
+.page-header h2:hover {
+  transform: translateZ(20px) scale(1.02);
+}
+
+/* שיפור לסקרולבר - עיצוב מודרני */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-light);
+  border-radius: var(--radius-full);
+  margin: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--primary-color), var(--primary-hover));
+  border-radius: var(--radius-full);
+  border: 2px solid var(--bg-light);
+  transition: all var(--transition-fast);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--primary-hover), var(--info-hover));
+  border-color: var(--primary-light);
+}
+
+/* אפקט זכוכית מטושטשת (Glassmorphism) */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+}
+
+/* אפקט ניאומורפיזם */
+.neomorphism {
+  background: #e0e5ec;
+  box-shadow: 9px 9px 16px rgba(163, 177, 198, 0.6), -9px -9px 16px rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-lg);
+  transition: all var(--transition-normal);
+}
+
+.neomorphism:hover {
+  box-shadow: inset 9px 9px 16px rgba(163, 177, 198, 0.6), inset -9px -9px 16px rgba(255, 255, 255, 0.5);
+}
+
+/* אנימציות כניסה מתקדמות */
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes zoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* אפקט הובר מתקדם לתמונות */
+img {
+  transition: all var(--transition-normal);
+}
+
+img:hover {
+  transform: scale(1.05);
+  filter: brightness(1.1) contrast(1.1);
+}
+
+/* אפקט טקסט מדורג */
+.gradient-text {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 800;
+}
+
+/* אפקט זוהר לאייקונים */
+.icon-glow {
+  filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.5));
+  transition: filter var(--transition-fast);
+}
+
+.icon-glow:hover {
+  filter: drop-shadow(0 0 16px rgba(99, 102, 241, 0.8));
+}
+
+/* שיפור לפוקוס נגישות */
+*:focus-visible {
+  outline: 3px solid var(--primary-color);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* אנימציית דופק לאלמנטים חשובים */
+@keyframes heartbeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+  10%, 30% {
+    transform: scale(1.05);
+  }
+  20%, 40% {
+    transform: scale(1);
+  }
+}
+
+.pulse-animation {
+  animation: heartbeat 2s ease-in-out infinite;
+}
+
+/* אפקט ריחוף תלת-ממדי */
+.hover-3d {
+  transition: transform var(--transition-normal);
+  transform-style: preserve-3d;
+}
+
+.hover-3d:hover {
+  transform: perspective(1000px) rotateX(5deg) rotateY(-5deg) translateZ(10px);
+}
+
+/* אפקט טקסט מהבהב */
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.blink {
+  animation: blink 2s ease-in-out infinite;
+}
+
+/* שיפור למצב כהה */
+@media (prefers-color-scheme: dark) {
+  body:not(.custom-theme):not(.dark-theme) {
+    --bg-white: #1F2937;
+    --bg-light: #111827;
+    --text-dark: #F9FAFB;
+    --text-light: #D1D5DB;
+    --border-color: #374151;
+  }
+}
+
+/* אנימציות רספונסיביות */
+@media (max-width: 768px) {
+  .category {
+    animation-duration: 0.4s;
+  }
+  
+  .btn:hover {
+    transform: translateY(-2px) scale(1.01);
+  }
+  
+  .table tbody tr:hover {
+    transform: translateX(-2px);
+  }
+}
+
+/* אפקט מעבר חלק בין דפים */
+.page-transition {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+/* אפקט זוהר לכותרות */
+.title-glow {
+  text-shadow: 0 0 20px rgba(99, 102, 241, 0.5),
+               0 0 40px rgba(99, 102, 241, 0.3),
+               0 0 60px rgba(99, 102, 241, 0.2);
+}
+
+
+/* ========================================
+   תכונות CSS מתקדמות 2024
+   ======================================== */
+
+/* Container Queries - עיצוב רספונסיבי מתקדם */
+.form-container,
+.card,
+.info-section {
+  container-type: inline-size;
+  container-name: card-container;
+}
+
+@container card-container (max-width: 600px) {
+  .form-row {
+    flex-direction: column;
+  }
+  
+  .form-group {
+    width: 100%;
+  }
+}
+
+/* :has() Selector - בחירה מבוססת צאצאים */
+.table tbody tr:has(.status-badge.overdue) {
+  background: rgba(239, 68, 68, 0.05);
+  border-right: 3px solid var(--danger-color);
+}
+
+.form-container:has(input:focus) {
+  box-shadow: var(--shadow-xl);
+  border-color: var(--primary-color);
+}
+
+.category:has(.category-image:hover) {
+  z-index: 10;
+}
+
+/* CSS Nesting - קוד נקי יותר */
+.btn {
+  &:hover {
+    & .icon {
+      transform: rotate(15deg) scale(1.2);
+    }
+  }
+  
+  &:active {
+    & .icon {
+      transform: rotate(-15deg) scale(0.9);
+    }
+  }
+}
+
+/* Scroll-driven Animations - אנימציות מבוססות גלילה */
+@supports (animation-timeline: scroll()) {
+  .header {
+    animation: shrink-header linear;
+    animation-timeline: scroll();
+    animation-range: 0 200px;
+  }
+  
+  @keyframes shrink-header {
+    to {
+      padding: 12px 35px;
+      box-shadow: var(--shadow-lg);
+    }
+  }
+  
+  .back-btn {
+    animation: fade-in-btn linear;
+    animation-timeline: scroll();
+    animation-range: 100px 300px;
+  }
+  
+  @keyframes fade-in-btn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* View Transitions API - מעברים חלקים בין דפים */
+@view-transition {
+  navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.4s;
+}
+
+::view-transition-old(root) {
+  animation-name: slide-out;
+}
+
+::view-transition-new(root) {
+  animation-name: slide-in;
+}
+
+@keyframes slide-out {
+  to {
+    transform: translateX(-30px);
+    opacity: 0;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(30px);
+    opacity: 0;
+  }
+}
+
+/* Cascade Layers - ארגון CSS מתקדם */
+@layer base, components, utilities;
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+}
+
+@layer components {
+  .btn {
+    display: inline-block;
+  }
+  
+  .card {
+    display: block;
+  }
+}
+
+@layer utilities {
+  .text-center {
+    text-align: center;
+  }
+  
+  .flex {
+    display: flex;
+  }
+}
+
+/* Color-mix() - ערבוב צבעים דינמי */
+.btn-primary {
+  background: color-mix(in srgb, var(--primary-color) 90%, white 10%);
+}
+
+.btn-primary:hover {
+  background: color-mix(in srgb, var(--primary-color) 100%, black 10%);
+}
+
+.table tbody tr:hover {
+  background: color-mix(in srgb, var(--primary-color) 8%, white 92%);
+}
+
+/* Relative Colors - צבעים יחסיים */
+.btn-success {
+  --btn-color: var(--secondary-color);
+  background: var(--btn-color);
+  border: 2px solid rgb(from var(--btn-color) r g b / 0.5);
+}
+
+.btn-success:hover {
+  background: rgb(from var(--secondary-color) calc(r * 0.9) calc(g * 0.9) calc(b * 0.9));
+}
+
+/* Anchor Positioning - מיקום מתקדם */
+.tooltip {
+  position: absolute;
+  position-anchor: --tooltip-anchor;
+  bottom: anchor(top);
+  left: anchor(center);
+  translate: -50% -8px;
+}
+
+/* Subgrid - גריד מקונן */
+/* הוסר כדי לא להפריע לטבלאות רגילות */
+/* .table {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+}
+
+.table tbody {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+} */
+
+/* Trigonometric Functions - פונקציות טריגונומטריות */
+.category:nth-child(1) {
+  animation-delay: calc(sin(0deg) * 0.1s);
+}
+
+.category:nth-child(2) {
+  animation-delay: calc(sin(30deg) * 0.2s);
+}
+
+.category:nth-child(3) {
+  animation-delay: calc(sin(60deg) * 0.3s);
+}
+
+/* Individual Transform Properties - טרנספורמציות נפרדות */
+.category-image {
+  translate: 0 0;
+  rotate: 0deg;
+  scale: 1;
+  transition: translate 0.3s, rotate 0.3s, scale 0.3s;
+}
+
+.category:hover .category-image {
+  translate: 0 -4px;
+  rotate: 0deg;
+  scale: 1.05;
+}
+
+/* Scroll Snap - גלילה מגנטית */
+.categories {
+  scroll-snap-type: x mandatory;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.category {
+  scroll-snap-align: center;
+  scroll-margin: 20px;
+}
+
+/* Accent Color - צבע מבטא */
+input[type="checkbox"],
+input[type="radio"],
+input[type="range"] {
+  accent-color: var(--primary-color);
+}
+
+/* Inert - השבתת אינטראקציה */
+[inert] {
+  pointer-events: none;
+  opacity: 0.5;
+  filter: grayscale(100%);
+}
+
+/* :focus-visible - פוקוס חכם */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid var(--primary-color);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+/* :is() and :where() - סלקטורים מתקדמים */
+:is(.btn-primary, .btn-success, .btn-danger):hover {
+  transform: translateY(-3px) scale(1.02);
+}
+
+:where(.card, .form-container, .info-section) {
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+/* Logical Properties - תכונות לוגיות (תמיכה ב-RTL) */
+.form-group {
+  margin-block-end: 20px;
+  padding-inline: 12px;
+  border-inline-start: 3px solid transparent;
+}
+
+.form-group:focus-within {
+  border-inline-start-color: var(--primary-color);
+}
+
+.btn {
+  padding-block: 12px;
+  padding-inline: 28px;
+  margin-inline-start: 8px;
+}
+
+/* Aspect Ratio - יחס גובה-רוחב */
+.category-image {
+  aspect-ratio: 1 / 1;
+  width: 140px;
+}
+
+/* Gap - רווחים בגריד/פלקס */
+.categories {
+  display: flex;
+  gap: 60px;
+  row-gap: 40px;
+  column-gap: 60px;
+}
+
+/* Clamp() - גודל רספונסיבי */
+.main-title {
+  font-size: clamp(32px, 5vw, 52px);
+}
+
+.category-title {
+  font-size: clamp(18px, 2.5vw, 24px);
+}
+
+.btn {
+  padding: clamp(10px, 1.5vw, 12px) clamp(20px, 3vw, 28px);
+}
+
+/* Min/Max - גדלים דינמיים */
+.form-container {
+  width: min(1000px, 95vw);
+  padding: max(20px, 3vw);
+}
+
+/* Custom Properties with @property - משתנים מתקדמים */
+@property --gradient-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.animated-gradient {
+  --gradient-angle: 0deg;
+  background: linear-gradient(var(--gradient-angle), var(--primary-color), var(--secondary-color));
+  animation: rotate-gradient 3s linear infinite;
+}
+
+@keyframes rotate-gradient {
+  to {
+    --gradient-angle: 360deg;
+  }
+}
+
+/* Overscroll Behavior - התנהגות גלילה */
+body {
+  overscroll-behavior: contain;
+}
+
+.table-container {
+  overscroll-behavior-x: contain;
+  overscroll-behavior-y: auto;
+}
+
+/* Backdrop Filter - טשטוש רקע מתקדם */
+.header {
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+}
+
+.modal-overlay {
+  backdrop-filter: blur(8px) brightness(0.8);
+  -webkit-backdrop-filter: blur(8px) brightness(0.8);
+}
+
+/* Text Decoration - קישוט טקסט מתקדם */
+.category-title {
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+  text-decoration-skip-ink: auto;
+}
+
+/* Smooth Scrolling - גלילה חלקה */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+}
+
+/* Prefers Reduced Motion - נגישות */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Prefers Color Scheme - מצב כהה אוטומטי */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+  }
+}
+
+/* Prefers Contrast - ניגודיות גבוהה */
+@media (prefers-contrast: high) {
+  .btn {
+    border: 3px solid currentColor;
+  }
+  
+  .table tbody tr:hover {
+    outline: 3px solid var(--primary-color);
+  }
+}
+
+/* Content Visibility - אופטימיזציה */
+.table tbody tr {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 50px;
+}
+
+/* Will Change - אופטימיזציה לאנימציות */
+.btn:hover,
+.category:hover,
+.table tbody tr:hover {
+  will-change: transform, box-shadow;
+}
+
+/* Contain - אופטימיזציה לביצועים */
+.card,
+.form-container {
+  contain: layout style paint;
+}
+
+/* Light-Dark() - צבעים אוטומטיים */
+@supports (color: light-dark(white, black)) {
+  body {
+    background: light-dark(
+      linear-gradient(135deg, #667eea 0%, #764ba2 100%),
+      linear-gradient(135deg, #2c3e50 0%, #34495e 100%)
+    );
+  }
+  
+  .card {
+    background: light-dark(white, #1F2937);
+    color: light-dark(#1F2937, white);
+  }
+}
+
+/* Starting Style - אנימציות כניסה */
+@starting-style {
+  .modal-overlay {
+    opacity: 0;
+  }
+  
+  .card {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+}
+
+/* Interpolate Size - אנימציות גודל */
+.details-section {
+  interpolate-size: allow-keywords;
+  height: 0;
+  overflow: hidden;
+  transition: height 0.3s ease;
+}
+
+.details-section.open {
+  height: auto;
+}
+
+/* Field Sizing - גודל שדות אוטומטי */
+textarea {
+  field-sizing: content;
+  min-height: 60px;
+  max-height: 300px;
+}
+
+/* ========================================
+   סיום תכונות CSS מתקדמות 2024
+   ======================================== */

@@ -93,6 +93,42 @@ function AdminToolsPage() {
         padding: '20px 0'
       }}>
 
+        {/* כרטיס הלוואות שפג תוקפן */}
+        <div style={{
+          background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+          border: '2px solid #ef4444',
+          borderRadius: '15px',
+          padding: '25px',
+          textAlign: 'center',
+          boxShadow: '0 4px 15px rgba(239, 68, 68, 0.2)',
+          transition: 'transform 0.2s ease',
+          cursor: 'pointer'
+        }}
+          onClick={() => navigate('/overdue-loans')}
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+        >
+          <div style={{ fontSize: '48px', marginBottom: '15px' }}>⏰</div>
+          <h3 style={{ margin: '0 0 10px 0', color: '#dc2626' }}>הלוואות שפג תוקפן</h3>
+          <p style={{ color: '#7f1d1d', fontSize: '14px', lineHeight: '1.5' }}>
+            ריכוז הלוואות שעבר מועד הפירעון.<br />
+            העברה לאחריות הערבים.
+          </p>
+          <button style={{
+            background: '#dc2626',
+            color: 'white',
+            border: 'none',
+            padding: '10px 20px',
+            borderRadius: '8px',
+            marginTop: '15px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 'bold'
+          }}>
+            צפה בהלוואות שפג תוקפן
+          </button>
+        </div>
+
         {/* כרטיס רשימה שחורה */}
         <div style={{
           background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',

@@ -6,6 +6,7 @@ import DepositsPage from './pages/DepositsPage'
 import DonationsPage from './pages/DonationsPage'
 
 import AdminToolsPage from './pages/AdminToolsPage'
+import OverdueLoansPage from './pages/OverdueLoansPage'
 import SettingsPage from './pages/SettingsPage'
 import HelpPage from './pages/HelpPage'
 import BorrowerReportPage from './pages/BorrowerReportPage'
@@ -58,6 +59,7 @@ function App() {
         <Route path="/donations" element={<DonationsPage />} />
 
         <Route path="/admin-tools" element={<AdminToolsPage />} />
+        <Route path="/overdue-loans" element={<OverdueLoansPage />} />
         <Route path="/borrower-report" element={<BorrowerReportPage />} />
         <Route path="/statistics" element={<StatisticsPage />} />
         <Route path="/settings" element={<SettingsPage />} />

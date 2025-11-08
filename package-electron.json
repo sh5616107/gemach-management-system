@@ -1,12 +1,12 @@
 {
   "name": "gemach-management-system",
-  "version": "2.9.5",
+  "version": "2.9.6",
   "description": "Comprehensive Gemach Management System for loans, deposits and donations",
   "main": "electron.js",
   "homepage": "./",
   "author": {
     "name": "מפתח מערכת גמ\"ח",
-    "email": "developer@gemach.co.il"
+    "email": "sh5616107@gmail.com"
   },
   "license": "MIT",
   "private": true,

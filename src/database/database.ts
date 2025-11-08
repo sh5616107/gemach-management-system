@@ -38,6 +38,10 @@ export interface DatabaseLoan {
   guarantor1Id?: number        // ID ערב ראשון (חדש)
   guarantor2Id?: number        // ID ערב שני (חדש)
   status: 'active' | 'completed' | 'overdue' | 'reminder_sent'
+  transferredToGuarantors?: boolean    // האם הועברה לערבים
+  transferDate?: string                // תאריך העברה
+  transferredBy?: string               // מי ביצע את ההעברה
+  transferNotes?: string               // הערות על ההעברה
 }
 
 // פרטי אמצעי תשלום
@@ -78,6 +82,7 @@ export interface DatabasePayment {
   paymentDetails?: string // פרטי אמצעי התשלום (JSON string)
   paymentDetailsComplete?: boolean // האם פרטי התשלום הושלמו (למעקב אמצעי תשלום)
   notes: string
+  guarantorDebtId?: number  // קישור לחוב ערב (אם רלוונטי)
 }
 
 export interface DatabaseDeposit {
@@ -169,6 +174,22 @@ export interface DatabaseDonation {
   needsReceipt: boolean
 }
 
+export interface DatabaseGuarantorDebt {
+  id: number
+  originalLoanId: number          // קישור להלוואה המקורית
+  guarantorId: number             // ID הערב שחויב
+  originalBorrowerId: number      // ID הלווה המקורי
+  amount: number                  // סכום החוב
+  transferDate: string            // תאריך העברה
+  transferredBy: string           // מי ביצע את ההעברה
+  paymentType: 'single' | 'installments'  // סוג תשלום
+  installmentsCount?: number      // מספר תשלומים (אם רלוונטי)
+  installmentAmount?: number      // סכום כל תשלום
+  installmentDates?: string[]     // תאריכי פירעון לכל תשלום
+  status: 'active' | 'paid' | 'overdue'
+  notes?: string
+}
+
 export interface DatabaseGuarantor {
   id: number
   firstName: string
@@ -249,6 +270,7 @@ interface DatabaseFile {
   guarantors: DatabaseGuarantor[] // טבלת ערבים חדשה
   blacklist: DatabaseBlacklistEntry[] // טבלת רשימה שחורה
   warningLetters: DatabaseWarningLetter[] // טבלת מכתבי התראה
+  guarantorDebts: DatabaseGuarantorDebt[] // טבלת חובות ערבים
   lastUpdated: string
   gemachName: string
   settings: DatabaseSettings
@@ -262,6 +284,7 @@ class GemachDatabase {
     donations: [],
     payments: [],
     withdrawals: [],
+    guarantorDebts: [],
     guarantors: [],
     blacklist: [],
     warningLetters: [],
@@ -314,6 +337,7 @@ class GemachDatabase {
       const guarantors = localStorage.getItem('gemach_guarantors')
       const blacklist = localStorage.getItem('gemach_blacklist')
       const warningLetters = localStorage.getItem('gemach_warning_letters')
+      const guarantorDebts = localStorage.getItem('gemach_guarantor_debts')
 
       const gemachName = localStorage.getItem('gemach_name')
       const settings = localStorage.getItem('gemach_settings')
@@ -328,6 +352,7 @@ class GemachDatabase {
         guarantors: guarantors ? JSON.parse(guarantors) : [],
         blacklist: blacklist ? JSON.parse(blacklist) : [],
         warningLetters: warningLetters ? JSON.parse(warningLetters) : [],
+        guarantorDebts: guarantorDebts ? JSON.parse(guarantorDebts) : [],
         lastUpdated: new Date().toISOString(),
         gemachName: gemachName || 'נר שרה',
         settings: settings ? JSON.parse(settings) : {
@@ -375,6 +400,7 @@ class GemachDatabase {
       localStorage.setItem('gemach_guarantors', JSON.stringify(this.dataFile.guarantors))
       localStorage.setItem('gemach_blacklist', JSON.stringify(this.dataFile.blacklist))
       localStorage.setItem('gemach_warning_letters', JSON.stringify(this.dataFile.warningLetters))
+      localStorage.setItem('gemach_guarantor_debts', JSON.stringify(this.dataFile.guarantorDebts))
       localStorage.setItem('gemach_name', this.dataFile.gemachName)
       localStorage.setItem('gemach_settings', JSON.stringify(this.dataFile.settings))
 
@@ -390,7 +416,8 @@ class GemachDatabase {
         withdrawals: this.dataFile.withdrawals.length,
         guarantors: this.dataFile.guarantors.length,
         blacklist: this.dataFile.blacklist.length,
-        warningLetters: this.dataFile.warningLetters.length
+        warningLetters: this.dataFile.warningLetters.length,
+        guarantorDebts: this.dataFile.guarantorDebts.length
       })
     } catch (error) {
       console.error('שגיאה בשמירת נתונים:', error)
@@ -422,6 +449,7 @@ class GemachDatabase {
         guarantors: importedData.guarantors || [],
         blacklist: importedData.blacklist || [],
         warningLetters: importedData.warningLetters || [],
+        guarantorDebts: importedData.guarantorDebts || [],
         lastUpdated: new Date().toISOString(),
         gemachName: importedData.gemachName || 'נר שרה',
         settings: importedData.settings || {
@@ -1295,6 +1323,7 @@ class GemachDatabase {
       guarantors: [],
       blacklist: [],
       warningLetters: [],
+      guarantorDebts: [],
       lastUpdated: new Date().toISOString(),
       gemachName: 'נר שרה',
       settings: {
@@ -2824,6 +2853,203 @@ class GemachDatabase {
     if (migratedCount > 0) {
       this.saveData()
       console.log(`🔄 מיגרציה הושלמה: ${migratedCount} ערבים חדשים נוצרו`)
+    }
+  }
+
+  // ===== מתודות לניהול חובות ערבים =====
+
+  /**
+   * הוספת חוב ערב חדש
+   */
+  addGuarantorDebt(debt: Omit<DatabaseGuarantorDebt, 'id'>): DatabaseGuarantorDebt {
+    const newDebt: DatabaseGuarantorDebt = {
+      ...debt,
+      id: this.getNextId(this.dataFile.guarantorDebts)
+    }
+    this.dataFile.guarantorDebts.push(newDebt)
+    this.saveData()
+    return newDebt
+  }
+
+  /**
+   * קבלת כל חובות הערבים
+   */
+  getGuarantorDebts(): DatabaseGuarantorDebt[] {
+    return this.dataFile.guarantorDebts
+  }
+
+  /**
+   * קבלת חובות של ערב ספציפי
+   */
+  getGuarantorDebtsByGuarantorId(guarantorId: number): DatabaseGuarantorDebt[] {
+    return this.dataFile.guarantorDebts.filter(debt => debt.guarantorId === guarantorId)
+  }
+
+  /**
+   * קבלת חובות שנוצרו מהלוואה ספציפית
+   */
+  getGuarantorDebtsByLoanId(loanId: number): DatabaseGuarantorDebt[] {
+    return this.dataFile.guarantorDebts.filter(debt => debt.originalLoanId === loanId)
+  }
+
+  /**
+   * עדכון סטטוס חוב ערב
+   */
+  updateGuarantorDebtStatus(debtId: number, status: 'active' | 'paid' | 'overdue'): boolean {
+    const debt = this.dataFile.guarantorDebts.find(d => d.id === debtId)
+    if (debt) {
+      debt.status = status
+      this.saveData()
+      return true
+    }
+    return false
+  }
+
+  /**
+   * חישוב יתרת חוב ערב (סכום החוב פחות תשלומים)
+   */
+  getGuarantorDebtBalance(debtId: number): number {
+    const debt = this.dataFile.guarantorDebts.find(d => d.id === debtId)
+    if (!debt) return 0
+
+    // חשב את סך התשלומים לחוב זה
+    const payments = this.dataFile.payments.filter(p => p.guarantorDebtId === debtId)
+    const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0)
+
+    return debt.amount - totalPaid
+  }
+
+  /**
+   * העברת הלוואה לערבים
+   * @param loanId - מזהה ההלוואה להעברה
+   * @param guarantorSplits - Map של guarantorId לסכום שיחויב
+   * @param paymentType - סוג תשלום (תשלום אחד או תשלומים)
+   * @param installmentsData - נתוני תשלומים (אם רלוונטי)
+   * @param transferredBy - שם המשתמש שמבצע את ההעברה
+   * @param notes - הערות על ההעברה
+   * @returns אובייקט עם success ו-message או error
+   */
+  transferLoanToGuarantors(
+    loanId: number,
+    guarantorSplits: Map<number, number>,
+    paymentType: 'single' | 'installments',
+    installmentsData?: {
+      count: number
+      amount: number
+      dates: string[]
+    },
+    transferredBy: string = 'מנהל',
+    notes?: string
+  ): { success: boolean; message?: string; error?: string } {
+    try {
+      // בדיקות ולידציה
+      const loan = this.dataFile.loans.find(l => l.id === loanId)
+      if (!loan) {
+        return { success: false, error: 'הלוואה לא נמצאה' }
+      }
+
+      if (loan.transferredToGuarantors) {
+        return { success: false, error: 'הלוואה זו כבר הועברה לערבים' }
+      }
+
+      // בדוק שיש לפחות ערב אחד
+      if (guarantorSplits.size === 0) {
+        return { success: false, error: 'חייב לבחור לפחות ערב אחד' }
+      }
+
+      // בדוק שסכום החלוקה שווה ליתרת ההלוואה
+      const loanBalance = this.getLoanBalance(loanId)
+      const totalSplit = Array.from(guarantorSplits.values()).reduce((sum, amount) => sum + amount, 0)
+      
+      if (Math.abs(totalSplit - loanBalance) > 0.01) { // סובלנות של אגורה
+        return { 
+          success: false, 
+          error: `סכום החלוקה (₪${totalSplit}) לא שווה ליתרת ההלוואה (₪${loanBalance})` 
+        }
+      }
+
+      // בדוק שכל הערבים קיימים ולא ברשימה שחורה
+      for (const [guarantorId] of guarantorSplits) {
+        const guarantor = this.dataFile.guarantors.find(g => g.id === guarantorId)
+        if (!guarantor) {
+          return { success: false, error: `ערב עם ID ${guarantorId} לא נמצא` }
+        }
+        if (this.isBlacklisted('guarantor', guarantorId)) {
+          return { 
+            success: false, 
+            error: `ערב ${guarantor.firstName} ${guarantor.lastName} נמצא ברשימה השחורה` 
+          }
+        }
+      }
+
+      // בדיקת תאריכים אם יש תשלומים
+      if (paymentType === 'installments' && installmentsData) {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        
+        for (const dateStr of installmentsData.dates) {
+          const date = new Date(dateStr)
+          if (date < today) {
+            return { success: false, error: 'תאריכי פירעון לא יכולים להיות בעבר' }
+          }
+        }
+      }
+
+      // ביצוע ההעברה
+      const transferDate = new Date().toISOString()
+
+      // יצירת חובות ערבים
+      const createdDebts: DatabaseGuarantorDebt[] = []
+      for (const [guarantorId, amount] of guarantorSplits) {
+        const debt: Omit<DatabaseGuarantorDebt, 'id'> = {
+          originalLoanId: loanId,
+          guarantorId,
+          originalBorrowerId: loan.borrowerId,
+          amount,
+          transferDate,
+          transferredBy,
+          paymentType,
+          status: 'active',
+          notes
+        }
+
+        // הוסף נתוני תשלומים אם רלוונטי
+        if (paymentType === 'installments' && installmentsData) {
+          debt.installmentsCount = installmentsData.count
+          debt.installmentAmount = installmentsData.amount
+          debt.installmentDates = installmentsData.dates
+        }
+
+        const createdDebt = this.addGuarantorDebt(debt)
+        createdDebts.push(createdDebt)
+      }
+
+      // עדכון ההלוואה
+      loan.transferredToGuarantors = true
+      loan.transferDate = transferDate
+      loan.transferredBy = transferredBy
+      loan.transferNotes = notes
+
+      // הוספת הלווה לרשימה שחורה אוטומטית
+      const borrower = this.dataFile.borrowers.find(b => b.id === loan.borrowerId)
+      if (borrower) {
+        const blacklistReason = `לא פרע הלוואה #${loanId} - הועבר לערבים`
+        this.addToBlacklist('borrower', loan.borrowerId, blacklistReason)
+      }
+
+      this.saveData()
+
+      return {
+        success: true,
+        message: `הלוואה הועברה בהצלחה ל-${createdDebts.length} ערבים`
+      }
+
+    } catch (error) {
+      console.error('שגיאה בהעברת הלוואה לערבים:', error)
+      return {
+        success: false,
+        error: `שגיאה בהעברת הלוואה: ${error}`
+      }
     }
   }
 

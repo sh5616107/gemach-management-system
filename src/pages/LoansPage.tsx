@@ -492,15 +492,6 @@ function LoansPage() {
     return formatDateForInput(new Date())
   }
 
-  // פונקציה לחישוב תאריך החזרה כברירת מחדל
-  const calculateDefaultReturnDate = (loanDate?: string): string => {
-    const settings = db.getSettings()
-    const baseDate = loanDate ? createLocalDate(loanDate) : new Date()
-    const returnDate = new Date(baseDate)
-    returnDate.setMonth(returnDate.getMonth() + settings.defaultLoanPeriod)
-    return formatDateForInput(returnDate)
-  }
-
   const handleLoanChange = (field: keyof DatabaseLoan, value: string | number | boolean) => {
     console.log('🔄 LoansPage: handleLoanChange נקרא עם:', field, value)
 

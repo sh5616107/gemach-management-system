@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { db, DatabaseLoan, DatabasePayment, DatabaseBorrower, DatabaseGuarantor } from '../database/database'
+import { db, DatabaseLoan, DatabasePayment, DatabaseBorrower, DatabaseGuarantor, DatabaseGuarantorDebt } from '../database/database'
 import NumberInput from '../components/NumberInput'
-
+import GuarantorDebtCard from '../components/GuarantorDebtCard'
 
 import { formatCombinedDate, formatHebrewDateOnly } from '../utils/hebrewDate'
 import BankBranchSelector from '../components/BankBranchSelector'
@@ -101,10 +101,13 @@ function LoansPage() {
   const [loans, setLoans] = useState<DatabaseLoan[]>([])
   const [payments, setPayments] = useState<DatabasePayment[]>([])
   const [guarantors, setGuarantors] = useState<DatabaseGuarantor[]>([])
+  const [guarantorDebts, setGuarantorDebts] = useState<DatabaseGuarantorDebt[]>([])
   const [selectedLoanId, setSelectedLoanId] = useState<number | null>(null)
   const [selectedBorrowerId, setSelectedBorrowerId] = useState<number | null>(null)
   const [editingGuarantorId, setEditingGuarantorId] = useState<number | null>(null)
   const [guarantorSearchTerm, setGuarantorSearchTerm] = useState('')
+  const [selectedGuarantorDebt, setSelectedGuarantorDebt] = useState<DatabaseGuarantorDebt | null>(null)
+  const [showGuarantorDebtPaymentModal, setShowGuarantorDebtPaymentModal] = useState(false)
   // הכפתורים הועברו לדף "כלים מתקדמים"
 
 
@@ -267,9 +270,11 @@ function LoansPage() {
   const loadData = () => {
     const newBorrowers = db.getBorrowers()
     const newLoans = db.getLoans()
+    const newGuarantorDebts = db.getGuarantorDebts()
 
     setBorrowers(newBorrowers)
     setLoans(newLoans)
+    setGuarantorDebts(newGuarantorDebts)
 
     // עדכן את הנתונים הנוכחיים אם יש הלוואה או לווה נבחרים
     if (selectedLoanId) {
@@ -301,6 +306,49 @@ function LoansPage() {
     db.updateAllGuarantorStats()
     setGuarantors(newGuarantors)
     console.log('🔄 רענון טבלת ערבים:', newGuarantors.length)
+  }
+
+  // רישום פרעון לחוב ערב
+  const recordGuarantorDebtPayment = (debtId: number, amount: number) => {
+    try {
+      const debt = guarantorDebts.find(d => d.id === debtId)
+      if (!debt) {
+        showNotification('❌ חוב ערב לא נמצא', 'error')
+        return
+      }
+
+      const balance = db.getGuarantorDebtBalance(debtId)
+      if (amount > balance) {
+        showNotification(`❌ סכום הפרעון (₪${amount}) גבוה מהיתרה (₪${balance})`, 'error')
+        return
+      }
+
+      // יצירת תשלום חדש
+      const payment: Omit<DatabasePayment, 'id'> = {
+        loanId: debt.originalLoanId, // קישור להלוואה המקורית
+        amount,
+        date: new Date().toISOString().split('T')[0],
+        type: 'payment',
+        notes: `פרעון חוב ערב #${debtId}`,
+        guarantorDebtId: debtId
+      }
+
+      db.addPayment(payment)
+
+      // עדכן סטטוס החוב אם נפרע במלואה
+      const newBalance = balance - amount
+      if (newBalance <= 0) {
+        db.updateGuarantorDebtStatus(debtId, 'paid')
+      }
+
+      showNotification(`✅ פרעון של ₪${amount.toLocaleString()} נרשם בהצלחה!`)
+      loadData()
+      setShowGuarantorDebtPaymentModal(false)
+      setSelectedGuarantorDebt(null)
+    } catch (error) {
+      console.error('שגיאה ברישום פרעון חוב ערב:', error)
+      showNotification('❌ שגיאה ברישום הפרעון', 'error')
+    }
   }
 
   const handleGuarantorInputChange = (field: string, value: string) => {
@@ -2693,6 +2741,29 @@ function LoansPage() {
           </div>
         )}
 
+        {/* הצגת חובות ערבים */}
+        {selectedBorrowerId && guarantorDebts.filter(debt => 
+          loans.find(l => l.id === debt.originalLoanId && l.borrowerId === selectedBorrowerId)
+        ).length > 0 && (
+          <div style={{ marginTop: '30px', padding: '20px', background: '#fff7ed', borderRadius: '15px' }}>
+            <h3 style={{ color: '#ea580c', marginBottom: '20px', textAlign: 'center' }}>
+              🤝 חובות ערבים (הלוואות שהועברו לערבים)
+            </h3>
+            {guarantorDebts
+              .filter(debt => loans.find(l => l.id === debt.originalLoanId && l.borrowerId === selectedBorrowerId))
+              .map(debt => (
+                <GuarantorDebtCard
+                  key={debt.id}
+                  debt={debt}
+                  onPaymentClick={(debt) => {
+                    setSelectedGuarantorDebt(debt)
+                    setShowGuarantorDebtPaymentModal(true)
+                  }}
+                />
+              ))}
+          </div>
+        )}
+
         {mode === 'guarantor' && (
           <div style={{ padding: '20px' }}>
             <h2 style={{ color: '#2c3e50', marginBottom: '20px', textAlign: 'center' }}>
@@ -3173,7 +3244,11 @@ function LoansPage() {
                       let statusIcon = '✅'
                       let statusText = 'נפרע'
 
-                      if (isFuture) {
+                      if (loan.transferredToGuarantors) {
+                        // הלוואה שהועברה לערבים
+                        statusIcon = '🔄'
+                        statusText = 'הועברה לערבים'
+                      } else if (isFuture) {
                         // הלוואה עתידית
                         const daysUntil = Math.ceil((loanDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
                         statusIcon = '🕐'
@@ -3224,6 +3299,76 @@ function LoansPage() {
                 )}
               </div>
             </div>
+
+            {/* סימון הלוואה שהועברה לערבים */}
+            {selectedLoanId && currentLoan.transferredToGuarantors && (
+              <div style={{
+                background: 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)',
+                border: '2px solid #a855f7',
+                borderRadius: '12px',
+                padding: '15px 20px',
+                marginBottom: '20px',
+                boxShadow: '0 4px 10px rgba(168, 85, 247, 0.2)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '28px' }}>🔄</span>
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ margin: '0 0 5px 0', color: '#7c3aed', fontSize: '16px' }}>
+                      הלוואה הועברה לאחריות הערבים
+                    </h4>
+                    <div style={{ fontSize: '13px', color: '#6b21a8' }}>
+                      <div>תאריך העברה: {currentLoan.transferDate ? new Date(currentLoan.transferDate).toLocaleDateString('he-IL') : '-'}</div>
+                      {currentLoan.transferredBy && <div>הועבר על ידי: {currentLoan.transferredBy}</div>}
+                      {currentLoan.transferNotes && <div>הערות: {currentLoan.transferNotes}</div>}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const debts = guarantorDebts.filter(d => d.originalLoanId === selectedLoanId)
+                      if (debts.length > 0) {
+                        // הצגת מודל עם פרטי העברה
+                        const modalContent = debts.map(d => {
+                          const g = guarantors.find(gr => gr.id === d.guarantorId)
+                          const balance = db.getGuarantorDebtBalance(d.id)
+                          return `
+                            <div style="padding: 12px; background: #f9fafb; border-radius: 8px; margin-bottom: 10px;">
+                              <div style="font-weight: bold; color: #1f2937; margin-bottom: 5px;">
+                                ${g ? `${g.firstName} ${g.lastName}` : 'לא ידוע'}
+                              </div>
+                              <div style="font-size: 13px; color: #6b7280;">
+                                סכום חוב: ₪${d.amount.toLocaleString()} | יתרה: ₪${balance.toLocaleString()}
+                              </div>
+                              <div style="font-size: 12px; color: #9ca3af; margin-top: 3px;">
+                                ${d.paymentType === 'single' ? 'תשלום אחד' : `${d.installmentsCount} תשלומים`}
+                              </div>
+                            </div>
+                          `
+                        }).join('')
+                        
+                        showNotification(`
+                          <div style="max-width: 400px;">
+                            <h4 style="margin: 0 0 15px 0; color: #7c3aed;">ערבים שחויבו:</h4>
+                            ${modalContent}
+                          </div>
+                        `, 'info')
+                      }
+                    }}
+                    style={{
+                      background: '#7c3aed',
+                      color: 'white',
+                      border: 'none',
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    📋 פרטי העברה
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="form-row">
               <div className="form-group">
@@ -5489,6 +5634,105 @@ function LoansPage() {
       }
 
 
+      {/* מודל רישום פרעון לחוב ערב */}
+      {showGuarantorDebtPaymentModal && selectedGuarantorDebt && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          direction: 'rtl'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '15px',
+            padding: '30px',
+            maxWidth: '500px',
+            width: '90%',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)'
+          }}>
+            <h3 style={{ margin: '0 0 20px 0', color: '#ea580c' }}>💰 רישום פרעון לחוב ערב</h3>
+            
+            <div style={{ marginBottom: '20px', padding: '15px', background: '#fff7ed', borderRadius: '10px' }}>
+              <div style={{ fontSize: '14px', color: '#9a3412' }}>
+                <div><strong>חוב ערב #{selectedGuarantorDebt.id}</strong></div>
+                <div style={{ marginTop: '5px' }}>סכום חוב: ₪{selectedGuarantorDebt.amount.toLocaleString()}</div>
+                <div>יתרה: ₪{db.getGuarantorDebtBalance(selectedGuarantorDebt.id).toLocaleString()}</div>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                סכום פרעון:
+              </label>
+              <input
+                type="number"
+                id="guarantorDebtPaymentAmount"
+                step="0.01"
+                min="0"
+                max={db.getGuarantorDebtBalance(selectedGuarantorDebt.id)}
+                placeholder="הכנס סכום"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  border: '2px solid #ddd',
+                  borderRadius: '8px',
+                  fontSize: '16px'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+              <button
+                onClick={() => {
+                  setShowGuarantorDebtPaymentModal(false)
+                  setSelectedGuarantorDebt(null)
+                }}
+                style={{
+                  background: '#95a5a6',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '15px'
+                }}
+              >
+                ביטול
+              </button>
+              <button
+                onClick={() => {
+                  const input = document.getElementById('guarantorDebtPaymentAmount') as HTMLInputElement
+                  const amount = parseFloat(input.value)
+                  if (!amount || amount <= 0) {
+                    showNotification('⚠️ אנא הכנס סכום תקין', 'error')
+                    return
+                  }
+                  recordGuarantorDebtPayment(selectedGuarantorDebt.id, amount)
+                }}
+                style={{
+                  background: '#ea580c',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '15px',
+                  fontWeight: 'bold'
+                }}
+              >
+                ✅ אשר פרעון
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   )
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { db, DatabaseLoan, DatabaseBorrower, DatabaseGuarantor } from '../database/database'
+import LoanTransferModal from '../components/LoanTransferModal'
 
 interface OverdueLoan {
   loan: DatabaseLoan
@@ -14,6 +15,8 @@ function OverdueLoansPage() {
   const navigate = useNavigate()
   const [overdueLoans, setOverdueLoans] = useState<OverdueLoan[]>([])
   const [loading, setLoading] = useState(true)
+  const [showTransferModal, setShowTransferModal] = useState(false)
+  const [selectedOverdueLoan, setSelectedOverdueLoan] = useState<OverdueLoan | null>(null)
 
   useEffect(() => {
     loadOverdueLoans()
@@ -208,8 +211,8 @@ function OverdueLoansPage() {
 
                   <button
                     onClick={() => {
-                      // הלוגיקה תמומש במשימה 3.7
-                      alert('מודל העברה יפתח כאן')
+                      setSelectedOverdueLoan({ loan, borrower, guarantors, daysOverdue, balance })
+                      setShowTransferModal(true)
                     }}
                     style={{
                       background: '#dc2626',
@@ -248,6 +251,23 @@ function OverdueLoansPage() {
       <button className="back-btn" onClick={() => navigate('/admin-tools')}>
         🏠
       </button>
+
+      {/* מודל העברה לערבים */}
+      {showTransferModal && selectedOverdueLoan && (
+        <LoanTransferModal
+          isOpen={showTransferModal}
+          onClose={() => {
+            setShowTransferModal(false)
+            setSelectedOverdueLoan(null)
+          }}
+          loan={selectedOverdueLoan.loan}
+          borrower={selectedOverdueLoan.borrower}
+          guarantors={selectedOverdueLoan.guarantors}
+          onTransferComplete={() => {
+            loadOverdueLoans() // רענן את הרשימה
+          }}
+        />
+      )}
     </div>
   )
 }

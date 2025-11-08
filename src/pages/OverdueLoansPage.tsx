@@ -248,7 +248,7 @@ function OverdueLoansPage() {
         </div>
       )}
 
-      <button className="back-btn" onClick={() => navigate('/admin-tools')}>
+      <button className="back-btn" onClick={() => navigate('/')}>
         🏠
       </button>
 

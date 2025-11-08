@@ -9,6 +9,7 @@ function GuarantorDebtCard({ debt, onPaymentClick }: GuarantorDebtCardProps) {
   // טען נתונים נוספים
   const originalLoan = db.getLoans().find(l => l.id === debt.originalLoanId)
   const originalBorrower = db.getBorrowers().find(b => b.id === debt.originalBorrowerId)
+  const guarantor = db.getGuarantors().find(g => g.id === debt.guarantorId)
   const balance = db.getGuarantorDebtBalance(debt.id)
 
   return (
@@ -25,7 +26,7 @@ function GuarantorDebtCard({ debt, onPaymentClick }: GuarantorDebtCardProps) {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
             <span style={{ fontSize: '24px' }}>🤝</span>
             <h3 style={{ margin: 0, color: '#ea580c', fontSize: '18px' }}>
-              חוב ערב
+              חוב ערב - {guarantor ? `${guarantor.firstName} ${guarantor.lastName}` : 'לא ידוע'}
             </h3>
             <span style={{
               background: debt.status === 'paid' ? '#22c55e' : debt.status === 'overdue' ? '#dc2626' : '#f59e0b',

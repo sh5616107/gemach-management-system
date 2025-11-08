@@ -28,6 +28,9 @@ function LoanTransferModal({
   const [installmentDates, setInstallmentDates] = useState<string[]>([])
   const [transferNotes, setTransferNotes] = useState('')
 
+  // חישוב יתרת ההלוואה
+  const balance = isOpen ? db.getLoanBalance(loan.id) : 0
+
   // פונקציה להצגת הודעות
   const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
     const colors = {
@@ -55,15 +58,24 @@ function LoanTransferModal({
   // איפוס כשנפתח המודל
   useEffect(() => {
     if (isOpen) {
-      setCurrentStep('select-guarantors')
-      setSelectedGuarantorIds([])
-      setGuarantorSplits(new Map())
+      // אם יש רק ערב אחד, דלג ישר לשלב תנאי התשלום
+      if (guarantors.length === 1) {
+        setCurrentStep('payment-terms')
+        setSelectedGuarantorIds([guarantors[0].id])
+        const splits = new Map<number, number>()
+        splits.set(guarantors[0].id, balance)
+        setGuarantorSplits(splits)
+      } else {
+        setCurrentStep('select-guarantors')
+        setSelectedGuarantorIds([])
+        setGuarantorSplits(new Map())
+      }
       setPaymentType('single')
       setInstallmentsCount(3)
       setInstallmentDates([])
       setTransferNotes('')
     }
-  }, [isOpen])
+  }, [isOpen, guarantors, balance])
 
   // חישוב חלוקה אוטומטית
   const calculateEqualSplit = () => {
@@ -135,8 +147,6 @@ function LoanTransferModal({
   }
 
   if (!isOpen) return null
-
-  const balance = db.getLoanBalance(loan.id)
 
   return (
     <div style={{
@@ -593,11 +603,35 @@ function LoanTransferModal({
                             type="date"
                             value={installmentDates[index] || ''}
                             onChange={(e) => {
+                              const newDate = e.target.value
                               const newDates = [...installmentDates]
-                              newDates[index] = e.target.value
+                              
+                              // ולידציה: בדוק שהתאריך לא זהה לתאריך אחר
+                              if (newDate && newDates.some((d, i) => i !== index && d === newDate)) {
+                                showNotification('⚠️ לא ניתן להגדיר שני תשלומים באותו תאריך', 'error')
+                                return
+                              }
+                              
+                              // ולידציה: בדוק שהתאריך מאוחר מהתאריך הקודם
+                              if (index > 0 && newDate && newDates[index - 1]) {
+                                if (new Date(newDate) <= new Date(newDates[index - 1])) {
+                                  showNotification('⚠️ כל תאריך חייב להיות מאוחר מהתאריך הקודם', 'error')
+                                  return
+                                }
+                              }
+                              
+                              // ולידציה: בדוק שהתאריך מוקדם מהתאריך הבא
+                              if (index < newDates.length - 1 && newDate && newDates[index + 1]) {
+                                if (new Date(newDate) >= new Date(newDates[index + 1])) {
+                                  showNotification('⚠️ כל תאריך חייב להיות מוקדם מהתאריך הבא', 'error')
+                                  return
+                                }
+                              }
+                              
+                              newDates[index] = newDate
                               setInstallmentDates(newDates)
                             }}
-                            min={new Date().toISOString().split('T')[0]}
+                            min={index === 0 ? new Date().toISOString().split('T')[0] : installmentDates[index - 1] || new Date().toISOString().split('T')[0]}
                             style={{
                               flex: 1,
                               padding: '10px',

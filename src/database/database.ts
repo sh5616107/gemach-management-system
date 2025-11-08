@@ -83,6 +83,9 @@ export interface DatabasePayment {
   paymentDetailsComplete?: boolean // האם פרטי התשלום הושלמו (למעקב אמצעי תשלום)
   notes: string
   guarantorDebtId?: number  // קישור לחוב ערב (אם רלוונטי)
+  paidBy?: 'borrower' | 'guarantor'  // מי שילם - לווה או ערב
+  guarantorId?: number  // ID של הערב ששילם (אם רלוונטי)
+  guarantorName?: string  // שם הערב ששילם (לשמירה מהירה)
 }
 
 export interface DatabaseDeposit {
@@ -822,7 +825,41 @@ class GemachDatabase {
   }
 
   deletePayment(id: number): void {
+    const payment = this.dataFile.payments.find(p => p.id === id)
+    
     this.dataFile.payments = this.dataFile.payments.filter(payment => payment.id !== id)
+    
+    // אם התשלום היה לחוב ערב, עדכן את הסטטוס
+    if (payment && payment.guarantorDebtId) {
+      const debt = this.dataFile.guarantorDebts.find(d => d.id === payment.guarantorDebtId)
+      if (debt) {
+        const balance = this.getGuarantorDebtBalance(debt.id)
+        if (balance > 0) {
+          // יש עדיין יתרה - החזר לסטטוס פעיל או באיחור
+          const today = new Date()
+          today.setHours(0, 0, 0, 0)
+          
+          let isOverdue = false
+          if (debt.paymentType === 'single' && debt.installmentDates && debt.installmentDates[0]) {
+            const dueDate = new Date(debt.installmentDates[0])
+            dueDate.setHours(0, 0, 0, 0)
+            isOverdue = dueDate < today
+          } else if (debt.paymentType === 'installments' && debt.installmentDates) {
+            for (const dateStr of debt.installmentDates) {
+              const dueDate = new Date(dateStr)
+              dueDate.setHours(0, 0, 0, 0)
+              if (dueDate < today) {
+                isOverdue = true
+                break
+              }
+            }
+          }
+          
+          debt.status = isOverdue ? 'overdue' : 'active'
+        }
+      }
+    }
+    
     this.saveData()
   }
 
@@ -1468,6 +1505,9 @@ class GemachDatabase {
 
     return this.getActiveLoans()
       .filter(loan => {
+        // הלוואות שהועברו לערבים לא צריכות להופיע כהלוואות באיחור
+        if (loan.transferredToGuarantors) return false
+        
         const returnDate = new Date(loan.returnDate)
         returnDate.setHours(0, 0, 0, 0)
 
@@ -3051,6 +3091,205 @@ class GemachDatabase {
         error: `שגיאה בהעברת הלוואה: ${error}`
       }
     }
+  }
+
+  /**
+   * בדיקת חובות ערבים שפג תוקפם
+   * @returns רשימת ערבים שצריכים להיכנס לרשימה שחורה
+   */
+  checkOverdueGuarantorDebts(): Array<{ debt: DatabaseGuarantorDebt; guarantor: DatabaseGuarantor }> {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    const overdueDebts: Array<{ debt: DatabaseGuarantorDebt; guarantor: DatabaseGuarantor }> = []
+
+    for (const debt of this.dataFile.guarantorDebts) {
+      // דלג על חובות ששולמו או כבר מסומנים כבאיחור
+      if (debt.status === 'paid') continue
+
+      // בדוק אם הערב כבר ברשימה שחורה
+      if (this.isBlacklisted('guarantor', debt.guarantorId)) continue
+
+      // בדוק את תאריכי הפירעון
+      let isOverdue = false
+
+      if (debt.paymentType === 'single' && debt.installmentDates && debt.installmentDates[0]) {
+        // תשלום אחד
+        const dueDate = new Date(debt.installmentDates[0])
+        dueDate.setHours(0, 0, 0, 0)
+        isOverdue = dueDate < today
+      } else if (debt.paymentType === 'installments' && debt.installmentDates) {
+        // תשלומים - בדוק אם עבר תאריך התשלום הראשון שלא שולם
+        const balance = this.getGuarantorDebtBalance(debt.id)
+        if (balance > 0) {
+          // יש עדיין יתרה - בדוק אם עבר תאריך כלשהו
+          for (const dateStr of debt.installmentDates) {
+            const dueDate = new Date(dateStr)
+            dueDate.setHours(0, 0, 0, 0)
+            if (dueDate < today) {
+              isOverdue = true
+              break
+            }
+          }
+        }
+      }
+
+      if (isOverdue) {
+        // עדכן סטטוס החוב
+        if (debt.status !== 'overdue') {
+          debt.status = 'overdue'
+        }
+
+        const guarantor = this.dataFile.guarantors.find(g => g.id === debt.guarantorId)
+        if (guarantor) {
+          overdueDebts.push({ debt, guarantor })
+        }
+      }
+    }
+
+    if (overdueDebts.length > 0) {
+      this.saveData()
+    }
+
+    return overdueDebts
+  }
+
+  /**
+   * טיפול בפרעון לווה אחרי שההלוואה הועברה לערבים
+   * @param loanId - מזהה ההלוואה
+   * @param amount - סכום הפרעון
+   * @returns תוצאה עם הצלחה והודעה
+   */
+  handleBorrowerPaymentAfterTransfer(loanId: number, amount: number): { success: boolean; message: string } {
+    const loan = this.dataFile.loans.find(l => l.id === loanId)
+    if (!loan || !loan.transferredToGuarantors) {
+      return { success: false, message: 'הלוואה לא נמצאה או לא הועברה לערבים' }
+    }
+
+    // מצא את חובות הערבים להלוואה זו
+    const guarantorDebts = this.dataFile.guarantorDebts.filter(d => d.originalLoanId === loanId)
+    if (guarantorDebts.length === 0) {
+      return { success: false, message: 'לא נמצאו חובות ערבים להלוואה זו' }
+    }
+
+    // חשב את סך כל חובות הערבים
+    const totalGuarantorDebt = guarantorDebts.reduce((sum, debt) => sum + debt.amount, 0)
+    const totalGuarantorBalance = guarantorDebts.reduce((sum, debt) => sum + this.getGuarantorDebtBalance(debt.id), 0)
+
+    // אם הלווה משלם את כל החוב
+    if (amount >= totalGuarantorBalance) {
+      // מחק את כל חובות הערבים
+      for (const debt of guarantorDebts) {
+        const balance = this.getGuarantorDebtBalance(debt.id)
+        if (balance > 0) {
+          // הוסף תשלום לחוב הערב
+          this.addPayment({
+            loanId: loanId,
+            amount: balance,
+            date: new Date().toISOString().split('T')[0],
+            type: 'payment',
+            notes: `פרעון מלא על ידי הלווה המקורי - חוב ערב #${debt.id}`,
+            guarantorDebtId: debt.id,
+            paidBy: 'borrower'
+          })
+          
+          // עדכן סטטוס החוב
+          debt.status = 'paid'
+        }
+      }
+      
+      this.saveData()
+      return { success: true, message: 'כל חובות הערבים נמחקו - הלווה פרע את כל החוב' }
+    }
+
+    // פרעון חלקי - בדוק אם החלוקה הייתה שווה
+    const isEqualSplit = guarantorDebts.every(debt => debt.amount === guarantorDebts[0].amount)
+
+    if (isEqualSplit) {
+      // חלוקה שווה - הפחת באופן יחסי מכל הערבים
+      const reductionPerGuarantor = amount / guarantorDebts.length
+      
+      for (const debt of guarantorDebts) {
+        const balance = this.getGuarantorDebtBalance(debt.id)
+        const paymentAmount = Math.min(reductionPerGuarantor, balance)
+        
+        if (paymentAmount > 0) {
+          this.addPayment({
+            loanId: loanId,
+            amount: paymentAmount,
+            date: new Date().toISOString().split('T')[0],
+            type: 'payment',
+            notes: `פרעון חלקי על ידי הלווה המקורי - חוב ערב #${debt.id}`,
+            guarantorDebtId: debt.id,
+            paidBy: 'borrower'
+          })
+          
+          // עדכן סטטוס אם נפרע במלואה
+          const newBalance = this.getGuarantorDebtBalance(debt.id)
+          if (newBalance <= 0) {
+            debt.status = 'paid'
+          }
+        }
+      }
+      
+      this.saveData()
+      return { success: true, message: `הסכום חולק שווה בין ${guarantorDebts.length} ערבים (₪${reductionPerGuarantor.toLocaleString()} לכל אחד)` }
+    } else {
+      // חלוקה לא שווה - צריך החלטה ידנית
+      // כרגע נחלק באופן יחסי לפי החלק של כל ערב
+      for (const debt of guarantorDebts) {
+        const debtRatio = debt.amount / totalGuarantorDebt
+        const paymentForThisDebt = amount * debtRatio
+        const balance = this.getGuarantorDebtBalance(debt.id)
+        const actualPayment = Math.min(paymentForThisDebt, balance)
+        
+        if (actualPayment > 0) {
+          this.addPayment({
+            loanId: loanId,
+            amount: actualPayment,
+            date: new Date().toISOString().split('T')[0],
+            type: 'payment',
+            notes: `פרעון חלקי על ידי הלווה המקורי (יחסי) - חוב ערב #${debt.id}`,
+            guarantorDebtId: debt.id,
+            paidBy: 'borrower'
+          })
+          
+          // עדכן סטטוס אם נפרע במלואה
+          const newBalance = this.getGuarantorDebtBalance(debt.id)
+          if (newBalance <= 0) {
+            debt.status = 'paid'
+          }
+        }
+      }
+      
+      this.saveData()
+      return { success: true, message: 'הסכום חולק באופן יחסי בין הערבים לפי חלקם בחוב' }
+    }
+  }
+
+  /**
+   * הוספת ערבים שפג תוקפם לרשימה שחורה
+   * @param overdueDebts - רשימת חובות שפג תוקפם
+   * @returns מספר הערבים שנוספו
+   */
+  addOverdueGuarantorsToBlacklist(
+    overdueDebts: Array<{ debt: DatabaseGuarantorDebt; guarantor: DatabaseGuarantor }>
+  ): number {
+    let addedCount = 0
+
+    for (const { debt, guarantor } of overdueDebts) {
+      // בדוק שהערב לא כבר ברשימה שחורה
+      if (this.isBlacklisted('guarantor', debt.guarantorId)) continue
+
+      const reason = `לא פרע חוב כערב - חוב #${debt.id} (הלוואה מקורית #${debt.originalLoanId})`
+      
+      if (this.addToBlacklist('guarantor', debt.guarantorId, reason)) {
+        addedCount++
+        console.log(`🚫 ערב ${guarantor.firstName} ${guarantor.lastName} נוסף לרשימה שחורה`)
+      }
+    }
+
+    return addedCount
   }
 
 

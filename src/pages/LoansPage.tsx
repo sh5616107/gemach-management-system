@@ -272,6 +272,24 @@ function LoansPage() {
     const newLoans = db.getLoans()
     const newGuarantorDebts = db.getGuarantorDebts()
 
+    // בדיקה תקופתית של חובות ערבים שפג תוקפם
+    const overdueDebts = db.checkOverdueGuarantorDebts()
+    if (overdueDebts.length > 0) {
+      const guarantorNames = overdueDebts.map(({ guarantor }) => 
+        `${guarantor.firstName} ${guarantor.lastName}`
+      ).join(', ')
+      
+      // הצגת התראה למשתמש
+      const shouldAddToBlacklist = window.confirm(
+        `⚠️ נמצאו ${overdueDebts.length} ערבים שלא פרעו בזמן:\n${guarantorNames}\n\nהאם להוסיף אותם לרשימה השחורה?`
+      )
+      
+      if (shouldAddToBlacklist) {
+        const addedCount = db.addOverdueGuarantorsToBlacklist(overdueDebts)
+        showNotification(`🚫 ${addedCount} ערבים נוספו לרשימה השחורה`)
+      }
+    }
+
     setBorrowers(newBorrowers)
     setLoans(newLoans)
     setGuarantorDebts(newGuarantorDebts)
@@ -323,6 +341,9 @@ function LoansPage() {
         return
       }
 
+      // מצא את הערב
+      const guarantor = db.getGuarantors().find(g => g.id === debt.guarantorId)
+      
       // יצירת תשלום חדש
       const payment: Omit<DatabasePayment, 'id'> = {
         loanId: debt.originalLoanId, // קישור להלוואה המקורית
@@ -330,7 +351,10 @@ function LoansPage() {
         date: new Date().toISOString().split('T')[0],
         type: 'payment',
         notes: `פרעון חוב ערב #${debtId}`,
-        guarantorDebtId: debtId
+        guarantorDebtId: debtId,
+        paidBy: 'guarantor',
+        guarantorId: debt.guarantorId,
+        guarantorName: guarantor ? `${guarantor.firstName} ${guarantor.lastName}` : 'לא ידוע'
       }
 
       db.addPayment(payment)
@@ -1067,15 +1091,32 @@ function LoansPage() {
         }
 
         if (db.canAddPayment(selectedLoanId!, amount)) {
-          db.addPayment({
-            loanId: selectedLoanId!,
-            amount,
-            date: getTodayString(),
-            type: 'payment',
-            paymentMethod: paymentMethod as 'cash' | 'transfer' | 'check' | 'credit' | 'other' | undefined,
-            paymentDetails: paymentDetails || undefined,
-            notes: ''
-          })
+          // בדוק אם ההלוואה הועברה לערבים
+          const loan = loans.find(l => l.id === selectedLoanId)
+          if (loan && loan.transferredToGuarantors) {
+            // הלוואה שהועברה לערבים - צריך לטפל בחובות הערבים
+            const result = db.handleBorrowerPaymentAfterTransfer(selectedLoanId!, amount)
+            
+            if (result.success) {
+              showNotification(`✅ פרעון נרשם! ${result.message}`, 'success')
+            } else {
+              showNotification(`❌ ${result.message}`, 'error')
+              document.body.removeChild(modalContent)
+              return
+            }
+          } else {
+            // הלוואה רגילה
+            db.addPayment({
+              loanId: selectedLoanId!,
+              amount,
+              date: getTodayString(),
+              type: 'payment',
+              paymentMethod: paymentMethod as 'cash' | 'transfer' | 'check' | 'credit' | 'other' | undefined,
+              paymentDetails: paymentDetails || undefined,
+              notes: '',
+              paidBy: 'borrower'
+            })
+          }
 
           // עדכן את התשלומים
           const loanPayments = db.getPaymentsByLoanId(selectedLoanId!)
@@ -1910,10 +1951,19 @@ function LoansPage() {
               </div>
 
               <div style="text-align: right; margin: 15px 0;">
-                <h3 style="margin-bottom: 10px; color: #2c3e50;">פרטי הלווה:</h3>
+                <h3 style="margin-bottom: 10px; color: #2c3e50;">${payment.paidBy === 'guarantor' ? 'פרטי הערב המשלם:' : 'פרטי הלווה:'}</h3>
+                <p style="margin: 5px 0;">שם: <strong>${payment.paidBy === 'guarantor' ? payment.guarantorName || 'ערב' : borrowerName}</strong></p>
+                ${borrowerIdNumber && payment.paidBy !== 'guarantor' ? `<p style="margin: 5px 0;">ת.ז: <strong>${borrowerIdNumber}</strong></p>` : ''}
+                ${payment.paidBy === 'guarantor' ? `<p style="margin: 5px 0; color: #fb923c; font-weight: bold;">🤝 תשלום על ידי ערב</p>` : ''}
+              </div>
+              
+              ${payment.paidBy === 'guarantor' ? `
+              <div style="text-align: right; margin: 15px 0;">
+                <h3 style="margin-bottom: 10px; color: #2c3e50;">פרטי הלווה המקורי:</h3>
                 <p style="margin: 5px 0;">שם: <strong>${borrowerName}</strong></p>
                 ${borrowerIdNumber ? `<p style="margin: 5px 0;">ת.ז: <strong>${borrowerIdNumber}</strong></p>` : ''}
               </div>
+              ` : ''}
 
               <div style="text-align: right; margin: 15px 0;">
                 <h3 style="margin-bottom: 10px; color: #2c3e50;">פרטי ההלוואה:</h3>
@@ -2112,10 +2162,19 @@ function LoansPage() {
                 </div>
 
                 <div style="text-align: right; margin: 15px 0;">
-                  <h3 style="margin-bottom: 10px; color: #2c3e50;">פרטי הלווה:</h3>
+                  <h3 style="margin-bottom: 10px; color: #2c3e50;">${payment.paidBy === 'guarantor' ? 'פרטי הערב המשלם:' : 'פרטי הלווה:'}</h3>
+                  <p style="margin: 5px 0;">שם: <strong>${payment.paidBy === 'guarantor' ? payment.guarantorName || 'ערב' : borrowerName}</strong></p>
+                  ${borrowerIdNumber && payment.paidBy !== 'guarantor' ? `<p style="margin: 5px 0;">ת.ז: <strong>${borrowerIdNumber}</strong></p>` : ''}
+                  ${payment.paidBy === 'guarantor' ? `<p style="margin: 5px 0; color: #fb923c; font-weight: bold;">🤝 תשלום על ידי ערב</p>` : ''}
+                </div>
+                
+                ${payment.paidBy === 'guarantor' ? `
+                <div style="text-align: right; margin: 15px 0;">
+                  <h3 style="margin-bottom: 10px; color: #2c3e50;">פרטי הלווה המקורי:</h3>
                   <p style="margin: 5px 0;">שם: <strong>${borrowerName}</strong></p>
                   ${borrowerIdNumber ? `<p style="margin: 5px 0;">ת.ז: <strong>${borrowerIdNumber}</strong></p>` : ''}
                 </div>
+                ` : ''}
 
                 <div style="text-align: right; margin: 15px 0;">
                   <h3 style="margin-bottom: 10px; color: #2c3e50;">פרטי ההלוואה:</h3>
@@ -4651,6 +4710,7 @@ function LoansPage() {
                   <th>תאריך</th>
                   <th>סוג</th>
                   <th>סכום</th>
+                  <th>שולם על ידי</th>
                   <th>אמצעי תשלום</th>
                   <th>הערות</th>
                   <th>פעולות</th>
@@ -4697,6 +4757,29 @@ function LoansPage() {
                         fontWeight: 'bold'
                       }}>
                         ₪{payment.amount.toLocaleString()}
+                      </td>
+                      <td>
+                        {payment.paidBy === 'guarantor' ? (
+                          <span style={{
+                            background: '#fb923c',
+                            color: 'white',
+                            padding: '3px 8px',
+                            borderRadius: '10px',
+                            fontSize: '12px'
+                          }}>
+                            🤝 {payment.guarantorName || 'ערב'}
+                          </span>
+                        ) : (
+                          <span style={{
+                            background: '#3b82f6',
+                            color: 'white',
+                            padding: '3px 8px',
+                            borderRadius: '10px',
+                            fontSize: '12px'
+                          }}>
+                            👤 לווה
+                          </span>
+                        )}
                       </td>
                       <td>
                         {paymentMethodIcon && paymentMethodName ? (

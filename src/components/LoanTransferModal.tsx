@@ -809,8 +809,20 @@ function LoanTransferModal({
                     <div style={{ marginBottom: '10px' }}>
                       <strong>סוג:</strong> {installmentsCount} תשלומים
                     </div>
-                    <div style={{ marginBottom: '5px' }}>
-                      <strong>סכום כל תשלום:</strong> ₪{(balance / installmentsCount).toFixed(2)}
+                    <div style={{ marginBottom: '10px' }}>
+                      <strong>תשלומים לכל ערב:</strong>
+                      <div style={{ marginTop: '5px', paddingRight: '15px' }}>
+                        {selectedGuarantorIds.map(id => {
+                          const guarantor = guarantors.find(g => g.id === id)
+                          const amount = guarantorSplits.get(id) || 0
+                          const installmentAmount = (amount / installmentsCount).toFixed(2)
+                          return (
+                            <div key={id} style={{ marginBottom: '3px' }}>
+                              • {guarantor?.firstName} {guarantor?.lastName}: {installmentsCount} תשלומים × ₪{installmentAmount} = ₪{amount.toLocaleString()}
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
                     <div>
                       <strong>תאריכי פירעון:</strong>

@@ -160,19 +160,33 @@ function LoanTransferModal({
   // ביצוע ההעברה
   const executeTransfer = () => {
     try {
-      // הכנת נתוני תשלומים
-      const installmentsData = paymentType === 'installments' ? {
-        count: installmentsCount,
-        amount: balance / installmentsCount,
-        dates: installmentDates
-      } : undefined
+      // הכנת נתוני תשלומים לכל ערב
+      const guarantorPaymentData = new Map<number, {
+        paymentType: 'single' | 'installments'
+        installmentsCount?: number
+        installmentAmount?: number
+        installmentDates: string[]
+      }>()
+
+      for (const guarantorId of selectedGuarantorIds) {
+        const terms = guarantorPaymentTerms.get(guarantorId)
+        const amount = guarantorSplits.get(guarantorId) || 0
+        
+        if (terms) {
+          guarantorPaymentData.set(guarantorId, {
+            paymentType: terms.paymentType,
+            installmentsCount: terms.paymentType === 'installments' ? terms.installmentsCount : undefined,
+            installmentAmount: terms.paymentType === 'installments' ? amount / terms.installmentsCount : undefined,
+            installmentDates: terms.installmentDates
+          })
+        }
+      }
 
       // קריאה למתודת ההעברה
-      const result = db.transferLoanToGuarantors(
+      const result = db.transferLoanToGuarantorsWithIndividualTerms(
         loan.id,
         guarantorSplits,
-        paymentType,
-        installmentsData,
+        guarantorPaymentData,
         'מנהל', // TODO: להוסיף ניהול משתמשים בעתיד
         transferNotes
       )
@@ -517,179 +531,240 @@ function LoanTransferModal({
           )}
           {currentStep === 'payment-terms' && (
             <div>
-              <h3 style={{ color: '#2c3e50', marginBottom: '20px' }}>שלב 3: תנאי תשלום</h3>
+              <h3 style={{ color: '#2c3e50', marginBottom: '20px' }}>שלב 3: תנאי תשלום לכל ערב</h3>
               
-              <div style={{ marginBottom: '25px' }}>
-                <label style={{ display: 'block', marginBottom: '15px', fontWeight: 'bold', color: '#2c3e50' }}>
-                  בחר סוג תשלום:
-                </label>
-                <div style={{ display: 'flex', gap: '15px' }}>
-                  <button
-                    onClick={() => setPaymentType('single')}
-                    style={{
-                      flex: 1,
-                      padding: '20px',
-                      border: paymentType === 'single' ? '3px solid #3498db' : '2px solid #ddd',
-                      borderRadius: '10px',
-                      background: paymentType === 'single' ? '#e3f2fd' : 'white',
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontWeight: paymentType === 'single' ? 'bold' : 'normal'
-                    }}
-                  >
-                    <div style={{ fontSize: '32px', marginBottom: '10px' }}>💰</div>
-                    <div>תשלום אחד</div>
-                    <div style={{ fontSize: '13px', color: '#666', marginTop: '5px' }}>
-                      פירעון מלא בתאריך אחד
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => setPaymentType('installments')}
-                    style={{
-                      flex: 1,
-                      padding: '20px',
-                      border: paymentType === 'installments' ? '3px solid #3498db' : '2px solid #ddd',
-                      borderRadius: '10px',
-                      background: paymentType === 'installments' ? '#e3f2fd' : 'white',
-                      cursor: 'pointer',
-                      fontSize: '16px',
-                      fontWeight: paymentType === 'installments' ? 'bold' : 'normal'
-                    }}
-                  >
-                    <div style={{ fontSize: '32px', marginBottom: '10px' }}>📅</div>
-                    <div>תשלומים</div>
-                    <div style={{ fontSize: '13px', color: '#666', marginTop: '5px' }}>
-                      פריסה למספר תשלומים
-                    </div>
-                  </button>
-                </div>
+              <div style={{ marginBottom: '15px', padding: '12px', background: '#e0f2fe', borderRadius: '8px', border: '2px solid #0ea5e9' }}>
+                <p style={{ margin: 0, color: '#0c4a6e', fontSize: '14px' }}>
+                  💡 <strong>הגדר תנאי תשלום נפרדים לכל ערב</strong> - כל ערב יכול לבחור בין תשלום אחד או תשלומים
+                </p>
               </div>
 
-              {paymentType === 'single' && (
-                <div style={{
-                  background: '#f0f9ff',
-                  padding: '20px',
-                  borderRadius: '10px',
-                  border: '2px solid #bfdbfe'
-                }}>
-                  <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: '#1e40af' }}>
-                    תאריך פירעון:
-                  </label>
-                  <input
-                    type="date"
-                    value={installmentDates[0] || ''}
-                    onChange={(e) => setInstallmentDates([e.target.value])}
-                    min={new Date().toISOString().split('T')[0]}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      border: '2px solid #ddd',
-                      borderRadius: '8px',
-                      fontSize: '15px'
-                    }}
-                  />
-                </div>
-              )}
+              {selectedGuarantorIds.map((guarantorId) => {
+                const guarantor = guarantors.find(g => g.id === guarantorId)
+                const amount = guarantorSplits.get(guarantorId) || 0
+                const terms = guarantorPaymentTerms.get(guarantorId) || {
+                  paymentType: 'single',
+                  installmentsCount: 3,
+                  installmentDates: []
+                }
 
-              {paymentType === 'installments' && (
-                <div style={{
-                  background: '#f0f9ff',
-                  padding: '20px',
-                  borderRadius: '10px',
-                  border: '2px solid #bfdbfe'
-                }}>
-                  <div style={{ marginBottom: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: '#1e40af' }}>
-                      מספר תשלומים:
-                    </label>
-                    <input
-                      type="number"
-                      value={installmentsCount}
-                      onChange={(e) => {
-                        const count = Math.max(2, Math.min(12, Number(e.target.value)))
-                        setInstallmentsCount(count)
-                        // אתחל תאריכים
-                        const dates: string[] = []
-                        const today = new Date()
-                        for (let i = 0; i < count; i++) {
-                          const date = new Date(today)
-                          date.setMonth(date.getMonth() + i + 1)
-                          dates.push(date.toISOString().split('T')[0])
-                        }
-                        setInstallmentDates(dates)
-                      }}
-                      min="2"
-                      max="12"
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        border: '2px solid #ddd',
-                        borderRadius: '8px',
-                        fontSize: '15px'
-                      }}
-                    />
-                    <div style={{ fontSize: '13px', color: '#666', marginTop: '5px' }}>
-                      סכום כל תשלום: ₪{(balance / installmentsCount).toFixed(2)}
+                return (
+                  <div key={guarantorId} style={{
+                    background: 'linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%)',
+                    border: '2px solid #fb923c',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    marginBottom: '20px'
+                  }}>
+                    <h4 style={{ margin: '0 0 15px 0', color: '#ea580c', fontSize: '16px' }}>
+                      🤝 {guarantor?.firstName} {guarantor?.lastName} - ₪{amount.toLocaleString()}
+                    </h4>
+
+                    {/* בחירת סוג תשלום */}
+                    <div style={{ marginBottom: '15px' }}>
+                      <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: '#9a3412', fontSize: '14px' }}>
+                        סוג תשלום:
+                      </label>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button
+                          onClick={() => {
+                            const newTerms = new Map(guarantorPaymentTerms)
+                            newTerms.set(guarantorId, {
+                              ...terms,
+                              paymentType: 'single',
+                              installmentDates: []
+                            })
+                            setGuarantorPaymentTerms(newTerms)
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: '12px',
+                            border: terms.paymentType === 'single' ? '2px solid #ea580c' : '1px solid #ddd',
+                            borderRadius: '8px',
+                            background: terms.paymentType === 'single' ? '#fff7ed' : 'white',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: terms.paymentType === 'single' ? 'bold' : 'normal'
+                          }}
+                        >
+                          💰 תשלום אחד
+                        </button>
+                        <button
+                          onClick={() => {
+                            const newTerms = new Map(guarantorPaymentTerms)
+                            // אתחל תאריכים
+                            const dates: string[] = []
+                            const today = new Date()
+                            for (let i = 0; i < 3; i++) {
+                              const date = new Date(today)
+                              date.setMonth(date.getMonth() + i + 1)
+                              dates.push(date.toISOString().split('T')[0])
+                            }
+                            newTerms.set(guarantorId, {
+                              paymentType: 'installments',
+                              installmentsCount: 3,
+                              installmentDates: dates
+                            })
+                            setGuarantorPaymentTerms(newTerms)
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: '12px',
+                            border: terms.paymentType === 'installments' ? '2px solid #ea580c' : '1px solid #ddd',
+                            borderRadius: '8px',
+                            background: terms.paymentType === 'installments' ? '#fff7ed' : 'white',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontWeight: terms.paymentType === 'installments' ? 'bold' : 'normal'
+                          }}
+                        >
+                          📅 תשלומים
+                        </button>
+                      </div>
                     </div>
-                  </div>
 
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: '#1e40af' }}>
-                      תאריכי פירעון:
-                    </label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {Array.from({ length: installmentsCount }).map((_, index) => (
-                        <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ minWidth: '100px', color: '#666' }}>
-                            תשלום {index + 1}:
-                          </span>
+                    {/* תשלום אחד */}
+                    {terms.paymentType === 'single' && (
+                      <div style={{
+                        background: 'rgba(255, 255, 255, 0.7)',
+                        padding: '15px',
+                        borderRadius: '8px'
+                      }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#9a3412', fontSize: '14px' }}>
+                          תאריך פירעון:
+                        </label>
+                        <input
+                          type="date"
+                          value={terms.installmentDates[0] || ''}
+                          onChange={(e) => {
+                            const newTerms = new Map(guarantorPaymentTerms)
+                            newTerms.set(guarantorId, {
+                              ...terms,
+                              installmentDates: [e.target.value]
+                            })
+                            setGuarantorPaymentTerms(newTerms)
+                          }}
+                          min={new Date().toISOString().split('T')[0]}
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '2px solid #ddd',
+                            borderRadius: '6px',
+                            fontSize: '14px'
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {/* תשלומים */}
+                    {terms.paymentType === 'installments' && (
+                      <div style={{
+                        background: 'rgba(255, 255, 255, 0.7)',
+                        padding: '15px',
+                        borderRadius: '8px'
+                      }}>
+                        <div style={{ marginBottom: '15px' }}>
+                          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#9a3412', fontSize: '14px' }}>
+                            מספר תשלומים:
+                          </label>
                           <input
-                            type="date"
-                            value={installmentDates[index] || ''}
+                            type="number"
+                            value={terms.installmentsCount}
                             onChange={(e) => {
-                              const newDate = e.target.value
-                              const newDates = [...installmentDates]
-                              
-                              // ולידציה: בדוק שהתאריך לא זהה לתאריך אחר
-                              if (newDate && newDates.some((d, i) => i !== index && d === newDate)) {
-                                showNotification('⚠️ לא ניתן להגדיר שני תשלומים באותו תאריך', 'error')
-                                return
+                              const count = Math.max(2, Math.min(12, Number(e.target.value)))
+                              const dates: string[] = []
+                              const today = new Date()
+                              for (let i = 0; i < count; i++) {
+                                const date = new Date(today)
+                                date.setMonth(date.getMonth() + i + 1)
+                                dates.push(date.toISOString().split('T')[0])
                               }
-                              
-                              // ולידציה: בדוק שהתאריך מאוחר מהתאריך הקודם
-                              if (index > 0 && newDate && newDates[index - 1]) {
-                                if (new Date(newDate) <= new Date(newDates[index - 1])) {
-                                  showNotification('⚠️ כל תאריך חייב להיות מאוחר מהתאריך הקודם', 'error')
-                                  return
-                                }
-                              }
-                              
-                              // ולידציה: בדוק שהתאריך מוקדם מהתאריך הבא
-                              if (index < newDates.length - 1 && newDate && newDates[index + 1]) {
-                                if (new Date(newDate) >= new Date(newDates[index + 1])) {
-                                  showNotification('⚠️ כל תאריך חייב להיות מוקדם מהתאריך הבא', 'error')
-                                  return
-                                }
-                              }
-                              
-                              newDates[index] = newDate
-                              setInstallmentDates(newDates)
+                              const newTerms = new Map(guarantorPaymentTerms)
+                              newTerms.set(guarantorId, {
+                                paymentType: 'installments',
+                                installmentsCount: count,
+                                installmentDates: dates
+                              })
+                              setGuarantorPaymentTerms(newTerms)
                             }}
-                            min={index === 0 ? new Date().toISOString().split('T')[0] : installmentDates[index - 1] || new Date().toISOString().split('T')[0]}
+                            min="2"
+                            max="12"
                             style={{
-                              flex: 1,
+                              width: '100%',
                               padding: '10px',
                               border: '2px solid #ddd',
                               borderRadius: '6px',
                               fontSize: '14px'
                             }}
                           />
+                          <div style={{ fontSize: '12px', color: '#9a3412', marginTop: '5px' }}>
+                            סכום כל תשלום: ₪{(amount / terms.installmentsCount).toFixed(2)}
+                          </div>
                         </div>
-                      ))}
-                    </div>
+
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: '#9a3412', fontSize: '14px' }}>
+                            תאריכי פירעון:
+                          </label>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {Array.from({ length: terms.installmentsCount }).map((_, index) => (
+                              <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ minWidth: '80px', color: '#9a3412', fontSize: '13px' }}>
+                                  תשלום {index + 1}:
+                                </span>
+                                <input
+                                  type="date"
+                                  value={terms.installmentDates[index] || ''}
+                                  onChange={(e) => {
+                                    const newDate = e.target.value
+                                    const newDates = [...terms.installmentDates]
+                                    
+                                    // ולידציה
+                                    if (newDate && newDates.some((d, i) => i !== index && d === newDate)) {
+                                      showNotification('⚠️ לא ניתן להגדיר שני תשלומים באותו תאריך', 'error')
+                                      return
+                                    }
+                                    
+                                    if (index > 0 && newDate && newDates[index - 1]) {
+                                      if (new Date(newDate) <= new Date(newDates[index - 1])) {
+                                        showNotification('⚠️ כל תאריך חייב להיות מאוחר מהקודם', 'error')
+                                        return
+                                      }
+                                    }
+                                    
+                                    if (index < newDates.length - 1 && newDate && newDates[index + 1]) {
+                                      if (new Date(newDate) >= new Date(newDates[index + 1])) {
+                                        showNotification('⚠️ כל תאריך חייב להיות מוקדם מהבא', 'error')
+                                        return
+                                      }
+                                    }
+                                    
+                                    newDates[index] = newDate
+                                    const newTerms = new Map(guarantorPaymentTerms)
+                                    newTerms.set(guarantorId, {
+                                      ...terms,
+                                      installmentDates: newDates
+                                    })
+                                    setGuarantorPaymentTerms(newTerms)
+                                  }}
+                                  min={index === 0 ? new Date().toISOString().split('T')[0] : terms.installmentDates[index - 1] || new Date().toISOString().split('T')[0]}
+                                  style={{
+                                    flex: 1,
+                                    padding: '8px',
+                                    border: '2px solid #ddd',
+                                    borderRadius: '6px',
+                                    fontSize: '13px'
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                )
+              })}
 
               <div style={{ marginTop: '20px' }}>
                 <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold', color: '#2c3e50' }}>
@@ -790,7 +865,7 @@ function LoanTransferModal({
                 </div>
               </div>
 
-              {/* סיכום תנאי תשלום */}
+              {/* סיכום תנאי תשלום לכל ערב */}
               <div style={{
                 background: '#f0fdf4',
                 padding: '15px',
@@ -798,44 +873,44 @@ function LoanTransferModal({
                 marginBottom: '20px',
                 border: '2px solid #86efac'
               }}>
-                <h4 style={{ margin: '0 0 10px 0', color: '#16a34a' }}>תנאי תשלום:</h4>
-                {paymentType === 'single' ? (
-                  <div style={{ fontSize: '14px' }}>
-                    <div><strong>סוג:</strong> תשלום אחד</div>
-                    <div><strong>תאריך פירעון:</strong> {installmentDates[0] ? new Date(installmentDates[0]).toLocaleDateString('he-IL') : '-'}</div>
-                  </div>
-                ) : (
-                  <div style={{ fontSize: '14px' }}>
-                    <div style={{ marginBottom: '10px' }}>
-                      <strong>סוג:</strong> {installmentsCount} תשלומים
-                    </div>
-                    <div style={{ marginBottom: '10px' }}>
-                      <strong>תשלומים לכל ערב:</strong>
-                      <div style={{ marginTop: '5px', paddingRight: '15px' }}>
-                        {selectedGuarantorIds.map(id => {
-                          const guarantor = guarantors.find(g => g.id === id)
-                          const amount = guarantorSplits.get(id) || 0
-                          const installmentAmount = (amount / installmentsCount).toFixed(2)
-                          return (
-                            <div key={id} style={{ marginBottom: '3px' }}>
-                              • {guarantor?.firstName} {guarantor?.lastName}: {installmentsCount} תשלומים × ₪{installmentAmount} = ₪{amount.toLocaleString()}
-                            </div>
-                          )
-                        })}
+                <h4 style={{ margin: '0 0 10px 0', color: '#16a34a' }}>תנאי תשלום לכל ערב:</h4>
+                {selectedGuarantorIds.map(id => {
+                  const guarantor = guarantors.find(g => g.id === id)
+                  const amount = guarantorSplits.get(id) || 0
+                  const terms = guarantorPaymentTerms.get(id) || {
+                    paymentType: 'single',
+                    installmentsCount: 3,
+                    installmentDates: []
+                  }
+
+                  return (
+                    <div key={id} style={{
+                      background: 'rgba(255, 255, 255, 0.7)',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      marginBottom: '10px',
+                      border: '1px solid #86efac'
+                    }}>
+                      <div style={{ fontWeight: 'bold', marginBottom: '8px', color: '#16a34a' }}>
+                        🤝 {guarantor?.firstName} {guarantor?.lastName} - ₪{amount.toLocaleString()}
                       </div>
-                    </div>
-                    <div>
-                      <strong>תאריכי פירעון:</strong>
-                      <div style={{ marginTop: '5px', paddingRight: '15px' }}>
-                        {installmentDates.map((date, index) => (
-                          <div key={index}>
-                            {index + 1}. {date ? new Date(date).toLocaleDateString('he-IL') : '-'}
+                      {terms.paymentType === 'single' ? (
+                        <div style={{ fontSize: '14px', paddingRight: '15px' }}>
+                          • תשלום אחד בתאריך: {terms.installmentDates[0] ? new Date(terms.installmentDates[0]).toLocaleDateString('he-IL') : '-'}
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '14px', paddingRight: '15px' }}>
+                          • {terms.installmentsCount} תשלומים × ₪{(amount / terms.installmentsCount).toFixed(2)}
+                          <div style={{ marginTop: '5px', fontSize: '13px', color: '#15803d' }}>
+                            תאריכים: {terms.installmentDates.map((date, index) => 
+                              `${index + 1}. ${date ? new Date(date).toLocaleDateString('he-IL') : '-'}`
+                            ).join(' | ')}
                           </div>
-                        ))}
-                      </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  )
+                })}
               </div>
 
               {/* הערות */}

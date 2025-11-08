@@ -3094,6 +3094,141 @@ class GemachDatabase {
   }
 
   /**
+   * העברת הלוואה לערבים עם תנאי תשלום שונים לכל ערב
+   * @param loanId - מזהה ההלוואה
+   * @param guarantorSplits - מפה של ערב לסכום
+   * @param guarantorPaymentData - מפה של ערב לתנאי תשלום
+   * @param transferredBy - שם המבצע
+   * @param notes - הערות
+   * @returns אובייקט עם success ו-message או error
+   */
+  transferLoanToGuarantorsWithIndividualTerms(
+    loanId: number,
+    guarantorSplits: Map<number, number>,
+    guarantorPaymentData: Map<number, {
+      paymentType: 'single' | 'installments'
+      installmentsCount?: number
+      installmentAmount?: number
+      installmentDates: string[]
+    }>,
+    transferredBy: string = 'מנהל',
+    notes?: string
+  ): { success: boolean; message?: string; error?: string } {
+    try {
+      // בדיקות ולידציה
+      const loan = this.dataFile.loans.find(l => l.id === loanId)
+      if (!loan) {
+        return { success: false, error: 'הלוואה לא נמצאה' }
+      }
+
+      if (loan.transferredToGuarantors) {
+        return { success: false, error: 'הלוואה זו כבר הועברה לערבים' }
+      }
+
+      if (guarantorSplits.size === 0) {
+        return { success: false, error: 'חייב לבחור לפחות ערב אחד' }
+      }
+
+      // בדוק שסכום החלוקה שווה ליתרת ההלוואה
+      const loanBalance = this.getLoanBalance(loanId)
+      const totalSplit = Array.from(guarantorSplits.values()).reduce((sum, amount) => sum + amount, 0)
+      
+      if (Math.abs(totalSplit - loanBalance) > 0.01) {
+        return { 
+          success: false, 
+          error: `סכום החלוקה (₪${totalSplit}) לא שווה ליתרת ההלוואה (₪${loanBalance})` 
+        }
+      }
+
+      // בדוק שכל הערבים קיימים ולא ברשימה שחורה
+      for (const [guarantorId] of guarantorSplits) {
+        const guarantor = this.dataFile.guarantors.find(g => g.id === guarantorId)
+        if (!guarantor) {
+          return { success: false, error: `ערב עם ID ${guarantorId} לא נמצא` }
+        }
+        if (this.isBlacklisted('guarantor', guarantorId)) {
+          return { 
+            success: false, 
+            error: `ערב ${guarantor.firstName} ${guarantor.lastName} נמצא ברשימה השחורה` 
+          }
+        }
+      }
+
+      // בדיקת תאריכים
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      
+      for (const [, paymentData] of guarantorPaymentData) {
+        for (const dateStr of paymentData.installmentDates) {
+          if (!dateStr) continue
+          const date = new Date(dateStr)
+          if (date < today) {
+            return { success: false, error: 'תאריכי פירעון לא יכולים להיות בעבר' }
+          }
+        }
+      }
+
+      // ביצוע ההעברה
+      const transferDate = new Date().toISOString()
+
+      // יצירת חובות ערבים
+      for (const [gId, amount] of guarantorSplits) {
+        const paymentData = guarantorPaymentData.get(gId)
+        if (!paymentData) continue
+
+        const debt: Omit<DatabaseGuarantorDebt, 'id'> = {
+          originalLoanId: loanId,
+          guarantorId: gId,
+          originalBorrowerId: loan.borrowerId,
+          amount,
+          transferDate,
+          transferredBy,
+          paymentType: paymentData.paymentType,
+          status: 'active',
+          notes
+        }
+
+        // הוסף נתוני תשלומים
+        if (paymentData.paymentType === 'installments') {
+          debt.installmentsCount = paymentData.installmentsCount
+          debt.installmentAmount = paymentData.installmentAmount
+          debt.installmentDates = paymentData.installmentDates
+        } else {
+          debt.installmentDates = paymentData.installmentDates
+        }
+
+        this.addGuarantorDebt(debt)
+      }
+
+      // עדכן את ההלוואה
+      loan.transferredToGuarantors = true
+      loan.transferDate = transferDate
+      loan.transferredBy = transferredBy
+      loan.transferNotes = notes
+
+      // הוסף את הלווה לרשימה שחורה
+      const borrower = this.dataFile.borrowers.find(b => b.id === loan.borrowerId)
+      if (borrower) {
+        this.addToBlacklist(
+          'borrower',
+          loan.borrowerId,
+          `לא פרע הלוואה #${loanId} - הועבר לערבים`
+        )
+      }
+
+      this.saveData()
+
+      return {
+        success: true,
+        message: `הלוואה #${loanId} הועברה בהצלחה ל-${guarantorSplits.size} ערבים`
+      }
+    } catch (error) {
+      console.error('שגיאה בהעברת הלוואה לערבים:', error)
+      return { success: false, error: 'שגיאה בביצוע ההעברה' }
+    }
+  }
+
+  /**
    * בדיקת חובות ערבים שפג תוקפם
    * @returns רשימת ערבים שצריכים להיכנס לרשימה שחורה
    */

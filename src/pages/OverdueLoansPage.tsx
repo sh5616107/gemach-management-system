@@ -17,6 +17,7 @@ function OverdueLoansPage() {
   const [loading, setLoading] = useState(true)
   const [showTransferModal, setShowTransferModal] = useState(false)
   const [selectedOverdueLoan, setSelectedOverdueLoan] = useState<OverdueLoan | null>(null)
+  const [showTransferHistory, setShowTransferHistory] = useState(false)
 
   useEffect(() => {
     loadOverdueLoans()
@@ -102,10 +103,28 @@ function OverdueLoansPage() {
         <button className="close-btn" onClick={() => navigate('/')}>×</button>
       </header>
 
-      <div className="page-header">
-        <p style={{ color: '#666', fontSize: '16px', marginTop: '10px' }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <p style={{ color: '#666', fontSize: '16px', marginTop: '10px', flex: 1 }}>
           ריכוז הלוואות שעבר מועד הפירעון שלהן - ניהול והעברה לאחריות הערבים
         </p>
+        <button
+          onClick={() => setShowTransferHistory(true)}
+          style={{
+            background: '#7c3aed',
+            color: 'white',
+            border: 'none',
+            padding: '10px 20px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          📜 היסטוריית העברות
+        </button>
       </div>
 
       {loading ? (
@@ -267,6 +286,176 @@ function OverdueLoansPage() {
             loadOverdueLoans() // רענן את הרשימה
           }}
         />
+      )}
+
+      {/* מודל היסטוריית העברות */}
+      {showTransferHistory && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10001,
+          direction: 'rtl'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '15px',
+            padding: '30px',
+            maxWidth: '95vw',
+            maxHeight: '90vh',
+            width: '1000px',
+            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+              <h2 style={{ margin: 0, color: '#7c3aed' }}>📜 היסטוריית העברות לערבים</h2>
+              <button
+                onClick={() => setShowTransferHistory(false)}
+                style={{
+                  background: '#95a5a6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '35px',
+                  height: '35px',
+                  fontSize: '18px',
+                  cursor: 'pointer'
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {(() => {
+              const transferredLoans = db.getLoans().filter(l => l.transferredToGuarantors)
+              
+              if (transferredLoans.length === 0) {
+                return (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '60px 20px',
+                    background: '#f0fdf4',
+                    borderRadius: '15px',
+                    border: '2px solid #86efac'
+                  }}>
+                    <div style={{ fontSize: '64px', marginBottom: '20px' }}>📋</div>
+                    <h3 style={{ color: '#16a34a', margin: '0 0 10px 0' }}>אין היסטוריה</h3>
+                    <p style={{ color: '#15803d', fontSize: '16px' }}>
+                      לא נמצאו הלוואות שהועברו לערבים
+                    </p>
+                  </div>
+                )
+              }
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                  {transferredLoans.map(loan => {
+                    const borrower = db.getBorrowers().find(b => b.id === loan.borrowerId)
+                    const guarantorDebts = db.getGuarantorDebts().filter(d => d.originalLoanId === loan.id)
+                    
+                    return (
+                      <div
+                        key={loan.id}
+                        style={{
+                          background: 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)',
+                          border: '2px solid #a855f7',
+                          borderRadius: '12px',
+                          padding: '20px',
+                          boxShadow: '0 4px 10px rgba(168, 85, 247, 0.2)'
+                        }}
+                      >
+                        <div style={{ marginBottom: '15px' }}>
+                          <h4 style={{ margin: '0 0 10px 0', color: '#7c3aed', fontSize: '18px' }}>
+                            🔄 הלוואה #{loan.id} - {borrower ? `${borrower.firstName} ${borrower.lastName}` : 'לא ידוע'}
+                          </h4>
+                          
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', fontSize: '14px' }}>
+                            <div><strong>סכום מקורי:</strong> ₪{loan.amount.toLocaleString()}</div>
+                            <div><strong>תאריך העברה:</strong> {loan.transferDate ? new Date(loan.transferDate).toLocaleDateString('he-IL') : '-'}</div>
+                            <div><strong>הועבר על ידי:</strong> {loan.transferredBy || '-'}</div>
+                            <div><strong>מספר ערבים:</strong> {guarantorDebts.length}</div>
+                          </div>
+                        </div>
+
+                        {/* ערבים */}
+                        <div style={{
+                          background: 'rgba(255, 255, 255, 0.7)',
+                          padding: '12px',
+                          borderRadius: '8px'
+                        }}>
+                          <strong style={{ color: '#6b21a8', fontSize: '14px' }}>🤝 ערבים שחויבו:</strong>
+                          <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {guarantorDebts.map(debt => {
+                              const guarantor = db.getGuarantors().find(g => g.id === debt.guarantorId)
+                              const balance = db.getGuarantorDebtBalance(debt.id)
+                              
+                              return (
+                                <div key={debt.id} style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  padding: '8px 12px',
+                                  background: 'white',
+                                  borderRadius: '6px',
+                                  border: '1px solid #e5e7eb'
+                                }}>
+                                  <div>
+                                    <span style={{ fontWeight: 'bold' }}>
+                                      {guarantor ? `${guarantor.firstName} ${guarantor.lastName}` : 'לא ידוע'}
+                                    </span>
+                                    <span style={{
+                                      marginRight: '10px',
+                                      padding: '2px 8px',
+                                      borderRadius: '4px',
+                                      fontSize: '12px',
+                                      background: debt.status === 'paid' ? '#dcfce7' : debt.status === 'overdue' ? '#fee2e2' : '#fef3c7',
+                                      color: debt.status === 'paid' ? '#166534' : debt.status === 'overdue' ? '#991b1b' : '#92400e'
+                                    }}>
+                                      {debt.status === 'paid' ? 'שולם' : debt.status === 'overdue' ? 'באיחור' : 'פעיל'}
+                                    </span>
+                                  </div>
+                                  <div style={{ fontSize: '14px' }}>
+                                    <span style={{ color: '#6b7280' }}>₪{debt.amount.toLocaleString()}</span>
+                                    {balance > 0 && (
+                                      <span style={{ marginRight: '10px', color: '#dc2626', fontWeight: 'bold' }}>
+                                        (יתרה: ₪{balance.toLocaleString()})
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+
+                        {/* הערות */}
+                        {loan.transferNotes && (
+                          <div style={{
+                            marginTop: '12px',
+                            padding: '10px',
+                            background: 'rgba(255, 255, 255, 0.5)',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            color: '#6b21a8',
+                            fontStyle: 'italic'
+                          }}>
+                            💬 {loan.transferNotes}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })()}
+          </div>
+        </div>
       )}
     </div>
   )

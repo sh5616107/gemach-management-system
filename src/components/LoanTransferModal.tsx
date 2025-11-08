@@ -23,9 +23,19 @@ function LoanTransferModal({
   const [currentStep, setCurrentStep] = useState<TransferStep>('select-guarantors')
   const [selectedGuarantorIds, setSelectedGuarantorIds] = useState<number[]>([])
   const [guarantorSplits, setGuarantorSplits] = useState<Map<number, number>>(new Map())
+  
+  // תנאי תשלום לכל ערב בנפרד
+  const [guarantorPaymentTerms, setGuarantorPaymentTerms] = useState<Map<number, {
+    paymentType: 'single' | 'installments'
+    installmentsCount: number
+    installmentDates: string[]
+  }>>(new Map())
+  
+  // תנאי תשלום גלובליים (לתאימות לאחור - כרגע משמש לכל הערבים)
   const [paymentType, setPaymentType] = useState<'single' | 'installments'>('single')
   const [installmentsCount, setInstallmentsCount] = useState(3)
   const [installmentDates, setInstallmentDates] = useState<string[]>([])
+  
   const [transferNotes, setTransferNotes] = useState('')
 
   // חישוב יתרת ההלוואה
@@ -65,10 +75,20 @@ function LoanTransferModal({
         const splits = new Map<number, number>()
         splits.set(guarantors[0].id, balance)
         setGuarantorSplits(splits)
+        
+        // אתחל תנאי תשלום לערב היחיד
+        const terms = new Map()
+        terms.set(guarantors[0].id, {
+          paymentType: 'single' as const,
+          installmentsCount: 3,
+          installmentDates: []
+        })
+        setGuarantorPaymentTerms(terms)
       } else {
         setCurrentStep('select-guarantors')
         setSelectedGuarantorIds([])
         setGuarantorSplits(new Map())
+        setGuarantorPaymentTerms(new Map())
       }
       setPaymentType('single')
       setInstallmentsCount(3)
@@ -76,6 +96,30 @@ function LoanTransferModal({
       setTransferNotes('')
     }
   }, [isOpen, guarantors, balance])
+
+  // אתחול תנאי תשלום כשעוברים לשלב payment-terms
+  useEffect(() => {
+    if (currentStep === 'payment-terms' && selectedGuarantorIds.length > 0) {
+      // אתחל תנאי תשלום לכל ערב שנבחר אם עדיין לא קיים
+      const newTerms = new Map(guarantorPaymentTerms)
+      let hasChanges = false
+      
+      for (const guarantorId of selectedGuarantorIds) {
+        if (!newTerms.has(guarantorId)) {
+          newTerms.set(guarantorId, {
+            paymentType: 'single',
+            installmentsCount: 3,
+            installmentDates: []
+          })
+          hasChanges = true
+        }
+      }
+      
+      if (hasChanges) {
+        setGuarantorPaymentTerms(newTerms)
+      }
+    }
+  }, [currentStep, selectedGuarantorIds])
 
   // חישוב חלוקה אוטומטית
   const calculateEqualSplit = () => {

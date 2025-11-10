@@ -10,6 +10,11 @@ export interface DatabaseBorrower {
   email: string
   idNumber: string // מספר זהות - שדה חובה ויחודי
   notes?: string // הערות על הלווה (אופציונלי)
+  
+  // פרטי בנק למס"ב (אופציונלי)
+  bankCode?: string              // קוד בנק (2 ספרות)
+  branchNumber?: string          // מספר סניף (3 ספרות)
+  accountNumber?: string         // מספר חשבון (9 ספרות)
 }
 
 export interface DatabaseLoan {
@@ -238,6 +243,39 @@ export interface DatabaseWarningLetter {
   notes?: string             // הערות נוספות
 }
 
+// ממשקים למערכת מס"ב
+export interface MasavSettings {
+  institutionCode: string        // קוד מוסד/נושא (8 ספרות)
+  senderCode: string             // מספר מוסד שולח (5 ספרות)
+  institutionName: string        // שם המוסד (30 תווים)
+  lastReferenceNumber: number    // מספר אסמכתא אחרון
+}
+
+export interface MasavCharge {
+  borrowerId: number
+  borrowerName: string
+  idNumber: string
+  bankCode: string
+  branchNumber: string
+  accountNumber: string
+  amount: number                 // בשקלים (כולל אגורות)
+  referenceNumber: string        // מספר אסמכתא (20 תווים)
+  chargeDate: string            // תאריך חיוב
+  loanId?: number               // קישור להלוואה (אופציונלי)
+}
+
+export interface MasavFileRecord {
+  id: number
+  creationDate: string
+  chargeDate: string
+  totalAmount: number
+  chargesCount: number
+  charges: MasavCharge[]
+  fileName: string
+  fileContent: string           // תוכן הקובץ לשמירה
+  status: 'pending' | 'confirmed' | 'cancelled'
+}
+
 export interface DatabaseSettings {
   currency: 'ILS' | 'USD'
   currencySymbol: string
@@ -261,6 +299,8 @@ export interface DatabaseSettings {
   trackPaymentMethods: boolean // מעקב אחרי אמצעי תשלום
   // הגדרות כפתורי פעולות מהירות
   quickActions: string[] // רשימת כפתורי הפעולות המהירות שיוצגו
+  // הגדרות מס"ב
+  enableMasav: boolean // הפעלת מערכת מס"ב לגביית תשלומים
 }
 
 interface DatabaseFile {
@@ -274,6 +314,8 @@ interface DatabaseFile {
   blacklist: DatabaseBlacklistEntry[] // טבלת רשימה שחורה
   warningLetters: DatabaseWarningLetter[] // טבלת מכתבי התראה
   guarantorDebts: DatabaseGuarantorDebt[] // טבלת חובות ערבים
+  masavSettings?: MasavSettings // הגדרות מס"ב
+  masavFiles: MasavFileRecord[] // קבצי מס"ב
   lastUpdated: string
   gemachName: string
   settings: DatabaseSettings
@@ -283,6 +325,7 @@ class GemachDatabase {
   private dataFile: DatabaseFile = {
     borrowers: [],
     loans: [],
+    masavFiles: [],
     deposits: [],
     donations: [],
     payments: [],
@@ -312,7 +355,8 @@ class GemachDatabase {
       showHebrewDates: false,
       showDateWarnings: true,
       trackPaymentMethods: true,
-      quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools']
+      quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
+      enableMasav: false // כבוי כברירת מחדל
     }
   }
 
@@ -356,6 +400,7 @@ class GemachDatabase {
         blacklist: blacklist ? JSON.parse(blacklist) : [],
         warningLetters: warningLetters ? JSON.parse(warningLetters) : [],
         guarantorDebts: guarantorDebts ? JSON.parse(guarantorDebts) : [],
+        masavFiles: [],
         lastUpdated: new Date().toISOString(),
         gemachName: gemachName || 'נר שרה',
         settings: settings ? JSON.parse(settings) : {
@@ -374,7 +419,10 @@ class GemachDatabase {
           enableRecurringPayments: false,
           requireIdNumber: false,
           showHebrewDates: false,
-          showDateWarnings: true
+          showDateWarnings: true,
+          trackPaymentMethods: false,
+          quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
+          enableMasav: false
         }
       }
 
@@ -453,6 +501,7 @@ class GemachDatabase {
         blacklist: importedData.blacklist || [],
         warningLetters: importedData.warningLetters || [],
         guarantorDebts: importedData.guarantorDebts || [],
+        masavFiles: importedData.masavFiles || [],
         lastUpdated: new Date().toISOString(),
         gemachName: importedData.gemachName || 'נר שרה',
         settings: importedData.settings || {
@@ -471,12 +520,19 @@ class GemachDatabase {
           enableRecurringPayments: false,
           requireIdNumber: false,
           showHebrewDates: false,
-          showDateWarnings: true
+          showDateWarnings: true,
+          trackPaymentMethods: false,
+          quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
+          enableMasav: false
         }
       }
       // הוספת הגדרה חדשה למעקב אמצעי תשלום
       if (this.dataFile.settings.trackPaymentMethods === undefined) {
         this.dataFile.settings.trackPaymentMethods = false
+      }
+      // הוספת הגדרה חדשה למס"ב
+      if (this.dataFile.settings.enableMasav === undefined) {
+        this.dataFile.settings.enableMasav = false
       }
       this.saveData()
       return true
@@ -1361,6 +1417,7 @@ class GemachDatabase {
       blacklist: [],
       warningLetters: [],
       guarantorDebts: [],
+      masavFiles: [],
       lastUpdated: new Date().toISOString(),
       gemachName: 'נר שרה',
       settings: {
@@ -1381,7 +1438,8 @@ class GemachDatabase {
         showHebrewDates: false,
         showDateWarnings: true,
         trackPaymentMethods: true,
-        quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools']
+        quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
+        enableMasav: false
       }
     }
     this.saveData()
@@ -3425,6 +3483,103 @@ class GemachDatabase {
     }
 
     return addedCount
+  }
+
+  // ===============================================
+  // מתודות מס"ב
+  // ===============================================
+
+  /**
+   * קבלת הגדרות מס"ב
+   */
+  getMasavSettings(): MasavSettings | null {
+    return this.dataFile.masavSettings || null
+  }
+
+  /**
+   * עדכון הגדרות מס"ב
+   */
+  updateMasavSettings(settings: MasavSettings): void {
+    this.dataFile.masavSettings = settings
+    this.saveData()
+  }
+
+  /**
+   * קבלת כל קבצי מס"ב
+   */
+  getMasavFiles(): MasavFileRecord[] {
+    return this.dataFile.masavFiles || []
+  }
+
+  /**
+   * הוספת קובץ מס"ב חדש
+   */
+  addMasavFile(file: Omit<MasavFileRecord, 'id'>): number {
+    const newId = this.dataFile.masavFiles.length > 0
+      ? Math.max(...this.dataFile.masavFiles.map(f => f.id)) + 1
+      : 1
+
+    const newFile: MasavFileRecord = {
+      id: newId,
+      ...file
+    }
+
+    this.dataFile.masavFiles.push(newFile)
+    this.saveData()
+    return newId
+  }
+
+  /**
+   * עדכון סטטוס קובץ מס"ב
+   */
+  updateMasavFileStatus(fileId: number, status: 'pending' | 'confirmed' | 'cancelled'): boolean {
+    const file = this.dataFile.masavFiles.find(f => f.id === fileId)
+    if (!file) return false
+
+    file.status = status
+    this.saveData()
+    return true
+  }
+
+  /**
+   * קבלת מספר אסמכתא הבא
+   */
+  getNextReferenceNumber(): number {
+    if (!this.dataFile.masavSettings) {
+      return 1
+    }
+
+    const nextNumber = (this.dataFile.masavSettings.lastReferenceNumber || 0) + 1
+    this.dataFile.masavSettings.lastReferenceNumber = nextNumber
+    this.saveData()
+    return nextNumber
+  }
+
+  /**
+   * רישום תשלומים מקובץ מס"ב שאושר
+   */
+  confirmMasavFilePayments(fileId: number): boolean {
+    const file = this.dataFile.masavFiles.find(f => f.id === fileId)
+    if (!file || file.status !== 'pending') return false
+
+    // רשום תשלום לכל חיוב
+    for (const charge of file.charges) {
+      if (charge.loanId) {
+        this.addPayment({
+          loanId: charge.loanId,
+          amount: charge.amount,
+          date: file.chargeDate,
+          type: 'payment',
+          paymentMethod: 'transfer',
+          notes: `גביה באמצעות מס"ב - קובץ ${file.fileName} - אסמכתא ${charge.referenceNumber}`
+        })
+      }
+    }
+
+    // עדכן סטטוס הקובץ
+    file.status = 'confirmed'
+    this.saveData()
+    return true
   }
 
 

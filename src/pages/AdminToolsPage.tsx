@@ -3,11 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { db } from '../database/database'
 import BlacklistManager from '../components/BlacklistManager'
 import WarningLetterGenerator from '../components/WarningLetterGenerator'
+import TransferredLoansReport from '../components/TransferredLoansReport'
+import GuarantorDebtsReport from '../components/GuarantorDebtsReport'
 
 function AdminToolsPage() {
   const navigate = useNavigate()
   const [showBlacklistManager, setShowBlacklistManager] = useState(false)
   const [showWarningLetterGenerator, setShowWarningLetterGenerator] = useState(false)
+  const [showTransferredLoansReport, setShowTransferredLoansReport] = useState(false)
+  const [showGuarantorDebtsReport, setShowGuarantorDebtsReport] = useState(false)
 
   const refreshData = () => {
     // פונקציה לרענון נתונים אם נדרש
@@ -237,6 +241,78 @@ function AdminToolsPage() {
           </button>
         </div>
 
+        {/* כרטיס קבצי מס"ב */}
+        <div style={{
+          background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+          border: '2px solid #3b82f6',
+          borderRadius: '15px',
+          padding: '25px',
+          textAlign: 'center',
+          boxShadow: '0 4px 15px rgba(59, 130, 246, 0.2)',
+          transition: 'transform 0.2s ease',
+          cursor: 'pointer'
+        }}
+          onClick={() => navigate('/masav-generator')}
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+        >
+          <div style={{ fontSize: '48px', marginBottom: '15px' }}>🏦</div>
+          <h3 style={{ margin: '0 0 10px 0', color: '#2563eb' }}>קבצי מס"ב</h3>
+          <p style={{ color: '#1e40af', fontSize: '14px', lineHeight: '1.5' }}>
+            יצירת קבצים לגביית תשלומים<br />
+            באמצעות הרשאה לחיוב חשבון.
+          </p>
+          <button style={{
+            background: '#2563eb',
+            color: 'white',
+            border: 'none',
+            padding: '10px 20px',
+            borderRadius: '8px',
+            marginTop: '15px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 'bold'
+          }}>
+            צור קובץ מס"ב
+          </button>
+        </div>
+
+        {/* כרטיס היסטוריית מס"ב */}
+        <div style={{
+          background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)',
+          border: '2px solid #0ea5e9',
+          borderRadius: '15px',
+          padding: '25px',
+          textAlign: 'center',
+          boxShadow: '0 4px 15px rgba(14, 165, 233, 0.2)',
+          transition: 'transform 0.2s ease',
+          cursor: 'pointer'
+        }}
+          onClick={() => navigate('/masav-history')}
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+        >
+          <div style={{ fontSize: '48px', marginBottom: '15px' }}>📋</div>
+          <h3 style={{ margin: '0 0 10px 0', color: '#0284c7' }}>היסטוריית מס"ב</h3>
+          <p style={{ color: '#075985', fontSize: '14px', lineHeight: '1.5' }}>
+            צפייה בקבצים שנוצרו,<br />
+            אישור גבייה ורישום תשלומים.
+          </p>
+          <button style={{
+            background: '#0284c7',
+            color: 'white',
+            border: 'none',
+            padding: '10px 20px',
+            borderRadius: '8px',
+            marginTop: '15px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 'bold'
+          }}>
+            צפה בהיסטוריה
+          </button>
+        </div>
+
         {/* כרטיס יצוא נתונים */}
         <div style={{
           background: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)',
@@ -309,7 +385,149 @@ function AdminToolsPage() {
           </button>
         </div>
 
+        {/* כרטיס דוח הלוואות מועברות */}
+        <div style={{
+          background: 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)',
+          border: '2px solid #a855f7',
+          borderRadius: '15px',
+          padding: '25px',
+          textAlign: 'center',
+          boxShadow: '0 4px 15px rgba(168, 85, 247, 0.2)',
+          transition: 'transform 0.2s ease',
+          cursor: 'pointer'
+        }}
+          onClick={() => setShowTransferredLoansReport(true)}
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+        >
+          <div style={{ fontSize: '48px', marginBottom: '15px' }}>📊</div>
+          <h3 style={{ margin: '0 0 10px 0', color: '#7c3aed' }}>הלוואות מועברות</h3>
+          <p style={{ color: '#6b21a8', fontSize: '14px', lineHeight: '1.5' }}>
+            דוח מפורט של הלוואות<br />
+            שהועברו לאחריות ערבים.
+          </p>
+          <button style={{
+            background: '#7c3aed',
+            color: 'white',
+            border: 'none',
+            padding: '10px 20px',
+            borderRadius: '8px',
+            marginTop: '15px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 'bold'
+          }}>
+            📊 צפה בדוח
+          </button>
+        </div>
 
+        {/* כרטיס יצירת קובץ מס"ב */}
+        <div style={{
+          background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
+          border: '2px solid #3b82f6',
+          borderRadius: '15px',
+          padding: '25px',
+          textAlign: 'center',
+          boxShadow: '0 4px 15px rgba(59, 130, 246, 0.2)',
+          transition: 'transform 0.2s ease',
+          cursor: 'pointer'
+        }}
+          onClick={() => navigate('/masav-generator')}
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+        >
+          <div style={{ fontSize: '48px', marginBottom: '15px' }}>🏦</div>
+          <h3 style={{ margin: '0 0 10px 0', color: '#2563eb' }}>קבצי מס"ב</h3>
+          <p style={{ color: '#1e40af', fontSize: '14px', lineHeight: '1.5' }}>
+            יצירת קבצים לגביית תשלומים<br />
+            באמצעות הרשאה לחיוב חשבון.
+          </p>
+          <button style={{
+            background: '#2563eb',
+            color: 'white',
+            border: 'none',
+            padding: '10px 20px',
+            borderRadius: '8px',
+            marginTop: '15px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 'bold'
+          }}>
+            🏦 צור קובץ מס"ב
+          </button>
+        </div>
+
+        {/* כרטיס היסטוריית מס"ב */}
+        <div style={{
+          background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)',
+          border: '2px solid #0ea5e9',
+          borderRadius: '15px',
+          padding: '25px',
+          textAlign: 'center',
+          boxShadow: '0 4px 15px rgba(14, 165, 233, 0.2)',
+          transition: 'transform 0.2s ease',
+          cursor: 'pointer'
+        }}
+          onClick={() => navigate('/masav-history')}
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+        >
+          <div style={{ fontSize: '48px', marginBottom: '15px' }}>📋</div>
+          <h3 style={{ margin: '0 0 10px 0', color: '#0284c7' }}>היסטוריית מס"ב</h3>
+          <p style={{ color: '#075985', fontSize: '14px', lineHeight: '1.5' }}>
+            צפייה בקבצים שנוצרו,<br />
+            אישור גבייה ורישום תשלומים.
+          </p>
+          <button style={{
+            background: '#0284c7',
+            color: 'white',
+            border: 'none',
+            padding: '10px 20px',
+            borderRadius: '8px',
+            marginTop: '15px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 'bold'
+          }}>
+            📋 צפה בהיסטוריה
+          </button>
+        </div>
+
+        {/* כרטיס דוח חובות ערבים */}
+        <div style={{
+          background: 'linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%)',
+          border: '2px solid #fb923c',
+          borderRadius: '15px',
+          padding: '25px',
+          textAlign: 'center',
+          boxShadow: '0 4px 15px rgba(251, 146, 60, 0.2)',
+          transition: 'transform 0.2s ease',
+          cursor: 'pointer'
+        }}
+          onClick={() => setShowGuarantorDebtsReport(true)}
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+        >
+          <div style={{ fontSize: '48px', marginBottom: '15px' }}>🤝</div>
+          <h3 style={{ margin: '0 0 10px 0', color: '#ea580c' }}>חובות ערבים</h3>
+          <p style={{ color: '#c2410c', fontSize: '14px', lineHeight: '1.5' }}>
+            דוח מפורט של חובות ערבים<br />
+            וסטטוס תשלומים.
+          </p>
+          <button style={{
+            background: '#ea580c',
+            color: 'white',
+            border: 'none',
+            padding: '10px 20px',
+            borderRadius: '8px',
+            marginTop: '15px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 'bold'
+          }}>
+            🤝 צפה בדוח
+          </button>
+        </div>
 
       </div>
 
@@ -343,6 +561,16 @@ function AdminToolsPage() {
           onClose={() => setShowWarningLetterGenerator(false)}
         />
       )}
+
+      <TransferredLoansReport
+        isOpen={showTransferredLoansReport}
+        onClose={() => setShowTransferredLoansReport(false)}
+      />
+
+      <GuarantorDebtsReport
+        isOpen={showGuarantorDebtsReport}
+        onClose={() => setShowGuarantorDebtsReport(false)}
+      />
 
       <button className="back-btn" onClick={() => navigate('/')}>
         🏠

@@ -82,11 +82,21 @@ function SettingsPage() {
     showHebrewDates: false,
     showDateWarnings: true,
     trackPaymentMethods: false,
-    quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools']
+    quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
+    enableMasav: false
+  })
+
+  // הגדרות מס"ב
+  const [masavSettings, setMasavSettings] = useState({
+    institutionCode: '',
+    senderCode: '',
+    institutionName: '',
+    lastReferenceNumber: 0
   })
 
   useEffect(() => {
     loadSettings()
+    loadMasavSettings()
   }, [])
 
   useEffect(() => {
@@ -114,6 +124,20 @@ function SettingsPage() {
       db.updateSettings(currentSettings)
     }
     setSettings(currentSettings)
+  }
+
+  const loadMasavSettings = () => {
+    const settings = db.getMasavSettings()
+    if (settings) {
+      setMasavSettings(settings)
+    }
+  }
+
+  const handleMasavSettingChange = (key: string, value: string | number) => {
+    const newSettings = { ...masavSettings, [key]: value }
+    setMasavSettings(newSettings)
+    db.updateMasavSettings(newSettings)
+    showNotification('הגדרות מס"ב נשמרו בהצלחה', 'success')
   }
 
   const handleSettingChange = (key: keyof DatabaseSettings, value: any) => {
@@ -168,7 +192,8 @@ function SettingsPage() {
           showHebrewDates: false,
           showDateWarnings: true,
           trackPaymentMethods: false,
-          quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools']
+          quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
+          enableMasav: false
         }
         setSettings(defaultSettings)
         db.updateSettings(defaultSettings)
@@ -336,6 +361,25 @@ function SettingsPage() {
                 <small style={{ display: 'block', color: '#666', marginTop: '5px' }}>
                   מעקב מפורט אחרי אמצעי תשלום (מזומן, העברה, צ'ק, אשראי) בהלוואות, פרעונות, הפקדות ותרומות. מאפשר יצירת סטטיסטיקות מפורטות.
                 </small>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>מערכת מס"ב:</label>
+                <select
+                  value={settings.enableMasav ? 'true' : 'false'}
+                  onChange={(e) => handleSettingChange('enableMasav', e.target.value === 'true')}
+                >
+                  <option value="false">כבוי</option>
+                  <option value="true">מופעל</option>
+                </select>
+                <small style={{ display: 'block', color: '#666', marginTop: '5px' }}>
+                  הפעלת מערכת מס"ב לגביית תשלומים אוטומטית מחשבונות בנק
+                </small>
+              </div>
+              <div className="form-group">
+                {/* שדה ריק לאיזון */}
               </div>
             </div>
           </div>
@@ -519,6 +563,7 @@ function SettingsPage() {
                 <p><strong>תאריכים עבריים:</strong> {settings.showHebrewDates ? '✅ מופעל' : '❌ כבוי'}</p>
                 <p><strong>אזהרות חגים ושבתות:</strong> {settings.showDateWarnings ? '✅ מופעל' : '❌ כבוי'}</p>
                 <p><strong>מעקב אמצעי תשלום:</strong> {settings.trackPaymentMethods ? '✅ מופעל' : '❌ כבוי'}</p>
+                <p><strong>מערכת מס"ב:</strong> {settings.enableMasav ? '✅ מופעל' : '❌ כבוי'}</p>
               </div>
 
               {/* הגדרות ייצוא ותצוגה */}
@@ -572,6 +617,108 @@ function SettingsPage() {
                   }).join(', ')}
                 </div>
               </div>
+
+              {/* הגדרות מס"ב - מוצג רק אם מופעל */}
+              {settings.enableMasav && (
+                <div style={{
+                  padding: '15px',
+                  background: 'rgba(59, 130, 246, 0.1)',
+                  borderRadius: '8px',
+                  gridColumn: 'span 2'
+                }}>
+                  <h4 style={{ marginBottom: '15px', color: '#2c3e50' }}>🏦 הגדרות מס"ב</h4>
+                
+                <div style={{ display: 'grid', gap: '15px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                      קוד מוסד/נושא (8 ספרות):
+                    </label>
+                    <input
+                      type="text"
+                      value={masavSettings.institutionCode}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 8)
+                        handleMasavSettingChange('institutionCode', value)
+                      }}
+                      placeholder="12345678"
+                      maxLength={8}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        fontSize: '14px'
+                      }}
+                    />
+                    {masavSettings.institutionCode && masavSettings.institutionCode.length !== 8 && (
+                      <small style={{ color: '#e74c3c' }}>חייב להיות בדיוק 8 ספרות</small>
+                    )}
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                      מספר מוסד שולח (5 ספרות):
+                    </label>
+                    <input
+                      type="text"
+                      value={masavSettings.senderCode}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 5)
+                        handleMasavSettingChange('senderCode', value)
+                      }}
+                      placeholder="12345"
+                      maxLength={5}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        fontSize: '14px'
+                      }}
+                    />
+                    {masavSettings.senderCode && masavSettings.senderCode.length !== 5 && (
+                      <small style={{ color: '#e74c3c' }}>חייב להיות בדיוק 5 ספרות</small>
+                    )}
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+                      שם המוסד (עד 30 תווים):
+                    </label>
+                    <input
+                      type="text"
+                      value={masavSettings.institutionName}
+                      onChange={(e) => {
+                        const value = e.target.value.slice(0, 30)
+                        handleMasavSettingChange('institutionName', value)
+                      }}
+                      placeholder='גמ"ח חסד ואמת'
+                      maxLength={30}
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        border: '1px solid #ddd',
+                        borderRadius: '4px',
+                        fontSize: '14px'
+                      }}
+                    />
+                    <small style={{ color: '#7f8c8d' }}>
+                      {masavSettings.institutionName.length}/30 תווים
+                    </small>
+                  </div>
+
+                  <div style={{
+                    padding: '10px',
+                    background: 'rgba(52, 152, 219, 0.1)',
+                    borderRadius: '4px',
+                    fontSize: '13px'
+                  }}>
+                    <strong>💡 הסבר:</strong> הגדרות אלו נדרשות ליצירת קבצי מס"ב לגביית תשלומים.
+                    יש לקבל את הקודים מהבנק או מחברת הסליקה.
+                  </div>
+                </div>
+                </div>
+              )}
             </div>
           </div>
 

@@ -5,16 +5,80 @@ import { db } from '../database/database'
 function StatisticsPage() {
   const navigate = useNavigate()
   const [paymentStats, setPaymentStats] = useState<any>(null)
+  const [guarantorStats, setGuarantorStats] = useState<any>(null)
 
   useEffect(() => {
     loadStatistics()
   }, [])
+
+  const loadGuarantorStats = () => {
+    try {
+      const transferredLoans = db.getLoans().filter(l => l.transferredToGuarantors)
+      const guarantorDebts = db.getGuarantorDebts()
+      
+      // חישוב סטטיסטיקות הלוואות מועברות
+      const totalTransferredAmount = transferredLoans.reduce((sum, loan) => sum + loan.amount, 0)
+      
+      // חישוב סטטיסטיקות חובות ערבים
+      const totalDebtsAmount = guarantorDebts.reduce((sum, debt) => sum + debt.amount, 0)
+      const totalDebtsPaid = guarantorDebts.reduce((sum, debt) => {
+        const balance = db.getGuarantorDebtBalance(debt.id)
+        return sum + (debt.amount - balance)
+      }, 0)
+      const totalDebtsBalance = guarantorDebts.reduce((sum, debt) => {
+        return sum + db.getGuarantorDebtBalance(debt.id)
+      }, 0)
+      
+      // ספירת סטטוסים
+      const paidDebts = guarantorDebts.filter(d => d.status === 'paid').length
+      const activeDebts = guarantorDebts.filter(d => d.status === 'active').length
+      const overdueDebts = guarantorDebts.filter(d => d.status === 'overdue').length
+      
+      // ערבים ייחודיים
+      const uniqueGuarantors = new Set(guarantorDebts.map(d => d.guarantorId)).size
+      
+      setGuarantorStats({
+        transferredLoans: {
+          count: transferredLoans.length,
+          totalAmount: totalTransferredAmount
+        },
+        guarantorDebts: {
+          count: guarantorDebts.length,
+          totalAmount: totalDebtsAmount,
+          totalPaid: totalDebtsPaid,
+          totalBalance: totalDebtsBalance,
+          paidCount: paidDebts,
+          activeCount: activeDebts,
+          overdueCount: overdueDebts,
+          uniqueGuarantors: uniqueGuarantors
+        }
+      })
+    } catch (error) {
+      console.error('שגיאה בטעינת סטטיסטיקות ערבים:', error)
+      setGuarantorStats({
+        transferredLoans: { count: 0, totalAmount: 0 },
+        guarantorDebts: {
+          count: 0,
+          totalAmount: 0,
+          totalPaid: 0,
+          totalBalance: 0,
+          paidCount: 0,
+          activeCount: 0,
+          overdueCount: 0,
+          uniqueGuarantors: 0
+        }
+      })
+    }
+  }
 
   const loadStatistics = () => {
     try {
       const stats = db.getDetailedPaymentMethodReport()
       setPaymentStats(stats)
       console.log('📊 סטטיסטיקות אמצעי תשלום:', stats)
+      
+      // טען גם סטטיסטיקות של הלוואות מועברות וחובות ערבים
+      loadGuarantorStats()
     } catch (error) {
       console.error('שגיאה בטעינת סטטיסטיקות:', error)
       setPaymentStats({
@@ -359,6 +423,167 @@ function StatisticsPage() {
             </div>
           </div>
         </div>
+
+        {/* סטטיסטיקות הלוואות מועברות וחובות ערבים */}
+        {guarantorStats && (
+          <div style={{ marginBottom: '30px' }}>
+            <h3 style={{ marginBottom: '20px', color: '#2c3e50', fontSize: '20px' }}>
+              🔄 הלוואות מועברות לערבים
+            </h3>
+            
+            {/* סיכום הלוואות מועברות */}
+            <div style={{
+              background: 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)',
+              border: '2px solid #a855f7',
+              borderRadius: '15px',
+              padding: '25px',
+              marginBottom: '25px'
+            }}>
+              <h4 style={{ margin: '0 0 20px 0', color: '#7c3aed', fontSize: '18px' }}>
+                📊 סיכום הלוואות מועברות
+              </h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.7)',
+                  padding: '15px',
+                  borderRadius: '10px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#7c3aed', marginBottom: '5px' }}>
+                    {guarantorStats.transferredLoans.count}
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#6b21a8' }}>הלוואות מועברות</div>
+                </div>
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.7)',
+                  padding: '15px',
+                  borderRadius: '10px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#7c3aed', marginBottom: '5px' }}>
+                    {formatCurrency(guarantorStats.transferredLoans.totalAmount)}
+                  </div>
+                  <div style={{ fontSize: '14px', color: '#6b21a8' }}>סכום כולל</div>
+                </div>
+              </div>
+            </div>
+
+            {/* סיכום חובות ערבים */}
+            <div style={{
+              background: 'linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%)',
+              border: '2px solid #fb923c',
+              borderRadius: '15px',
+              padding: '25px',
+              marginBottom: '25px'
+            }}>
+              <h4 style={{ margin: '0 0 20px 0', color: '#ea580c', fontSize: '18px' }}>
+                🤝 סיכום חובות ערבים
+              </h4>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '15px' }}>
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.7)',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#ea580c', marginBottom: '5px' }}>
+                    {guarantorStats.guarantorDebts.count}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#c2410c' }}>חובות ערבים</div>
+                </div>
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.7)',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#ea580c', marginBottom: '5px' }}>
+                    {guarantorStats.guarantorDebts.uniqueGuarantors}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#c2410c' }}>ערבים מעורבים</div>
+                </div>
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.7)',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#3b82f6', marginBottom: '5px' }}>
+                    {formatCurrency(guarantorStats.guarantorDebts.totalAmount)}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#1e40af' }}>סכום כולל</div>
+                </div>
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.7)',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#16a34a', marginBottom: '5px' }}>
+                    {formatCurrency(guarantorStats.guarantorDebts.totalPaid)}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#15803d' }}>שולם</div>
+                </div>
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.7)',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#dc2626', marginBottom: '5px' }}>
+                    {formatCurrency(guarantorStats.guarantorDebts.totalBalance)}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#991b1b' }}>יתרה</div>
+                </div>
+              </div>
+
+              {/* פירוט סטטוסים */}
+              <div style={{ 
+                marginTop: '20px', 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', 
+                gap: '12px' 
+              }}>
+                <div style={{
+                  background: 'rgba(220, 252, 231, 0.7)',
+                  border: '2px solid #22c55e',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#16a34a', marginBottom: '3px' }}>
+                    {guarantorStats.guarantorDebts.paidCount}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#15803d' }}>✅ שולם במלואו</div>
+                </div>
+                <div style={{
+                  background: 'rgba(254, 243, 199, 0.7)',
+                  border: '2px solid #f59e0b',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#d97706', marginBottom: '3px' }}>
+                    {guarantorStats.guarantorDebts.activeCount}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#92400e' }}>⏳ פעיל</div>
+                </div>
+                <div style={{
+                  background: 'rgba(254, 226, 226, 0.7)',
+                  border: '2px solid #ef4444',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#dc2626', marginBottom: '3px' }}>
+                    {guarantorStats.guarantorDebts.overdueCount}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#991b1b' }}>⚠️ באיחור</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* כפתור רענון */}
         <div style={{ textAlign: 'center', marginTop: '30px' }}>

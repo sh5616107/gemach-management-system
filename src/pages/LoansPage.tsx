@@ -2734,6 +2734,147 @@ function LoansPage() {
               </div>
             </div>
 
+            {/* פרטי בנק למס"ב - מוצג רק אם מופעל */}
+            {db.getSettings().enableMasav && (
+              <div style={{
+                marginTop: '20px',
+                padding: '15px',
+                background: 'rgba(59, 130, 246, 0.05)',
+                border: '2px solid rgba(59, 130, 246, 0.2)',
+                borderRadius: '8px'
+              }}>
+              <h3 style={{ 
+                marginBottom: '15px', 
+                color: '#2c3e50',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                🏦 פרטי בנק למס"ב (אופציונלי)
+                <span style={{
+                  fontSize: '12px',
+                  color: '#666',
+                  fontWeight: 'normal'
+                }}>
+                  - נדרש לגביית תשלומים אוטומטית
+                </span>
+              </h3>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>קוד בנק (2 ספרות):</label>
+                  <input
+                    key={`bankCode-${selectedBorrowerId || 'new'}`}
+                    type="text"
+                    value={currentBorrower.bankCode || ''}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 2)
+                      handleBorrowerChange('bankCode', value)
+                    }}
+                    placeholder="12"
+                    maxLength={2}
+                    style={{
+                      borderColor: currentBorrower.bankCode && currentBorrower.bankCode.length !== 2 ? '#f39c12' : undefined
+                    }}
+                  />
+                  {currentBorrower.bankCode && currentBorrower.bankCode.length !== 2 && (
+                    <small style={{ color: '#f39c12', fontSize: '12px' }}>
+                      חייב להיות 2 ספרות
+                    </small>
+                  )}
+                </div>
+                <div className="form-group">
+                  <label>מספר סניף (3 ספרות):</label>
+                  <input
+                    key={`branchNumber-${selectedBorrowerId || 'new'}`}
+                    type="text"
+                    value={currentBorrower.branchNumber || ''}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 3)
+                      handleBorrowerChange('branchNumber', value)
+                    }}
+                    placeholder="345"
+                    maxLength={3}
+                    style={{
+                      borderColor: currentBorrower.branchNumber && currentBorrower.branchNumber.length !== 3 ? '#f39c12' : undefined
+                    }}
+                  />
+                  {currentBorrower.branchNumber && currentBorrower.branchNumber.length !== 3 && (
+                    <small style={{ color: '#f39c12', fontSize: '12px' }}>
+                      חייב להיות 3 ספרות
+                    </small>
+                  )}
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>מספר חשבון (9 ספרות):</label>
+                  <input
+                    key={`accountNumber-${selectedBorrowerId || 'new'}`}
+                    type="text"
+                    value={currentBorrower.accountNumber || ''}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 9)
+                      handleBorrowerChange('accountNumber', value)
+                    }}
+                    placeholder="123456789"
+                    maxLength={9}
+                    style={{
+                      borderColor: currentBorrower.accountNumber && currentBorrower.accountNumber.length !== 9 ? '#f39c12' : undefined
+                    }}
+                  />
+                  {currentBorrower.accountNumber && currentBorrower.accountNumber.length !== 9 && (
+                    <small style={{ color: '#f39c12', fontSize: '12px' }}>
+                      חייב להיות 9 ספרות
+                    </small>
+                  )}
+                </div>
+                <div className="form-group">
+                  {/* שדה ריק לאיזון */}
+                </div>
+              </div>
+
+              {/* סטטוס פרטי בנק */}
+              {currentBorrower.bankCode && currentBorrower.branchNumber && currentBorrower.accountNumber && (
+                <div style={{
+                  marginTop: '10px',
+                  padding: '10px',
+                  background: currentBorrower.bankCode.length === 2 && 
+                             currentBorrower.branchNumber.length === 3 && 
+                             currentBorrower.accountNumber.length === 9
+                    ? 'rgba(39, 174, 96, 0.1)'
+                    : 'rgba(243, 156, 18, 0.1)',
+                  borderRadius: '4px',
+                  fontSize: '13px',
+                  color: currentBorrower.bankCode.length === 2 && 
+                         currentBorrower.branchNumber.length === 3 && 
+                         currentBorrower.accountNumber.length === 9
+                    ? '#27ae60'
+                    : '#f39c12'
+                }}>
+                  {currentBorrower.bankCode.length === 2 && 
+                   currentBorrower.branchNumber.length === 3 && 
+                   currentBorrower.accountNumber.length === 9
+                    ? '✅ פרטי בנק מלאים - ניתן לגבות באמצעות מס"ב'
+                    : '⚠️ פרטי בנק חלקיים - יש להשלים את כל השדות'}
+                </div>
+              )}
+
+              <div style={{
+                marginTop: '10px',
+                padding: '8px',
+                background: 'rgba(52, 152, 219, 0.1)',
+                borderRadius: '4px',
+                fontSize: '12px',
+                color: '#666'
+              }}>
+                💡 <strong>טיפ:</strong> פרטי הבנק נדרשים רק אם ברצונך לגבות תשלומים באמצעות מערכת מס"ב.
+                ניתן להשאיר ריק אם לא רלוונטי.
+              </div>
+              </div>
+            )}
+
             <div className="form-row" style={{ justifyContent: 'center' }}>
               <button className="btn btn-success" onClick={saveBorrower}>
                 שמור לווה
@@ -2797,29 +2938,29 @@ function LoansPage() {
                 </button>
               )}
             </div>
-          </div>
-        )}
 
-        {/* הצגת חובות ערבים */}
-        {selectedBorrowerId && guarantorDebts.filter(debt => 
-          loans.find(l => l.id === debt.originalLoanId && l.borrowerId === selectedBorrowerId)
-        ).length > 0 && (
-          <div style={{ marginTop: '30px', padding: '20px', background: '#fff7ed', borderRadius: '15px' }}>
-            <h3 style={{ color: '#ea580c', marginBottom: '20px', textAlign: 'center' }}>
-              🤝 חובות ערבים (הלוואות שהועברו לערבים)
-            </h3>
-            {guarantorDebts
-              .filter(debt => loans.find(l => l.id === debt.originalLoanId && l.borrowerId === selectedBorrowerId))
-              .map(debt => (
-                <GuarantorDebtCard
-                  key={debt.id}
-                  debt={debt}
-                  onPaymentClick={(debt) => {
-                    setSelectedGuarantorDebt(debt)
-                    setShowGuarantorDebtPaymentModal(true)
-                  }}
-                />
-              ))}
+            {/* הצגת חובות ערבים */}
+            {selectedBorrowerId && guarantorDebts.filter(debt => 
+              loans.find(l => l.id === debt.originalLoanId && l.borrowerId === selectedBorrowerId)
+            ).length > 0 && (
+              <div style={{ marginTop: '30px', padding: '20px', background: '#fff7ed', borderRadius: '15px' }}>
+                <h3 style={{ color: '#ea580c', marginBottom: '20px', textAlign: 'center' }}>
+                  🤝 חובות ערבים (הלוואות שהועברו לערבים)
+                </h3>
+                {guarantorDebts
+                  .filter(debt => loans.find(l => l.id === debt.originalLoanId && l.borrowerId === selectedBorrowerId))
+                  .map(debt => (
+                    <GuarantorDebtCard
+                      key={debt.id}
+                      debt={debt}
+                      onPaymentClick={(debt) => {
+                        setSelectedGuarantorDebt(debt)
+                        setShowGuarantorDebtPaymentModal(true)
+                      }}
+                    />
+                  ))}
+              </div>
+            )}
           </div>
         )}
 

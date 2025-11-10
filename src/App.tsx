@@ -11,6 +11,8 @@ import SettingsPage from './pages/SettingsPage'
 import HelpPage from './pages/HelpPage'
 import BorrowerReportPage from './pages/BorrowerReportPage'
 import StatisticsPage from './pages/StatisticsPage'
+import MasavFileGeneratorPage from './pages/MasavFileGeneratorPage'
+import MasavHistoryPage from './pages/MasavHistoryPage'
 
 // קומפוננט לאיפוס גלילה בכל מעבר דף
 function ScrollToTop() {
@@ -64,6 +66,8 @@ function App() {
         <Route path="/statistics" element={<StatisticsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/help" element={<HelpPage />} />
+        <Route path="/masav-generator" element={<MasavFileGeneratorPage />} />
+        <Route path="/masav-history" element={<MasavHistoryPage />} />
       </Routes>
     </div>
   )

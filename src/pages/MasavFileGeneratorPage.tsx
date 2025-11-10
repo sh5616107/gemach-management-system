@@ -97,7 +97,8 @@ function MasavFileGeneratorPage() {
 
   const updateAmount = (index: number, amount: number) => {
     const newBorrowers = [...borrowers]
-    newBorrowers[index].amount = amount
+    // וודא שהסכום הוא מספר תקין
+    newBorrowers[index].amount = isNaN(amount) || amount < 0 ? 0 : amount
     setBorrowers(newBorrowers)
   }
 
@@ -119,7 +120,7 @@ function MasavFileGeneratorPage() {
 
   const canProceedToStep3 = () => {
     const selected = getSelectedBorrowers()
-    return selected.every(b => b.amount > 0 && b.amount <= b.balance)
+    return selected.every(b => b.amount && !isNaN(b.amount) && b.amount > 0 && b.amount <= b.balance)
   }
 
   const canProceedToStep4 = () => {
@@ -141,6 +142,14 @@ function MasavFileGeneratorPage() {
     }
 
     const selected = getSelectedBorrowers()
+    
+    // בדיקה שכל הסכומים תקינים
+    const invalidAmounts = selected.filter(sb => !sb.amount || sb.amount <= 0)
+    if (invalidAmounts.length > 0) {
+      const names = invalidAmounts.map(sb => `${sb.borrower.firstName} ${sb.borrower.lastName}`).join(', ')
+      showNotification(`❌ שגיאה: סכומים לא תקינים עבור: ${names}`, 'error')
+      return
+    }
     
     // יצירת charges
     const charges: MasavCharge[] = selected.map(sb => {
@@ -420,8 +429,20 @@ function MasavFileGeneratorPage() {
                   <label style={{ fontWeight: 'bold', minWidth: '100px' }}>סכום לגביה:</label>
                   <input
                     type="number"
-                    value={sb.amount}
-                    onChange={(e) => updateAmount(actualIndex, parseFloat(e.target.value) || 0)}
+                    min="0.01"
+                    step="0.01"
+                    value={sb.amount || ''}
+                    onChange={(e) => {
+                      const value = parseFloat(e.target.value)
+                      updateAmount(actualIndex, isNaN(value) ? 0 : value)
+                    }}
+                    onBlur={(e) => {
+                      // אם השדה ריק, מלא את היתרה
+                      if (!e.target.value || parseFloat(e.target.value) <= 0) {
+                        updateAmount(actualIndex, sb.balance)
+                      }
+                    }}
+                    placeholder={db.formatCurrency(sb.balance)}
                     style={{
                       flex: 1,
                       padding: '10px',

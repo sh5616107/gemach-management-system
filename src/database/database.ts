@@ -140,6 +140,11 @@ export interface DatabaseGuarantor {
   lastUpdated: string          // תאריך עדכון אחרון
   activeGuarantees: number     // מספר ערבויות פעילות (מחושב)
   totalRisk: number           // סיכון כולל בש"ח (מחושב)
+  
+  // פרטי בנק למס"ב (אופציונלי)
+  bankCode?: string              // קוד בנק (2 ספרות)
+  branchNumber?: string          // מספר סניף (3 ספרות)
+  accountNumber?: string         // מספר חשבון (9 ספרות)
 }
 
 export interface DatabaseBlacklistEntry {
@@ -196,25 +201,6 @@ export interface DatabaseGuarantorDebt {
   installmentDates?: string[]     // תאריכי פירעון לכל תשלום
   status: 'active' | 'paid' | 'overdue'
   notes?: string
-}
-
-export interface DatabaseGuarantor {
-  id: number
-  firstName: string
-  lastName: string
-  idNumber: string              // מספר זהות (חובה אם מופעל בהגדרות)
-  phone: string                 // טלפון (חובה)
-  email?: string               // אימייל (אופציונלי)
-  address?: string             // כתובת (אופציונלי)
-  notes?: string               // הערות (אופציונלי)
-  status: 'active' | 'blacklisted' | 'at_risk'
-  blacklistReason?: string     // סיבת חסימה
-  blacklistDate?: string       // תאריך חסימה
-  blacklistBy?: string         // מי חסם
-  createdDate: string          // תאריך יצירה
-  lastUpdated: string          // תאריך עדכון אחרון
-  activeGuarantees: number     // מספר ערבויות פעילות (מחושב)
-  totalRisk: number           // סיכון כולל בש"ח (מחושב)
 }
 
 export interface DatabaseBlacklistEntry {

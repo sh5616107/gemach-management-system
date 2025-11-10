@@ -123,7 +123,10 @@ function LoansPage() {
     email: '',
     address: '',
     notes: '',
-    status: 'active' as 'active' | 'blacklisted' | 'at_risk'
+    status: 'active' as 'active' | 'blacklisted' | 'at_risk',
+    bankCode: '',
+    branchNumber: '',
+    accountNumber: ''
   })
 
   // State למודל אישור
@@ -434,7 +437,10 @@ function LoansPage() {
       email: '',
       address: '',
       notes: '',
-      status: 'active'
+      status: 'active',
+      bankCode: '',
+      branchNumber: '',
+      accountNumber: ''
     })
   }
 
@@ -447,7 +453,10 @@ function LoansPage() {
       email: guarantor.email || '',
       address: guarantor.address || '',
       notes: guarantor.notes || '',
-      status: guarantor.status
+      status: guarantor.status,
+      bankCode: guarantor.bankCode || '',
+      branchNumber: guarantor.branchNumber || '',
+      accountNumber: guarantor.accountNumber || ''
     })
     setEditingGuarantorId(guarantor.id)
   }
@@ -462,7 +471,10 @@ function LoansPage() {
       email: '',
       address: '',
       notes: '',
-      status: 'active'
+      status: 'active',
+      bankCode: '',
+      branchNumber: '',
+      accountNumber: ''
     })
   }
 
@@ -3166,6 +3178,130 @@ function LoansPage() {
                     style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
                   />
                 </div>
+              </div>
+
+              {/* פרטי בנק למס"ב */}
+              <div style={{
+                marginTop: '20px',
+                padding: '15px',
+                background: 'rgba(59, 130, 246, 0.05)',
+                border: '2px solid rgba(59, 130, 246, 0.2)',
+                borderRadius: '8px'
+              }}>
+                <h4 style={{ 
+                  marginBottom: '15px', 
+                  color: '#2c3e50',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  🏦 פרטי בנק למס"ב (אופציונלי)
+                  <span style={{
+                    fontSize: '12px',
+                    color: '#666',
+                    fontWeight: 'normal'
+                  }}>
+                    - נדרש לגביית תשלומים מהערב
+                  </span>
+                </h4>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>קוד בנק (2 ספרות):</label>
+                    <input
+                      type="text"
+                      value={newGuarantor.bankCode || ''}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 2)
+                        handleGuarantorInputChange('bankCode', value)
+                      }}
+                      placeholder="12"
+                      maxLength={2}
+                      style={{
+                        borderColor: newGuarantor.bankCode && newGuarantor.bankCode.length !== 2 ? '#f39c12' : undefined
+                      }}
+                    />
+                    {newGuarantor.bankCode && newGuarantor.bankCode.length !== 2 && (
+                      <small style={{ color: '#f39c12', fontSize: '12px' }}>
+                        חייב להיות 2 ספרות
+                      </small>
+                    )}
+                  </div>
+                  <div className="form-group">
+                    <label>מספר סניף (3 ספרות):</label>
+                    <input
+                      type="text"
+                      value={newGuarantor.branchNumber || ''}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 3)
+                        handleGuarantorInputChange('branchNumber', value)
+                      }}
+                      placeholder="345"
+                      maxLength={3}
+                      style={{
+                        borderColor: newGuarantor.branchNumber && newGuarantor.branchNumber.length !== 3 ? '#f39c12' : undefined
+                      }}
+                    />
+                    {newGuarantor.branchNumber && newGuarantor.branchNumber.length !== 3 && (
+                      <small style={{ color: '#f39c12', fontSize: '12px' }}>
+                        חייב להיות 3 ספרות
+                      </small>
+                    )}
+                  </div>
+                </div>
+
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>מספר חשבון (9 ספרות):</label>
+                    <input
+                      type="text"
+                      value={newGuarantor.accountNumber || ''}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 9)
+                        handleGuarantorInputChange('accountNumber', value)
+                      }}
+                      placeholder="123456789"
+                      maxLength={9}
+                      style={{
+                        borderColor: newGuarantor.accountNumber && newGuarantor.accountNumber.length !== 9 ? '#f39c12' : undefined
+                      }}
+                    />
+                    {newGuarantor.accountNumber && newGuarantor.accountNumber.length !== 9 && (
+                      <small style={{ color: '#f39c12', fontSize: '12px' }}>
+                        חייב להיות 9 ספרות
+                      </small>
+                    )}
+                  </div>
+                  <div className="form-group">
+                    {/* שדה ריק לאיזון */}
+                  </div>
+                </div>
+
+                {/* סטטוס פרטי בנק */}
+                {newGuarantor.bankCode && newGuarantor.branchNumber && newGuarantor.accountNumber && (
+                  <div style={{
+                    marginTop: '10px',
+                    padding: '10px',
+                    background: newGuarantor.bankCode.length === 2 && 
+                               newGuarantor.branchNumber.length === 3 && 
+                               newGuarantor.accountNumber.length === 9
+                      ? 'rgba(39, 174, 96, 0.1)'
+                      : 'rgba(243, 156, 18, 0.1)',
+                    borderRadius: '4px',
+                    fontSize: '13px',
+                    color: newGuarantor.bankCode.length === 2 && 
+                           newGuarantor.branchNumber.length === 3 && 
+                           newGuarantor.accountNumber.length === 9
+                      ? '#27ae60'
+                      : '#f39c12'
+                  }}>
+                    {newGuarantor.bankCode.length === 2 && 
+                     newGuarantor.branchNumber.length === 3 && 
+                     newGuarantor.accountNumber.length === 9
+                      ? '✅ פרטי בנק מלאים - ניתן לגבות באמצעות מס"ב'
+                      : '⚠️ פרטי בנק חלקיים - יש להשלים את כל השדות'}
+                  </div>
+                )}
               </div>
 
               <div className="form-row" style={{ justifyContent: 'center' }}>

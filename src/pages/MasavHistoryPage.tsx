@@ -124,7 +124,13 @@ function MasavHistoryPage() {
     <div>
       <header className="header">
         <h1>📋 היסטוריית קבצי מס"ב</h1>
-        <button className="close-btn" onClick={() => navigate('/')}>×</button>
+        <button 
+          className="close-btn" 
+          onClick={() => navigate(-1)}
+          title="חזור מסך אחד אחורה"
+        >
+          ×
+        </button>
       </header>
 
       <div style={{ padding: '20px', maxWidth: '1400px', margin: '0 auto' }}>
@@ -501,6 +507,41 @@ function MasavHistoryPage() {
           </div>
         </div>
       )}
+
+      {/* כפתור חזרה לדף הבית */}
+      <button 
+        onClick={() => navigate('/')}
+        style={{ 
+          position: 'fixed',
+          bottom: '30px',
+          right: '30px',
+          background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+          color: 'white',
+          border: 'none',
+          width: '60px',
+          height: '60px',
+          borderRadius: '50%',
+          cursor: 'pointer',
+          fontSize: '28px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
+          transition: 'all 0.3s ease',
+          zIndex: 1000
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'scale(1.1)'
+          e.currentTarget.style.boxShadow = '0 6px 20px rgba(59, 130, 246, 0.6)'
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'scale(1)'
+          e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.4)'
+        }}
+        title="חזרה לדף הבית"
+      >
+        🏠
+      </button>
     </div>
   )
 }

@@ -16,6 +16,7 @@ function MasavFileGeneratorPage() {
   const [currentStep, setCurrentStep] = useState(1)
   const [borrowers, setBorrowers] = useState<SelectedBorrower[]>([])
   const [chargeDate, setChargeDate] = useState(new Date().toISOString().split('T')[0])
+  const [transactionType, setTransactionType] = useState<'504' | '505'>('504')
   const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
@@ -170,7 +171,7 @@ function MasavFileGeneratorPage() {
     })
 
     // בניית הקובץ
-    const fileContent = buildMasavFile(settings, charges, chargeDate)
+    const fileContent = buildMasavFile(settings, charges, chargeDate, transactionType)
 
     // שם קובץ
     const date = new Date(chargeDate)
@@ -481,7 +482,7 @@ function MasavFileGeneratorPage() {
     return (
       <div>
         <h2 style={{ color: '#2c3e50', marginBottom: '20px', textAlign: 'center' }}>
-          שלב 3: בחירת תאריך חיוב
+          שלב 3: הגדרות קובץ מס"ב
         </h2>
 
         <div style={{
@@ -492,39 +493,83 @@ function MasavFileGeneratorPage() {
           borderRadius: '10px',
           boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
         }}>
-          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px', fontSize: '16px' }}>
-            תאריך חיוב:
-          </label>
-          <input
-            type="date"
-            value={chargeDate}
-            onChange={(e) => setChargeDate(e.target.value)}
-            min={today}
-            style={{
-              width: '100%',
+          {/* סוג תנועה */}
+          <div style={{ marginBottom: '25px' }}>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px', fontSize: '16px' }}>
+              סוג תנועה:
+            </label>
+            <select
+              value={transactionType}
+              onChange={(e) => setTransactionType(e.target.value as '504' | '505')}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: '2px solid #ddd',
+                borderRadius: '5px',
+                fontSize: '16px',
+                background: 'white'
+              }}
+            >
+              <option value="504">חיוב (גביה מלקוחות)</option>
+              <option value="505">זיכוי (החזר ללקוחות)</option>
+            </select>
+            
+            <div style={{
+              marginTop: '10px',
               padding: '12px',
-              border: `2px solid ${isValid ? '#ddd' : '#ef4444'}`,
+              background: transactionType === '504' ? '#fef3c7' : '#d1fae5',
               borderRadius: '5px',
-              fontSize: '16px'
-            }}
-          />
-
-          {!isValid && (
-            <div style={{ color: '#ef4444', marginTop: '10px', fontSize: '14px' }}>
-              ⚠️ תאריך החיוב לא יכול להיות בעבר
+              fontSize: '13px',
+              color: transactionType === '504' ? '#92400e' : '#065f46'
+            }}>
+              {transactionType === '504' ? (
+                <>
+                  <strong>חיוב:</strong> גביית תשלומים מחשבונות הלווים (למשל: החזר הלוואה, תשלום חודשי)
+                </>
+              ) : (
+                <>
+                  <strong>זיכוי:</strong> החזרת כספים לחשבונות הלווים (למשל: החזר הפקדה, ביטול גביה מיותרת)
+                </>
+              )}
             </div>
-          )}
+          </div>
 
-          <div style={{
-            marginTop: '20px',
-            padding: '15px',
-            background: '#f0f9ff',
-            borderRadius: '8px',
-            fontSize: '14px',
-            color: '#0369a1'
-          }}>
-            <strong>💡 הסבר:</strong> תאריך החיוב הוא התאריך שבו הבנק יבצע את החיוב בחשבונות הלווים.
-            בדרך כלל מומלץ לבחור תאריך מספר ימים קדימה כדי לאפשר זמן עיבוד.
+          {/* תאריך */}
+          <div>
+            <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '10px', fontSize: '16px' }}>
+              תאריך {transactionType === '504' ? 'חיוב' : 'זיכוי'}:
+            </label>
+            <input
+              type="date"
+              value={chargeDate}
+              onChange={(e) => setChargeDate(e.target.value)}
+              min={today}
+              style={{
+                width: '100%',
+                padding: '12px',
+                border: `2px solid ${isValid ? '#ddd' : '#ef4444'}`,
+                borderRadius: '5px',
+                fontSize: '16px'
+              }}
+            />
+
+            {!isValid && (
+              <div style={{ color: '#ef4444', marginTop: '10px', fontSize: '14px' }}>
+                ⚠️ התאריך לא יכול להיות בעבר
+              </div>
+            )}
+
+            <div style={{
+              marginTop: '15px',
+              padding: '15px',
+              background: '#f0f9ff',
+              borderRadius: '8px',
+              fontSize: '14px',
+              color: '#0369a1'
+            }}>
+              <strong>💡 הסבר:</strong> התאריך שבו הבנק יבצע את הפעולה בחשבונות הלקוחות.
+              מומלץ לבחור תאריך מספר ימים קדימה כדי לאפשר זמן עיבוד.
+            </div>
           </div>
         </div>
       </div>
@@ -559,11 +604,14 @@ function MasavFileGeneratorPage() {
           }}>
             <h3 style={{ margin: '0 0 10px 0', color: '#1e40af' }}>סיכום הקובץ</h3>
             <div style={{ fontSize: '18px' }}>
-              <strong>מספר חיובים:</strong> {selected.length} | 
-              <strong style={{ marginRight: '20px' }}>סכום כולל:</strong> {db.formatCurrency(getTotalAmount())}
+              <strong>סוג תנועה:</strong> {transactionType === '504' ? '🔴 חיוב (גביה)' : '🟢 זיכוי (החזר)'} |
+              <strong style={{ marginRight: '20px' }}>מספר תנועות:</strong> {selected.length}
+            </div>
+            <div style={{ fontSize: '18px', marginTop: '5px' }}>
+              <strong>סכום כולל:</strong> {db.formatCurrency(getTotalAmount())}
             </div>
             <div style={{ fontSize: '16px', marginTop: '10px' }}>
-              <strong>תאריך חיוב:</strong> {formattedDate}
+              <strong>תאריך ביצוע:</strong> {formattedDate}
             </div>
           </div>
 

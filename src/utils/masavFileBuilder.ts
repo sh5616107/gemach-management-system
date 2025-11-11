@@ -114,7 +114,8 @@ export function buildHeaderRecord(
  */
 export function buildTransactionRecord(
   institutionCode: string,
-  charge: MasavCharge
+  charge: MasavCharge,
+  transactionType: '504' | '505' = '504'
 ): string {
   let record = ''
   
@@ -147,7 +148,7 @@ export function buildTransactionRecord(
   record += padLeft(charge.referenceNumber, 20, '0')    // 75-94: אסמכתא (צמוד לימין)
   record += '00000000'                                  // 95-102: תקופה (8 תווים)
   record += '000'                                       // 103-105: קוד מלל (3 תווים)
-  record += '504'                                       // 106-108: סוג תנועה (3 תווים)
+  record += transactionType                             // 106-108: סוג תנועה (504=חיוב, 505=זיכוי)
   record += '000000000000000000'                        // 109-126: FILLER (18 תווים)
   record += '  '                                        // 127-128: BLANK (2 תווים)
   
@@ -193,7 +194,8 @@ export function buildEndRecord(): string {
 export function buildMasavFile(
   settings: MasavSettings,
   charges: MasavCharge[],
-  chargeDate: string
+  chargeDate: string,
+  transactionType: '504' | '505' = '504'
 ): string {
   const creationDate = new Date().toISOString().split('T')[0]
   let fileContent = ''
@@ -209,7 +211,7 @@ export function buildMasavFile(
   
   // רשומות תנועה
   for (const charge of charges) {
-    fileContent += buildTransactionRecord(settings.institutionCode, charge)
+    fileContent += buildTransactionRecord(settings.institutionCode, charge, transactionType)
   }
   
   // חישוב סכום כולל

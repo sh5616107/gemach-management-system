@@ -87,7 +87,6 @@ export function buildHeaderRecord(
   institutionCode: string,
   chargeDate: string,
   creationDate: string,
-  senderCode: string,
   institutionName: string
 ): string {
   let record = ''
@@ -100,10 +99,10 @@ export function buildHeaderRecord(
   record += '001'                                       // 19-21: מספר סידורי
   record += '0'                                         // 22: FILLER
   record += formatDate(creationDate)                    // 23-28: תאריך יצירה
-  record += padLeft(senderCode, 5, '0')                 // 29-33: מוסד שולח
-  record += '000000'                                    // 34-39: FILLER אפסים
-  record += padRight(institutionName, 30, ' ')          // 40-69: שם מוסד (צמוד לשמאל!)
-  record += padRight('', 56, ' ')                       // 70-125: BLANK
+  record += padLeft(institutionCode, 8, '0')            // 29-36: קוד מוסד (שוב!)
+  record += '00'                                        // 37-38: אפסים
+  record += padLeft(institutionName, 30, ' ')           // 39-68: שם מוסד (צמוד לימין!)
+  record += padRight('', 57, ' ')                       // 69-125: BLANK
   record += 'KOT'                                       // 126-128: זיהוי כותרת
   
   return record + '\r\n'
@@ -205,7 +204,6 @@ export function buildMasavFile(
     settings.institutionCode,
     chargeDate,
     creationDate,
-    settings.senderCode,
     settings.institutionName
   )
   

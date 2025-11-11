@@ -668,13 +668,30 @@ function MasavFileGeneratorPage() {
     <div>
       <header className="header">
         <h1>🏦 יצירת קובץ מס"ב</h1>
-        <button 
-          className="close-btn" 
-          onClick={() => navigate(-1)}
-          title="חזור מסך אחד אחורה"
-        >
-          ×
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={() => navigate('/masav-validator')}
+            style={{
+              padding: '8px 15px',
+              background: '#ffc107',
+              color: '#000',
+              border: 'none',
+              borderRadius: '5px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+            title="בדיקת תקינות קובץ מס״ב"
+          >
+            🔍 ולידציה
+          </button>
+          <button 
+            className="close-btn" 
+            onClick={() => navigate(-1)}
+            title="חזור מסך אחד אחורה"
+          >
+            ×
+          </button>
+        </div>
       </header>
 
       <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>

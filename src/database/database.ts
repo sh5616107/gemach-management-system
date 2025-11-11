@@ -374,6 +374,7 @@ class GemachDatabase {
 
       const gemachName = localStorage.getItem('gemach_name')
       const settings = localStorage.getItem('gemach_settings')
+      const masavSettings = localStorage.getItem('gemach_masav_settings')
 
       this.dataFile = {
         borrowers: borrowers ? JSON.parse(borrowers) : [],
@@ -387,6 +388,7 @@ class GemachDatabase {
         warningLetters: warningLetters ? JSON.parse(warningLetters) : [],
         guarantorDebts: guarantorDebts ? JSON.parse(guarantorDebts) : [],
         masavFiles: [],
+        masavSettings: masavSettings ? JSON.parse(masavSettings) : undefined,
         lastUpdated: new Date().toISOString(),
         gemachName: gemachName || 'נר שרה',
         settings: settings ? JSON.parse(settings) : {
@@ -440,6 +442,7 @@ class GemachDatabase {
       localStorage.setItem('gemach_guarantor_debts', JSON.stringify(this.dataFile.guarantorDebts))
       localStorage.setItem('gemach_name', this.dataFile.gemachName)
       localStorage.setItem('gemach_settings', JSON.stringify(this.dataFile.settings))
+      localStorage.setItem('gemach_masav_settings', JSON.stringify(this.dataFile.masavSettings))
 
       // גם שמור את הקובץ המלא ב-localStorage לייצוא
       localStorage.setItem('gemach_full_data', JSON.stringify(this.dataFile))

@@ -130,13 +130,26 @@ function SettingsPage() {
     const settings = db.getMasavSettings()
     if (settings) {
       setMasavSettings(settings)
+    } else {
+      // אם אין הגדרות, צור ברירת מחדל
+      const defaultSettings = {
+        institutionCode: '',
+        senderCode: '',
+        institutionName: '',
+        lastReferenceNumber: 0
+      }
+      setMasavSettings(defaultSettings)
+      db.updateMasavSettings(defaultSettings)
     }
   }
 
   const handleMasavSettingChange = (key: string, value: string | number) => {
     const newSettings = { ...masavSettings, [key]: value }
     setMasavSettings(newSettings)
-    db.updateMasavSettings(newSettings)
+  }
+
+  const saveMasavSettings = () => {
+    db.updateMasavSettings(masavSettings)
     showNotification('הגדרות מס"ב נשמרו בהצלחה', 'success')
   }
 
@@ -640,6 +653,7 @@ function SettingsPage() {
                         const value = e.target.value.replace(/\D/g, '').slice(0, 8)
                         handleMasavSettingChange('institutionCode', value)
                       }}
+                      onBlur={saveMasavSettings}
                       placeholder="12345678"
                       maxLength={8}
                       style={{
@@ -666,6 +680,7 @@ function SettingsPage() {
                         const value = e.target.value.replace(/\D/g, '').slice(0, 5)
                         handleMasavSettingChange('senderCode', value)
                       }}
+                      onBlur={saveMasavSettings}
                       placeholder="12345"
                       maxLength={5}
                       style={{
@@ -692,6 +707,7 @@ function SettingsPage() {
                         const value = e.target.value.slice(0, 30)
                         handleMasavSettingChange('institutionName', value)
                       }}
+                      onBlur={saveMasavSettings}
                       placeholder='גמ"ח חסד ואמת'
                       maxLength={30}
                       style={{

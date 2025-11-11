@@ -7,9 +7,8 @@ let mainWindow
 
 // הגדרות auto-updater
 if (!isDev) {
-  // הגדר את auto-updater רק בפרודקשן
-  autoUpdater.checkForUpdatesAndNotify()
-
+  // הגדר את auto-updater רק בפרודקשן (ללא בדיקה אוטומטית)
+  
   // לוג עדכונים
   autoUpdater.logger = require('electron-log')
   autoUpdater.logger.transports.file.level = 'info'
@@ -607,12 +606,8 @@ ipcMain.handle('check-for-updates', async () => {
 app.whenReady().then(() => {
   createWindow()
 
-  // בדוק עדכונים בפתיחה (רק בפרודקשן)
-  if (!isDev) {
-    setTimeout(() => {
-      autoUpdater.checkForUpdatesAndNotify()
-    }, 3000) // המתן 3 שניות אחרי פתיחה
-  }
+  // בדיקת עדכונים רק ידנית - לא אוטומטית בפתיחה
+  // המשתמש יכול לבדוק עדכונים דרך התפריט: עזרה -> בדוק עדכונים
 })
 
 // יציאה כשכל החלונות נסגרו

@@ -7,6 +7,7 @@ interface DepositorDetailedReportProps {
 
 function DepositorDetailedReport({ depositor, onClose }: DepositorDetailedReportProps) {
   const deposits = db.getDepositorDeposits(depositor.id)
+  const recurringDeposits = db.getDepositorRecurringDeposits(depositor.id)
   
   // אסוף את כל הפעולות (הפקדות ומשיכות) למיון כרונולוגי
   const allTransactions: Array<{
@@ -132,6 +133,66 @@ function DepositorDetailedReport({ depositor, onClose }: DepositorDetailedReport
           <p style={{ margin: '5px 0' }}><strong>יתרה נוכחית:</strong> ₪{db.getDepositorBalance(depositor.id).toLocaleString()}</p>
         </div>
 
+        {/* הפקדות מתוכננות */}
+        {recurringDeposits.length > 0 && (
+          <div style={{ marginBottom: '30px' }}>
+            <h3 style={{ color: '#9b59b6' }}>🔄 הפקדות מתוכננות (עתידיות)</h3>
+            <div style={{
+              backgroundColor: '#f3e5f5',
+              border: '2px dashed #9b59b6',
+              borderRadius: '8px',
+              padding: '15px',
+              marginTop: '10px'
+            }}>
+              {recurringDeposits.map((recurring, index) => {
+                const nextDate = recurring.lastRecurringDate 
+                  ? new Date(recurring.lastRecurringDate)
+                  : new Date(recurring.depositDate)
+                nextDate.setMonth(nextDate.getMonth() + 1)
+                if (recurring.recurringDay) {
+                  nextDate.setDate(recurring.recurringDay)
+                }
+                
+                return (
+                  <div key={index} style={{
+                    padding: '10px',
+                    backgroundColor: 'white',
+                    borderRadius: '5px',
+                    marginBottom: index < recurringDeposits.length - 1 ? '10px' : '0'
+                  }}>
+                    <p style={{ margin: '5px 0', fontWeight: 'bold', color: '#9b59b6' }}>
+                      💰 ₪{recurring.amount.toLocaleString()} - כל {recurring.recurringDay} לחודש
+                    </p>
+                    <p style={{ margin: '5px 0', fontSize: '14px', color: '#666' }}>
+                      📅 הפקדה הבאה: {nextDate.toLocaleDateString('he-IL')}
+                    </p>
+                    {recurring.recurringEndDate && (
+                      <p style={{ margin: '5px 0', fontSize: '14px', color: '#666' }}>
+                        🏁 עד: {new Date(recurring.recurringEndDate).toLocaleDateString('he-IL')}
+                      </p>
+                    )}
+                    {recurring.notes && (
+                      <p style={{ margin: '5px 0', fontSize: '13px', color: '#999', fontStyle: 'italic' }}>
+                        📝 {recurring.notes}
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
+              <div style={{
+                marginTop: '10px',
+                padding: '10px',
+                backgroundColor: '#fff3cd',
+                borderRadius: '5px',
+                fontSize: '13px',
+                color: '#856404'
+              }}>
+                ℹ️ הפקדות אלו ייווצרו אוטומטית בתאריכים המתוכננים
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* טבלת תנועות */}
         <h3>תנועות</h3>
         <table style={{
@@ -143,6 +204,7 @@ function DepositorDetailedReport({ depositor, onClose }: DepositorDetailedReport
             <tr style={{ backgroundColor: '#3498db', color: 'white' }}>
               <th style={{ padding: '10px', textAlign: 'right', border: '1px solid #ddd' }}>תאריך</th>
               <th style={{ padding: '10px', textAlign: 'right', border: '1px solid #ddd' }}>סוג</th>
+              <th style={{ padding: '10px', textAlign: 'right', border: '1px solid #ddd' }}>זכות/חובה</th>
               <th style={{ padding: '10px', textAlign: 'right', border: '1px solid #ddd' }}>סכום</th>
               <th style={{ padding: '10px', textAlign: 'right', border: '1px solid #ddd' }}>יתרה</th>
               <th style={{ padding: '10px', textAlign: 'right', border: '1px solid #ddd' }}>הערות</th>
@@ -151,7 +213,7 @@ function DepositorDetailedReport({ depositor, onClose }: DepositorDetailedReport
           <tbody>
             {allTransactions.length === 0 ? (
               <tr>
-                <td colSpan={5} style={{ padding: '20px', textAlign: 'center', color: '#7f8c8d' }}>
+                <td colSpan={6} style={{ padding: '20px', textAlign: 'center', color: '#7f8c8d' }}>
                   אין תנועות
                 </td>
               </tr>
@@ -166,8 +228,23 @@ function DepositorDetailedReport({ depositor, onClose }: DepositorDetailedReport
                   <td style={{ padding: '10px', border: '1px solid #ddd' }}>
                     {transaction.type === 'deposit' ? '💰 הפקדה' : '💸 משיכה'}
                   </td>
-                  <td style={{ padding: '10px', border: '1px solid #ddd', fontWeight: 'bold' }}>
-                    {transaction.type === 'deposit' ? '+' : '-'}₪{transaction.amount.toLocaleString()}
+                  <td style={{ 
+                    padding: '10px', 
+                    border: '1px solid #ddd', 
+                    fontWeight: 'bold',
+                    fontSize: '16px',
+                    color: transaction.type === 'deposit' ? '#27ae60' : '#e74c3c',
+                    textAlign: 'center'
+                  }}>
+                    {transaction.type === 'deposit' ? '⬆️ זכות' : '⬇️ חובה'}
+                  </td>
+                  <td style={{ 
+                    padding: '10px', 
+                    border: '1px solid #ddd', 
+                    fontWeight: 'bold',
+                    color: transaction.type === 'deposit' ? '#27ae60' : '#e74c3c'
+                  }}>
+                    ₪{transaction.amount.toLocaleString()}
                   </td>
                   <td style={{ padding: '10px', border: '1px solid #ddd', fontWeight: 'bold' }}>
                     ₪{transaction.balance.toLocaleString()}

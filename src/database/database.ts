@@ -871,12 +871,26 @@ class GemachDatabase {
       lastDate.setHours(0, 0, 0, 0)
 
       // חשב את תאריך ההפקדה הבאה
-      const nextDate = new Date(lastDate)
-      nextDate.setMonth(nextDate.getMonth() + 1)
+      let nextDate = new Date(lastDate)
       
-      // אם יש יום ספציפי בחודש, השתמש בו
-      if (recurringDeposit.recurringDay) {
+      // אם זו הפקדה חדשה (אין lastRecurringDate) ויש יום ספציפי
+      if (!recurringDeposit.lastRecurringDate && recurringDeposit.recurringDay) {
+        // קבע את היום הספציפי בחודש הנוכחי
         nextDate.setDate(recurringDeposit.recurringDay)
+        
+        // אם היום הספציפי כבר עבר החודש, עבור לחודש הבא
+        if (nextDate <= lastDate) {
+          nextDate.setMonth(nextDate.getMonth() + 1)
+          nextDate.setDate(recurringDeposit.recurringDay)
+        }
+      } else {
+        // הפקדה קיימת - פשוט הוסף חודש
+        nextDate.setMonth(nextDate.getMonth() + 1)
+        
+        // אם יש יום ספציפי בחודש, השתמש בו
+        if (recurringDeposit.recurringDay) {
+          nextDate.setDate(recurringDeposit.recurringDay)
+        }
       }
 
       // בדוק אם הגיע הזמן ליצור הפקדה חדשה
@@ -1140,8 +1154,10 @@ class GemachDatabase {
 
   // פונקציות עזר למפקידים
   getDepositorBalance(depositorId: number): number {
-    // קבל את כל ההפקדות הפעילות של המפקיד
-    const deposits = this.dataFile.deposits.filter(d => d.depositorId === depositorId)
+    // קבל את כל ההפקדות הפעילות של המפקיד (לא כולל תבניות מחזוריות)
+    const deposits = this.dataFile.deposits.filter(d => 
+      d.depositorId === depositorId && !d.isRecurring
+    )
     
     let totalBalance = 0
     for (const deposit of deposits) {
@@ -1159,14 +1175,23 @@ class GemachDatabase {
   }
 
   getDepositorDeposits(depositorId: number): DatabaseDeposit[] {
+    // החזר רק הפקדות רגילות (לא תבניות מחזוריות)
     return this.dataFile.deposits
-      .filter(d => d.depositorId === depositorId)
+      .filter(d => d.depositorId === depositorId && !d.isRecurring)
+      .sort((a, b) => new Date(b.depositDate).getTime() - new Date(a.depositDate).getTime())
+  }
+
+  getDepositorRecurringDeposits(depositorId: number): DatabaseDeposit[] {
+    // החזר רק תבניות מחזוריות
+    return this.dataFile.deposits
+      .filter(d => d.depositorId === depositorId && d.isRecurring)
       .sort((a, b) => new Date(b.depositDate).getTime() - new Date(a.depositDate).getTime())
   }
 
   getDepositorActiveDepositsCount(depositorId: number): number {
+    // ספור רק הפקדות רגילות פעילות (לא תבניות מחזוריות)
     return this.dataFile.deposits.filter(d => 
-      d.depositorId === depositorId && d.status === 'active'
+      d.depositorId === depositorId && d.status === 'active' && !d.isRecurring
     ).length
   }
 

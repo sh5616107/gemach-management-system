@@ -43,25 +43,71 @@ function NewDepositForm({
       recurringEndDate = endDate.toISOString().split('T')[0]
     }
 
-    const result = db.addDepositToDepositor(depositorId, {
+    console.log('💾 Saving deposit:', {
       amount: formData.amount,
-      depositDate: formData.depositDate,
-      depositPeriod: formData.depositPeriod,
-      reminderDays: formData.reminderDays,
-      notes: formData.notes.trim(),
       isRecurring: formData.isRecurring,
-      recurringDay: formData.isRecurring ? formData.recurringDay : undefined,
-      recurringMonths: formData.isRecurring ? formData.recurringMonths : undefined,
-      recurringEndDate: formData.isRecurring ? recurringEndDate : undefined,
-      lastRecurringDate: formData.depositDate
+      recurringDay: formData.recurringDay,
+      recurringMonths: formData.recurringMonths,
+      recurringEndDate
     })
+    
+    if (formData.isRecurring) {
+      // הפקדה מחזורית - צור גם תבנית וגם הפקדה ראשונה
+      
+      // 1. צור את התבנית המחזורית
+      const templateResult = db.addDepositToDepositor(depositorId, {
+        amount: formData.amount,
+        depositDate: formData.depositDate,
+        depositPeriod: formData.depositPeriod,
+        reminderDays: formData.reminderDays,
+        notes: formData.notes.trim(),
+        isRecurring: true,
+        recurringDay: formData.recurringDay,
+        recurringMonths: formData.recurringMonths,
+        recurringEndDate: recurringEndDate,
+        lastRecurringDate: formData.depositDate // סמן שההפקדה הראשונה כבר נוצרה
+      })
 
-    if ('error' in result) {
-      showNotification(`❌ ${result.error}`, 'error')
-      return
+      if ('error' in templateResult) {
+        showNotification(`❌ ${templateResult.error}`, 'error')
+        return
+      }
+
+      // 2. צור את ההפקדה הראשונה (רגילה)
+      const firstDepositResult = db.addDepositToDepositor(depositorId, {
+        amount: formData.amount,
+        depositDate: formData.depositDate,
+        depositPeriod: formData.depositPeriod,
+        reminderDays: formData.reminderDays,
+        notes: `${formData.notes.trim()} (הפקדה מחזורית - ראשונה)`.trim(),
+        isRecurring: false // זו הפקדה רגילה
+      })
+
+      if ('error' in firstDepositResult) {
+        showNotification(`❌ ${firstDepositResult.error}`, 'error')
+        return
+      }
+
+      showNotification(`✅ הפקדה מחזורית נוספה! ההפקדה הראשונה נוצרה והבאות יווצרו אוטומטית.`)
+    } else {
+      // הפקדה רגילה
+      const result = db.addDepositToDepositor(depositorId, {
+        amount: formData.amount,
+        depositDate: formData.depositDate,
+        depositPeriod: formData.depositPeriod,
+        reminderDays: formData.reminderDays,
+        notes: formData.notes.trim(),
+        isRecurring: false
+      })
+
+      if ('error' in result) {
+        showNotification(`❌ ${result.error}`, 'error')
+        return
+      }
+
+      showNotification(`✅ הפקדה חדשה נוספה בהצלחה!`)
     }
-
-    showNotification(`✅ הפקדה חדשה נוספה בהצלחה!`)
+    
     onSuccess()
   }
 
@@ -194,9 +240,10 @@ function NewDepositForm({
           <div style={{
             marginBottom: '15px',
             padding: '15px',
-            backgroundColor: '#e8f5e9',
+            backgroundColor: formData.isRecurring ? '#e3f2fd' : '#e8f5e9',
             borderRadius: '5px',
-            border: '2px solid #4caf50'
+            border: formData.isRecurring ? '3px solid #2196f3' : '2px solid #4caf50',
+            transition: 'all 0.3s ease'
           }}>
             <label style={{ display: 'flex', alignItems: 'center', marginBottom: '10px', cursor: 'pointer' }}>
               <input
@@ -205,8 +252,8 @@ function NewDepositForm({
                 onChange={(e) => setFormData({ ...formData, isRecurring: e.target.checked })}
                 style={{ marginLeft: '10px', width: '20px', height: '20px', cursor: 'pointer' }}
               />
-              <span style={{ fontWeight: 'bold', fontSize: '16px' }}>
-                🔄 הפקדה מחזורית (אוטומטית כל חודש)
+              <span style={{ fontWeight: 'bold', fontSize: '18px', color: formData.isRecurring ? '#1976d2' : '#2c3e50' }}>
+                🔄 הפקדה מתוכננת (מחזורית - אוטומטית כל חודש)
               </span>
             </label>
 

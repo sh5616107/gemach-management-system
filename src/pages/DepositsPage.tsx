@@ -229,6 +229,13 @@ function DepositsPage() {
               <p>סכום של: <strong>${amount} ש"ח</strong></p>
               <p>בתאריך: <strong>${depositDate}</strong></p>
               <p>תקופת ההפקדה: <strong>${deposit.depositPeriod} חודשים</strong></p>
+              ${deposit.isRecurring ? `
+                <div style="background: #e3f2fd; border: 2px solid #2196f3; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                  <p style="margin: 5px 0; color: #1976d2;"><strong>🔄 הפקדה מחזורית</strong></p>
+                  <p style="margin: 5px 0; font-size: 13px;">גבייה אוטומטית ב-<strong>${deposit.recurringDay}</strong> לכל חודש</p>
+                  ${deposit.recurringEndDate ? `<p style="margin: 5px 0; font-size: 13px;">עד תאריך: <strong>${new Date(deposit.recurringEndDate).toLocaleDateString('he-IL')}</strong></p>` : '<p style="margin: 5px 0; font-size: 13px;">ללא תאריך סיום</p>'}
+                </div>
+              ` : ''}
               <p>אנו מתחייבים להחזיר את הסכום בתום התקופה או לפי דרישה</p>
               ${selectedDepositor?.phone ? `<p>טלפון המפקיד: <strong>${selectedDepositor.phone}</strong></p>` : ''}
               ${deposit.notes ? `<p>הערות: <strong>${deposit.notes}</strong></p>` : ''}
@@ -364,7 +371,16 @@ function DepositsPage() {
 
   // תצוגת מפקיד בודד עם הפקדות
   const depositorDeposits = db.getDepositorDeposits(selectedDepositor.id)
+  const recurringDeposits = db.getDepositorRecurringDeposits(selectedDepositor.id)
   const totalBalance = db.getDepositorBalance(selectedDepositor.id)
+  
+  console.log('🔍 Debug - Depositor:', selectedDepositor.name)
+  console.log('📋 Regular deposits:', depositorDeposits.length, depositorDeposits)
+  console.log('🔄 Recurring deposits:', recurringDeposits.length, recurringDeposits)
+  
+  // בדוק את כל ההפקדות של המפקיד (כולל מחזוריות)
+  const allDeposits = db.getDeposits().filter(d => d.depositorId === selectedDepositor.id)
+  console.log('📊 ALL deposits for this depositor:', allDeposits.length, allDeposits)
 
   return (
     <div>
@@ -522,6 +538,113 @@ function DepositsPage() {
         />
       )}
 
+      {/* הפקדות מחזוריות (תבניות) */}
+      {recurringDeposits.length > 0 && (
+        <>
+          <h2 style={{ marginBottom: '15px', color: '#9b59b6' }}>🔄 הפקדות מתוכננות (מחזוריות)</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginBottom: '30px' }}>
+            {recurringDeposits.map(deposit => (
+              <div
+                key={deposit.id}
+                style={{
+                  backgroundColor: '#f8f9fa',
+                  border: '2px dashed #9b59b6',
+                  borderRadius: '10px',
+                  padding: '20px',
+                  boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div style={{ flex: 1 }}>
+                    <h3 style={{ margin: '0 0 10px 0', color: '#9b59b6' }}>
+                      🔄 הפקדה מתוכננת
+                    </h3>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+                      <p style={{ margin: 0 }}>
+                        💵 <strong>סכום:</strong> ₪{deposit.amount.toLocaleString()}
+                      </p>
+                      <p style={{ margin: 0 }}>
+                        📅 <strong>יום בחודש:</strong> {deposit.recurringDay}
+                      </p>
+                      <p style={{ margin: 0 }}>
+                        ⏱️ <strong>תקופה:</strong> {deposit.depositPeriod} חודשים
+                      </p>
+                      {deposit.recurringEndDate && (
+                        <p style={{ margin: 0 }}>
+                          🏁 <strong>עד:</strong> {new Date(deposit.recurringEndDate).toLocaleDateString('he-IL')}
+                        </p>
+                      )}
+                    </div>
+
+                    {deposit.notes && (
+                      <p style={{ margin: '10px 0 0 0', color: '#95a5a6', fontSize: '14px' }}>
+                        📝 {deposit.notes}
+                      </p>
+                    )}
+
+                    <div style={{
+                      marginTop: '10px',
+                      padding: '10px',
+                      backgroundColor: '#e3f2fd',
+                      borderRadius: '5px',
+                      fontSize: '14px',
+                      color: '#1976d2'
+                    }}>
+                      <strong>ℹ️ הפקדה זו תיווצר אוטומטית ב-{deposit.recurringDay} לכל חודש</strong>
+                      {deposit.lastRecurringDate && (
+                        <div style={{ marginTop: '5px', fontSize: '12px' }}>
+                          הפקדה אחרונה: {new Date(deposit.lastRecurringDate).toLocaleDateString('he-IL')}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #ecf0f1' }}>
+                  <button
+                    onClick={() => setEditingDeposit(deposit)}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      backgroundColor: '#f39c12',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '5px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    ✏️ ערוך תבנית
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (window.confirm('האם למחוק את ההפקדה המתוכננת?')) {
+                        db.deleteDeposit(deposit.id)
+                        loadDepositors()
+                        showNotification('✅ הפקדה מתוכננת נמחקה')
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      backgroundColor: '#e74c3c',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '5px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    🗑️ מחק
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
       {/* רשימת הפקדות */}
       <h2 style={{ marginBottom: '15px' }}>📋 הפקדות</h2>
       
@@ -533,7 +656,7 @@ function DepositsPage() {
           borderRadius: '10px',
           color: '#7f8c8d'
         }}>
-          אין הפקדות למפקיד זה
+          {recurringDeposits.length > 0 ? 'אין הפקדות רגילות עדיין - ההפקדות המתוכננות ייווצרו אוטומטית' : 'אין הפקדות למפקיד זה'}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>

@@ -1,5 +1,6 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
+import './index.css' // CSS רגיל
 import HomePage from './pages/HomePage'
 import LoansPage from './pages/LoansPage'
 import DepositsPage from './pages/DepositsPage'
@@ -27,6 +28,26 @@ function ScrollToTop() {
 }
 
 function App() {
+  // טעינת CSS לפי מצב ביצועים
+  useEffect(() => {
+    const performanceMode = localStorage.getItem('performance_mode') || 'normal'
+    
+    // הסר CSS קיים
+    const existingLink = document.getElementById('performance-css')
+    if (existingLink) {
+      existingLink.remove()
+    }
+    
+    // טען CSS מתאים
+    if (performanceMode === 'light') {
+      const link = document.createElement('link')
+      link.id = 'performance-css'
+      link.rel = 'stylesheet'
+      link.href = '/src/index-light.css'
+      document.head.appendChild(link)
+    }
+  }, [])
+  
   // אופטימיזציה לטעינה באלקטרון
   useEffect(() => {
     // סמן שהאפליקציה נטענה

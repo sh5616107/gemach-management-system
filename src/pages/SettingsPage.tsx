@@ -446,7 +446,23 @@ function SettingsPage() {
                   <option value="custom">מותאם אישית</option>
                 </select>
               </div>
+              <div className="form-group">
+                <label>🚀 מצב ביצועים:</label>
+                <select
+                  value={localStorage.getItem('performance_mode') || 'normal'}
+                  onChange={(e) => {
+                    localStorage.setItem('performance_mode', e.target.value)
+                    showNotification('✅ מצב ביצועים שונה! רענן את הדף (F5) כדי להחיל את השינויים.', 'info')
+                  }}
+                >
+                  <option value="normal">רגיל (עם אפקטים ויזואליים)</option>
+                  <option value="light">קל (ללא אפקטים - מומלץ למחשבים חלשים)</option>
+                </select>
+              </div>
             </div>
+            <p style={{ fontSize: '12px', color: '#666', marginTop: '10px' }}>
+              💡 מצב קל מסיר אנימציות ואפקטים כבדים לביצועים טובים יותר
+            </p>
 
             {settings.theme === 'custom' && (
               <div className="form-row">

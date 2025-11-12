@@ -95,13 +95,14 @@ export interface DatabasePayment {
 
 export interface DatabaseDeposit {
   id: number
-  depositorName: string
-  idNumber: string // מספר זהות - שדה חובה ויחודי
+  depositorId?: number // קישור למפקיד (אופציונלי לתאימות לאחור)
+  depositorName: string // שמור לתאימות לאחור
+  idNumber: string // מספר זהות - שדה חובה ויחודי (שמור לתאימות לאחור)
   amount: number
   depositDate: string
   depositPeriod: number
   reminderDays?: number // כמה ימים לפני תום תקופת ההפקדה להתריע
-  phone: string
+  phone: string // שמור לתאימות לאחור
   notes: string
   status: 'active' | 'withdrawn'
   withdrawnAmount?: number // סכום כולל שנמשך (לתאימות לאחור)
@@ -110,6 +111,13 @@ export interface DatabaseDeposit {
   depositPaymentDetails?: string // פרטי אמצעי התשלום (JSON string)
   withdrawalPaymentMethod?: 'cash' | 'transfer' | 'check' | 'credit' | 'other' // אמצעי משיכה אחרונה (לתאימות לאחור)
   withdrawalPaymentDetails?: string // פרטי אמצעי התשלום למשיכה אחרונה (לתאימות לאחור)
+  
+  // הפקדות מחזוריות
+  isRecurring?: boolean // האם הפקדה מחזורית
+  recurringDay?: number // יום בחודש להפקדה מחזורית (1-31)
+  recurringMonths?: number // כמה חודשים ההפקדה המחזורית תמשך
+  recurringEndDate?: string // תאריך סיום הפקדות מחזוריות
+  lastRecurringDate?: string // תאריך ההפקדה המחזורית האחרונה שנוצרה
 }
 
 export interface DatabaseWithdrawal {
@@ -121,6 +129,19 @@ export interface DatabaseWithdrawal {
   paymentDetails?: string // פרטי אמצעי התשלום (JSON string)
   paymentDetailsComplete?: boolean // האם פרטי התשלום הושלמו
   notes?: string
+}
+
+export interface DatabaseDepositor {
+  id: number
+  name: string                  // שם מלא
+  idNumber: string              // מספר זהות (חובה/אופציונלי לפי הגדרות)
+  phone: string                 // טלפון
+  notes?: string                // הערות
+  
+  // פרטי בנק (אופציונלי - למס"ב עתידי)
+  bankCode?: string             // קוד בנק (2 ספרות)
+  branchNumber?: string         // מספר סניף (3 ספרות)
+  accountNumber?: string        // מספר חשבון (עד 9 ספרות)
 }
 
 export interface DatabaseGuarantor {
@@ -293,6 +314,7 @@ interface DatabaseFile {
   borrowers: DatabaseBorrower[]
   loans: DatabaseLoan[]
   deposits: DatabaseDeposit[]
+  depositors: DatabaseDepositor[] // טבלת מפקידים חדשה
   donations: DatabaseDonation[]
   payments: DatabasePayment[]
   withdrawals: DatabaseWithdrawal[] // טבלת משיכות חדשה
@@ -313,6 +335,7 @@ class GemachDatabase {
     loans: [],
     masavFiles: [],
     deposits: [],
+    depositors: [],
     donations: [],
     payments: [],
     withdrawals: [],
@@ -352,10 +375,12 @@ class GemachDatabase {
     this.migrateLoanDates()
     this.migrateBorrowersIdNumbers()
     this.migrateDepositsIdNumbers()
+    this.migrateDepositsToDepositors() // המרת הפקדות למבנה חדש עם מפקידים
     this.cleanupTemporaryIdNumbers() // נקה מספרי זהות זמניים אם לא חובה
     this.migrateRequireIdNumberSetting()
     this.updateTextsToNewDefaults() // עדכון טקסטים לברירות מחדל חדשות
     this.migrateLoansToGuarantors() // מיגרציה של ערבים מהלוואות קיימות
+    this.processRecurringDeposits() // עיבוד הפקדות מחזוריות אוטומטיות
   }
 
   private loadData(): void {
@@ -364,6 +389,7 @@ class GemachDatabase {
       const borrowers = localStorage.getItem('gemach_borrowers')
       const loans = localStorage.getItem('gemach_loans')
       const deposits = localStorage.getItem('gemach_deposits')
+      const depositors = localStorage.getItem('gemach_depositors')
       const donations = localStorage.getItem('gemach_donations')
       const payments = localStorage.getItem('gemach_payments')
       const withdrawals = localStorage.getItem('gemach_withdrawals')
@@ -380,6 +406,7 @@ class GemachDatabase {
         borrowers: borrowers ? JSON.parse(borrowers) : [],
         loans: loans ? JSON.parse(loans) : [],
         deposits: deposits ? JSON.parse(deposits) : [],
+        depositors: depositors ? JSON.parse(depositors) : [],
         donations: donations ? JSON.parse(donations) : [],
         payments: payments ? JSON.parse(payments) : [],
         withdrawals: withdrawals ? JSON.parse(withdrawals) : [],
@@ -433,6 +460,7 @@ class GemachDatabase {
       localStorage.setItem('gemach_borrowers', JSON.stringify(this.dataFile.borrowers))
       localStorage.setItem('gemach_loans', JSON.stringify(this.dataFile.loans))
       localStorage.setItem('gemach_deposits', JSON.stringify(this.dataFile.deposits))
+      localStorage.setItem('gemach_depositors', JSON.stringify(this.dataFile.depositors))
       localStorage.setItem('gemach_donations', JSON.stringify(this.dataFile.donations))
       localStorage.setItem('gemach_payments', JSON.stringify(this.dataFile.payments))
       localStorage.setItem('gemach_withdrawals', JSON.stringify(this.dataFile.withdrawals))
@@ -451,6 +479,7 @@ class GemachDatabase {
         borrowers: this.dataFile.borrowers.length,
         loans: this.dataFile.loans.length,
         deposits: this.dataFile.deposits.length,
+        depositors: this.dataFile.depositors.length,
         donations: this.dataFile.donations.length,
         payments: this.dataFile.payments.length,
         withdrawals: this.dataFile.withdrawals.length,
@@ -483,6 +512,7 @@ class GemachDatabase {
         borrowers: importedData.borrowers || [],
         loans: importedData.loans || [],
         deposits: importedData.deposits || [],
+        depositors: importedData.depositors || [],
         donations: importedData.donations || [],
         payments: importedData.payments || [],
         withdrawals: importedData.withdrawals || [],
@@ -743,6 +773,158 @@ class GemachDatabase {
     }
   }
 
+  // המרת הפקדות ישנות למבנה חדש עם מפקידים
+  private migrateDepositsToDepositors(): void {
+    // בדוק אם כבר בוצעה המרה
+    const migrated = localStorage.getItem('gemach_deposits_migrated')
+    if (migrated === 'true') {
+      return
+    }
+
+    // בדוק אם יש הפקדות ישנות ללא depositorId
+    const oldDeposits = this.dataFile.deposits.filter(d => !d.depositorId)
+    if (oldDeposits.length === 0) {
+      // אין הפקדות ישנות, סמן כמומר
+      localStorage.setItem('gemach_deposits_migrated', 'true')
+      return
+    }
+
+    console.log(`🔄 מתחיל המרת ${oldDeposits.length} הפקדות למבנה חדש...`)
+
+    let depositorsCreated = 0
+    let depositsUpdated = 0
+
+    // מפה לעקוב אחרי מפקידים שכבר נוצרו (לפי מספר זהות)
+    const depositorsByIdNumber = new Map<string, number>()
+
+    for (const deposit of oldDeposits) {
+      let depositorId: number
+
+      // בדוק אם כבר יצרנו מפקיד עם מספר זהות זה
+      const cleanIdNumber = deposit.idNumber ? deposit.idNumber.replace(/[\s-]/g, '') : ''
+      
+      if (cleanIdNumber && depositorsByIdNumber.has(cleanIdNumber)) {
+        // מפקיד כבר קיים - השתמש בו
+        depositorId = depositorsByIdNumber.get(cleanIdNumber)!
+        console.log(`♻️ מיזוג הפקדה למפקיד קיים: ${deposit.depositorName}`)
+      } else {
+        // צור מפקיד חדש
+        const newDepositor: DatabaseDepositor = {
+          id: this.getNextId(this.dataFile.depositors),
+          name: deposit.depositorName,
+          idNumber: cleanIdNumber,
+          phone: deposit.phone || '',
+          notes: deposit.notes || ''
+        }
+        
+        this.dataFile.depositors.push(newDepositor)
+        depositorId = newDepositor.id
+        depositorsCreated++
+
+        // שמור במפה
+        if (cleanIdNumber) {
+          depositorsByIdNumber.set(cleanIdNumber, depositorId)
+        }
+
+        console.log(`✅ נוצר מפקיד חדש: ${newDepositor.name} (ID: ${depositorId})`)
+      }
+
+      // עדכן את ההפקדה עם depositorId
+      deposit.depositorId = depositorId
+      depositsUpdated++
+    }
+
+    // שמור את השינויים
+    this.saveData()
+
+    // סמן שההמרה הושלמה
+    localStorage.setItem('gemach_deposits_migrated', 'true')
+
+    console.log(`✨ המרה הושלמה בהצלחה!`)
+    console.log(`📊 נוצרו ${depositorsCreated} מפקידים חדשים`)
+    console.log(`📊 עודכנו ${depositsUpdated} הפקדות`)
+
+    // הצג הודעה למשתמש (תישמר ב-localStorage להצגה בממשק)
+    const migrationMessage = `המערכת עודכנה! ${depositorsCreated} מפקידים ו-${depositsUpdated} הפקדות הומרו בהצלחה למבנה החדש.`
+    localStorage.setItem('gemach_migration_message', migrationMessage)
+  }
+
+  // עיבוד הפקדות מחזוריות אוטומטיות
+  private processRecurringDeposits(): void {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    let depositsCreated = 0
+    
+    // מצא את כל ההפקדות המחזוריות הפעילות
+    const recurringDeposits = this.dataFile.deposits.filter(d => 
+      d.isRecurring && 
+      d.depositorId && 
+      (!d.recurringEndDate || new Date(d.recurringEndDate) >= today)
+    )
+
+    for (const recurringDeposit of recurringDeposits) {
+      // קבע את תאריך ההפקדה האחרונה שנוצרה
+      const lastDate = recurringDeposit.lastRecurringDate 
+        ? new Date(recurringDeposit.lastRecurringDate)
+        : new Date(recurringDeposit.depositDate)
+      lastDate.setHours(0, 0, 0, 0)
+
+      // חשב את תאריך ההפקדה הבאה
+      const nextDate = new Date(lastDate)
+      nextDate.setMonth(nextDate.getMonth() + 1)
+      
+      // אם יש יום ספציפי בחודש, השתמש בו
+      if (recurringDeposit.recurringDay) {
+        nextDate.setDate(recurringDeposit.recurringDay)
+      }
+
+      // בדוק אם הגיע הזמן ליצור הפקדה חדשה
+      if (nextDate <= today) {
+        // בדוק אם לא עברנו את תאריך הסיום
+        if (recurringDeposit.recurringEndDate && nextDate > new Date(recurringDeposit.recurringEndDate)) {
+          continue
+        }
+
+        // צור הפקדה חדשה
+        const newDeposit: DatabaseDeposit = {
+          id: this.getNextId(this.dataFile.deposits),
+          depositorId: recurringDeposit.depositorId,
+          depositorName: recurringDeposit.depositorName,
+          idNumber: recurringDeposit.idNumber,
+          phone: recurringDeposit.phone,
+          amount: recurringDeposit.amount,
+          depositDate: nextDate.toISOString().split('T')[0],
+          depositPeriod: recurringDeposit.depositPeriod,
+          reminderDays: recurringDeposit.reminderDays,
+          notes: `${recurringDeposit.notes || ''} (הפקדה מחזורית אוטומטית)`.trim(),
+          status: 'active',
+          depositPaymentMethod: recurringDeposit.depositPaymentMethod,
+          depositPaymentDetails: recurringDeposit.depositPaymentDetails,
+          // לא מעתיק את השדות המחזוריים - זו הפקדה רגילה
+          isRecurring: false
+        }
+
+        this.dataFile.deposits.push(newDeposit)
+        
+        // עדכן את תאריך ההפקדה האחרונה בהפקדה המקורית
+        recurringDeposit.lastRecurringDate = nextDate.toISOString().split('T')[0]
+        
+        depositsCreated++
+        console.log(`✅ נוצרה הפקדה מחזורית אוטומטית: ₪${newDeposit.amount} למפקיד ${newDeposit.depositorName}`)
+      }
+    }
+
+    if (depositsCreated > 0) {
+      this.saveData()
+      console.log(`🔄 נוצרו ${depositsCreated} הפקדות מחזוריות אוטומטיות`)
+      
+      // שמור הודעה למשתמש
+      const message = `🔄 נוצרו ${depositsCreated} הפקדות מחזוריות אוטומטיות`
+      localStorage.setItem('gemach_recurring_message', message)
+    }
+  }
+
   updateBorrower(id: number, updates: Partial<DatabaseBorrower>): { success: boolean; error?: string } {
     const index = this.dataFile.borrowers.findIndex(borrower => borrower.id === id)
     if (index === -1) {
@@ -809,6 +991,183 @@ class GemachDatabase {
 
     this.saveData()
     return true
+  }
+
+  // מפקידים
+  addDepositor(depositor: Omit<DatabaseDepositor, 'id'>): DatabaseDepositor | { error: string } {
+    const settings = this.getSettings()
+
+    // בדוק אם מספר זהות חובה
+    if (settings.requireIdNumber) {
+      // בדוק שמספר הזהות לא ריק
+      if (!depositor.idNumber || depositor.idNumber.trim() === '') {
+        return { error: 'מספר זהות הוא שדה חובה (ניתן לשנות בהגדרות)' }
+      }
+
+      // בדוק תקינות מספר הזהות
+      if (!this.validateIsraeliId(depositor.idNumber)) {
+        return { error: 'מספר זהות לא תקין' }
+      }
+
+      // בדוק אם מספר הזהות כבר קיים במפקידים
+      const existingDepositor = this.dataFile.depositors.find(d =>
+        d.idNumber.replace(/[\s-]/g, '') === depositor.idNumber.replace(/[\s-]/g, '')
+      )
+      if (existingDepositor) {
+        return {
+          error: `מפקיד עם מספר זהות זה כבר קיים במערכת: ${existingDepositor.name}`
+        }
+      }
+    } else {
+      // אם מספר זהות לא חובה, אבל אם הוזן - בדוק תקינות
+      if (depositor.idNumber && depositor.idNumber.trim() !== '') {
+        if (!this.validateIsraeliId(depositor.idNumber)) {
+          return { error: 'מספר זהות לא תקין (או השאר ריק)' }
+        }
+
+        const existingDepositor = this.dataFile.depositors.find(d =>
+          d.idNumber && d.idNumber.replace(/[\s-]/g, '') === depositor.idNumber.replace(/[\s-]/g, '')
+        )
+        if (existingDepositor) {
+          return {
+            error: `מפקיד עם מספר זהות זה כבר קיים במערכת: ${existingDepositor.name}`
+          }
+        }
+      } else {
+        // בדוק כפילות שם אם אין מספר זהות
+        const existingDepositor = this.dataFile.depositors.find(d =>
+          d.name.toLowerCase() === depositor.name.toLowerCase()
+        )
+        if (existingDepositor) {
+          return { error: `מפקיד בשם "${depositor.name}" כבר קיים במערכת. הוסף מספר זהות כדי להבדיל בינם.` }
+        }
+      }
+    }
+
+    // נקה את מספר הזהות (הסר רווחים ומקפים) אם קיים
+    const cleanIdNumber = depositor.idNumber ? depositor.idNumber.replace(/[\s-]/g, '') : ''
+
+    const newDepositor: DatabaseDepositor = {
+      ...depositor,
+      idNumber: cleanIdNumber,
+      id: this.getNextId(this.dataFile.depositors)
+    }
+    this.dataFile.depositors.push(newDepositor)
+    this.saveData()
+    return newDepositor
+  }
+
+  getDepositors(): DatabaseDepositor[] {
+    return this.dataFile.depositors
+  }
+
+  getDepositorById(id: number): DatabaseDepositor | null {
+    return this.dataFile.depositors.find(d => d.id === id) || null
+  }
+
+  updateDepositor(id: number, updates: Partial<DatabaseDepositor>): { success: boolean; error?: string } {
+    const index = this.dataFile.depositors.findIndex(depositor => depositor.id === id)
+    if (index === -1) {
+      return { success: false, error: 'מפקיד לא נמצא' }
+    }
+
+    // אם מעדכנים מספר זהות, בדוק תקינות וכפילות
+    if (updates.idNumber !== undefined) {
+      // בדוק אם מספר זהות חובה רק אם ההגדרה מפעילה את זה
+      if (this.dataFile.settings.requireIdNumber && (!updates.idNumber || updates.idNumber.trim() === '')) {
+        return { success: false, error: 'מספר זהות הוא שדה חובה (ניתן לשנות בהגדרות)' }
+      }
+
+      // בדוק תקינות רק אם יש מספר זהות
+      if (updates.idNumber && updates.idNumber.trim() !== '' && !this.validateIsraeliId(updates.idNumber)) {
+        return { success: false, error: 'מספר זהות לא תקין' }
+      }
+
+      // בדוק כפילות רק אם יש מספר זהות
+      if (updates.idNumber && updates.idNumber.trim() !== '') {
+        const cleanNewId = updates.idNumber.replace(/[\s-]/g, '')
+        const existingDepositor = this.dataFile.depositors.find(d =>
+          d.id !== id && d.idNumber && d.idNumber.replace(/[\s-]/g, '') === cleanNewId
+        )
+
+        if (existingDepositor) {
+          return {
+            success: false,
+            error: `מספר זהות זה כבר קיים אצל: ${existingDepositor.name}`
+          }
+        }
+
+        // נקה את מספר הזהות
+        updates.idNumber = cleanNewId
+      }
+    }
+
+    this.dataFile.depositors[index] = { ...this.dataFile.depositors[index], ...updates }
+    this.saveData()
+    return { success: true }
+  }
+
+  deleteDepositor(id: number): { success: boolean; error?: string } {
+    // בדוק אם יש הפקדות פעילות למפקיד
+    const activeDeposits = this.dataFile.deposits.filter(deposit =>
+      deposit.depositorId === id && deposit.status === 'active'
+    )
+
+    if (activeDeposits.length > 0) {
+      return { 
+        success: false, 
+        error: 'לא ניתן למחוק מפקיד עם הפקדות פעילות' 
+      }
+    }
+
+    // קבל את כל ההפקדות של המפקיד לפני המחיקה
+    const depositorDepositIds = this.dataFile.deposits
+      .filter(deposit => deposit.depositorId === id)
+      .map(deposit => deposit.id)
+
+    // מחק את המפקיד
+    this.dataFile.depositors = this.dataFile.depositors.filter(depositor => depositor.id !== id)
+    // מחק את כל ההפקדות של המפקיד
+    this.dataFile.deposits = this.dataFile.deposits.filter(deposit => deposit.depositorId !== id)
+    // מחק את כל המשיכות הקשורות להפקדות של המפקיד
+    this.dataFile.withdrawals = this.dataFile.withdrawals.filter(
+      withdrawal => !depositorDepositIds.includes(withdrawal.depositId)
+    )
+
+    this.saveData()
+    return { success: true }
+  }
+
+  // פונקציות עזר למפקידים
+  getDepositorBalance(depositorId: number): number {
+    // קבל את כל ההפקדות הפעילות של המפקיד
+    const deposits = this.dataFile.deposits.filter(d => d.depositorId === depositorId)
+    
+    let totalBalance = 0
+    for (const deposit of deposits) {
+      // חשב יתרה להפקדה: סכום ההפקדה פחות כל המשיכות
+      const withdrawnAmount = this.getTotalWithdrawnAmount(deposit.id)
+      const depositBalance = deposit.amount - withdrawnAmount
+      
+      // הוסף רק אם היתרה חיובית (הפקדה פעילה)
+      if (depositBalance > 0) {
+        totalBalance += depositBalance
+      }
+    }
+    
+    return totalBalance
+  }
+
+  getDepositorDeposits(depositorId: number): DatabaseDeposit[] {
+    return this.dataFile.deposits
+      .filter(d => d.depositorId === depositorId)
+      .sort((a, b) => new Date(b.depositDate).getTime() - new Date(a.depositDate).getTime())
+  }
+
+  getDepositorActiveDepositsCount(depositorId: number): number {
+    return this.dataFile.deposits.filter(d => 
+      d.depositorId === depositorId && d.status === 'active'
+    ).length
   }
 
   // הלוואות
@@ -1132,6 +1491,33 @@ class GemachDatabase {
     return newDeposit
   }
 
+  addDepositToDepositor(
+    depositorId: number, 
+    deposit: Omit<DatabaseDeposit, 'id' | 'depositorId' | 'status' | 'depositorName' | 'idNumber' | 'phone'>
+  ): DatabaseDeposit | { error: string } {
+    // בדוק שהמפקיד קיים
+    const depositor = this.getDepositorById(depositorId)
+    if (!depositor) {
+      return { error: 'מפקיד לא נמצא' }
+    }
+
+    // צור הפקדה חדשה עם קישור למפקיד
+    const newDeposit: DatabaseDeposit = {
+      ...deposit,
+      id: this.getNextId(this.dataFile.deposits),
+      depositorId: depositorId,
+      // מלא שדות ישנים לתאימות לאחור
+      depositorName: depositor.name,
+      idNumber: depositor.idNumber,
+      phone: depositor.phone,
+      status: 'active'
+    }
+    
+    this.dataFile.deposits.push(newDeposit)
+    this.saveData()
+    return newDeposit
+  }
+
   getDeposits(): DatabaseDeposit[] {
     return this.dataFile.deposits
   }
@@ -1399,6 +1785,7 @@ class GemachDatabase {
       borrowers: [],
       loans: [],
       deposits: [],
+      depositors: [],
       donations: [],
       payments: [],
       withdrawals: [],

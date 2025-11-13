@@ -1203,42 +1203,7 @@ input[type="radio"] {
 
 /* אפקטים מודרניים נוספים */
 
-/* אפקט זוהר לכפתורים חשובים */
-.btn-primary,
-.btn-success {
-  position: relative;
-}
-
-.btn-primary::before,
-.btn-success::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: -2px;
-  right: -2px;
-  bottom: -2px;
-  background: linear-gradient(45deg, var(--primary-light), var(--secondary-light), var(--primary-light));
-  border-radius: var(--radius-md);
-  opacity: 0;
-  z-index: -1;
-  transition: opacity var(--transition-normal);
-  filter: blur(4px);
-}
-
-.btn-primary:hover::before,
-.btn-success:hover::before {
-  opacity: 0.3;
-  animation: glow 2s ease-in-out infinite;
-}
-
-@keyframes glow {
-  0%, 100% {
-    opacity: 0.2;
-  }
-  50% {
-    opacity: 0.4;
-  }
-}
+/* אפקט זוהר הוסר - היה מוגזם */
 
 /* אפקט גלים לכרטיסים */
 .card,

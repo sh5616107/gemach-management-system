@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { db } from '../database/database'
 import { formatCombinedDate, getDateWarnings } from '../utils/hebrewDate'
+import { CategoryIcons, iconSizes } from '../components/Icons'
 
 function HomePage() {
   const navigate = useNavigate()
@@ -792,29 +793,39 @@ function HomePage() {
 
         <div className="categories">
           <div className="category" onClick={() => navigate('/loans')}>
-            <div className="category-image">📋</div>
+            <div className="category-image">
+              <CategoryIcons.Loans size={iconSizes.xxl} color="#e74c3c" strokeWidth={2.5} />
+            </div>
             <h2 className="category-title">הלוואות וערבים</h2>
           </div>
 
           <div className="category" onClick={() => navigate('/donations')}>
-            <div className="category-image">💰</div>
+            <div className="category-image">
+              <CategoryIcons.Donations size={iconSizes.xxl} color="#f39c12" strokeWidth={2.5} />
+            </div>
             <h2 className="category-title">תרומות והפקדות</h2>
           </div>
 
           <div className="category" onClick={() => navigate('/admin-tools')}>
-            <div className="category-image">🛠️</div>
+            <div className="category-image">
+              <CategoryIcons.AdminTools size={iconSizes.xxl} color="#9b59b6" strokeWidth={2.5} />
+            </div>
             <h2 className="category-title">כלים מתקדמים</h2>
           </div>
 
           <div className="category" onClick={() => navigate('/settings')}>
-            <div className="category-image">⚙️</div>
+            <div className="category-image">
+              <CategoryIcons.Settings size={iconSizes.xxl} color="#7f8c8d" strokeWidth={2.5} />
+            </div>
             <h2 className="category-title">הגדרות</h2>
           </div>
 
 
 
           <div className="category" onClick={() => navigate('/help')}>
-            <div className="category-image">📖</div>
+            <div className="category-image">
+              <CategoryIcons.Help size={iconSizes.xxl} color="#3498db" strokeWidth={2.5} />
+            </div>
             <h2 className="category-title">מדריך שימוש</h2>
           </div>
         </div>

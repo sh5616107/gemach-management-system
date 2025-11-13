@@ -802,14 +802,6 @@ function SettingsPage() {
             >
               🔄 אפס לברירת מחדל
             </button>
-            
-            <button
-              className="btn"
-              onClick={() => navigate('/')}
-              style={{ backgroundColor: '#27ae60', color: 'white' }}
-            >
-              🏠 חזור לדף הבית
-            </button>
           </div>
         </div>
       </div>

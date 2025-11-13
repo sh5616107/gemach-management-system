@@ -5,6 +5,7 @@ import BlacklistManager from '../components/BlacklistManager'
 import WarningLetterGenerator from '../components/WarningLetterGenerator'
 import TransferredLoansReport from '../components/TransferredLoansReport'
 import GuarantorDebtsReport from '../components/GuarantorDebtsReport'
+import { CategoryIcons, ActionIcons, StatusIcons, MiscIcons, PeopleIcons, iconSizes } from '../components/Icons'
 
 function AdminToolsPage() {
   const navigate = useNavigate()
@@ -80,7 +81,10 @@ function AdminToolsPage() {
   return (
     <div className="page-container" style={{ direction: 'rtl' }}>
       <header className="header">
-        <h1>🛠️ כלי ניהול מתקדמים</h1>
+        <h1 style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
+          <CategoryIcons.AdminTools size={iconSizes.lg} color="#9b59b6" strokeWidth={2.5} />
+          כלי ניהול מתקדמים
+        </h1>
         <button className="close-btn" onClick={() => navigate('/')}>×</button>
       </header>
 
@@ -112,7 +116,9 @@ function AdminToolsPage() {
           onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
         >
-          <div style={{ fontSize: '48px', marginBottom: '15px' }}>⏰</div>
+          <div style={{ marginBottom: '15px' }}>
+            <MiscIcons.Clock size={iconSizes.xxl} color="#dc2626" strokeWidth={2} />
+          </div>
           <h3 style={{ margin: '0 0 10px 0', color: '#dc2626' }}>הלוואות שפג תוקפן</h3>
           <p style={{ color: '#7f1d1d', fontSize: '14px', lineHeight: '1.5' }}>
             ריכוז הלוואות שעבר מועד הפירעון.<br />
@@ -148,7 +154,9 @@ function AdminToolsPage() {
           onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
         >
-          <div style={{ fontSize: '48px', marginBottom: '15px' }}>🚫</div>
+          <div style={{ marginBottom: '15px' }}>
+            <MiscIcons.Ban size={iconSizes.xxl} color="#dc2626" strokeWidth={2.5} />
+          </div>
           <h3 style={{ margin: '0 0 10px 0', color: '#dc2626' }}>רשימה שחורה</h3>
           <p style={{ color: '#7f1d1d', fontSize: '14px', lineHeight: '1.5' }}>
             ניהול רשימת לווים וערבים בעייתיים.<br />
@@ -184,7 +192,9 @@ function AdminToolsPage() {
           onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
         >
-          <div style={{ fontSize: '48px', marginBottom: '15px' }}>⚠️</div>
+          <div style={{ marginBottom: '15px' }}>
+            <StatusIcons.Warning size={iconSizes.xxl} color="#d97706" strokeWidth={2.5} />
+          </div>
           <h3 style={{ margin: '0 0 10px 0', color: '#d97706' }}>מכתבי אזהרה</h3>
           <p style={{ color: '#92400e', fontSize: '14px', lineHeight: '1.5' }}>
             יצירת מכתבי התראה ללווים<br />
@@ -220,7 +230,9 @@ function AdminToolsPage() {
           onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
         >
-          <div style={{ fontSize: '48px', marginBottom: '15px' }}>📊</div>
+          <div style={{ marginBottom: '15px' }}>
+            <CategoryIcons.Statistics size={iconSizes.xxl} color="#4f46e5" strokeWidth={2.5} />
+          </div>
           <h3 style={{ margin: '0 0 10px 0', color: '#4f46e5' }}>סטטיסטיקות</h3>
           <p style={{ color: '#3730a3', fontSize: '14px', lineHeight: '1.5' }}>
             דוחות מפורטים וניתוחים<br />
@@ -256,7 +268,9 @@ function AdminToolsPage() {
           onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
         >
-          <div style={{ fontSize: '48px', marginBottom: '15px' }}>🏦</div>
+          <div style={{ marginBottom: '15px' }}>
+            <MiscIcons.Bank size={iconSizes.xxl} color="#2563eb" strokeWidth={2.5} />
+          </div>
           <h3 style={{ margin: '0 0 10px 0', color: '#2563eb' }}>קבצי מס"ב</h3>
           <p style={{ color: '#1e40af', fontSize: '14px', lineHeight: '1.5' }}>
             יצירת קבצים לגביית תשלומים<br />
@@ -292,7 +306,9 @@ function AdminToolsPage() {
           onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
         >
-          <div style={{ fontSize: '48px', marginBottom: '15px' }}>📋</div>
+          <div style={{ marginBottom: '15px' }}>
+            <MiscIcons.History size={iconSizes.xxl} color="#0284c7" strokeWidth={2.5} />
+          </div>
           <h3 style={{ margin: '0 0 10px 0', color: '#0284c7' }}>היסטוריית מס"ב</h3>
           <p style={{ color: '#075985', fontSize: '14px', lineHeight: '1.5' }}>
             צפייה בקבצים שנוצרו,<br />
@@ -328,7 +344,9 @@ function AdminToolsPage() {
           onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
         >
-          <div style={{ fontSize: '48px', marginBottom: '15px' }}>📤</div>
+          <div style={{ marginBottom: '15px' }}>
+            <ActionIcons.Download size={iconSizes.xxl} color="#16a34a" strokeWidth={2.5} />
+          </div>
           <h3 style={{ margin: '0 0 10px 0', color: '#16a34a' }}>יצוא נתונים</h3>
           <p style={{ color: '#15803d', fontSize: '14px', lineHeight: '1.5' }}>
             יצירת קובץ גיבוי של כל<br />
@@ -364,7 +382,9 @@ function AdminToolsPage() {
           onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
         >
-          <div style={{ fontSize: '48px', marginBottom: '15px' }}>📥</div>
+          <div style={{ marginBottom: '15px' }}>
+            <ActionIcons.Upload size={iconSizes.xxl} color="#ca8a04" strokeWidth={2.5} />
+          </div>
           <h3 style={{ margin: '0 0 10px 0', color: '#ca8a04' }}>יבוא נתונים</h3>
           <p style={{ color: '#a16207', fontSize: '14px', lineHeight: '1.5' }}>
             שחזור נתונים מקובץ<br />
@@ -400,7 +420,9 @@ function AdminToolsPage() {
           onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
         >
-          <div style={{ fontSize: '48px', marginBottom: '15px' }}>📊</div>
+          <div style={{ marginBottom: '15px' }}>
+            <MiscIcons.Transfer size={iconSizes.xxl} color="#7c3aed" strokeWidth={2.5} />
+          </div>
           <h3 style={{ margin: '0 0 10px 0', color: '#7c3aed' }}>הלוואות מועברות</h3>
           <p style={{ color: '#6b21a8', fontSize: '14px', lineHeight: '1.5' }}>
             דוח מפורט של הלוואות<br />
@@ -421,78 +443,6 @@ function AdminToolsPage() {
           </button>
         </div>
 
-        {/* כרטיס יצירת קובץ מס"ב */}
-        <div style={{
-          background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-          border: '2px solid #3b82f6',
-          borderRadius: '15px',
-          padding: '25px',
-          textAlign: 'center',
-          boxShadow: '0 4px 15px rgba(59, 130, 246, 0.2)',
-          transition: 'transform 0.2s ease',
-          cursor: 'pointer'
-        }}
-          onClick={() => navigate('/masav-generator')}
-          onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
-          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-        >
-          <div style={{ fontSize: '48px', marginBottom: '15px' }}>🏦</div>
-          <h3 style={{ margin: '0 0 10px 0', color: '#2563eb' }}>קבצי מס"ב</h3>
-          <p style={{ color: '#1e40af', fontSize: '14px', lineHeight: '1.5' }}>
-            יצירת קבצים לגביית תשלומים<br />
-            באמצעות הרשאה לחיוב חשבון.
-          </p>
-          <button style={{
-            background: '#2563eb',
-            color: 'white',
-            border: 'none',
-            padding: '10px 20px',
-            borderRadius: '8px',
-            marginTop: '15px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: 'bold'
-          }}>
-            🏦 צור קובץ מס"ב
-          </button>
-        </div>
-
-        {/* כרטיס היסטוריית מס"ב */}
-        <div style={{
-          background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)',
-          border: '2px solid #0ea5e9',
-          borderRadius: '15px',
-          padding: '25px',
-          textAlign: 'center',
-          boxShadow: '0 4px 15px rgba(14, 165, 233, 0.2)',
-          transition: 'transform 0.2s ease',
-          cursor: 'pointer'
-        }}
-          onClick={() => navigate('/masav-history')}
-          onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
-          onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-        >
-          <div style={{ fontSize: '48px', marginBottom: '15px' }}>📋</div>
-          <h3 style={{ margin: '0 0 10px 0', color: '#0284c7' }}>היסטוריית מס"ב</h3>
-          <p style={{ color: '#075985', fontSize: '14px', lineHeight: '1.5' }}>
-            צפייה בקבצים שנוצרו,<br />
-            אישור גבייה ורישום תשלומים.
-          </p>
-          <button style={{
-            background: '#0284c7',
-            color: 'white',
-            border: 'none',
-            padding: '10px 20px',
-            borderRadius: '8px',
-            marginTop: '15px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: 'bold'
-          }}>
-            📋 צפה בהיסטוריה
-          </button>
-        </div>
-
         {/* כרטיס דוח חובות ערבים */}
         <div style={{
           background: 'linear-gradient(135deg, #fff7ed 0%, #fed7aa 100%)',
@@ -508,7 +458,9 @@ function AdminToolsPage() {
           onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-5px)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
         >
-          <div style={{ fontSize: '48px', marginBottom: '15px' }}>🤝</div>
+          <div style={{ marginBottom: '15px' }}>
+            <PeopleIcons.Guarantor size={iconSizes.xxl} color="#ea580c" strokeWidth={2.5} />
+          </div>
           <h3 style={{ margin: '0 0 10px 0', color: '#ea580c' }}>חובות ערבים</h3>
           <p style={{ color: '#c2410c', fontSize: '14px', lineHeight: '1.5' }}>
             דוח מפורט של חובות ערבים<br />

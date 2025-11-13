@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { db } from '../database/database'
+import AllAccountsReport from '../components/AllAccountsReport'
 
 function StatisticsPage() {
   const navigate = useNavigate()
   const [paymentStats, setPaymentStats] = useState<any>(null)
   const [guarantorStats, setGuarantorStats] = useState<any>(null)
+  const [showAccountsReport, setShowAccountsReport] = useState(false)
 
   useEffect(() => {
     loadStatistics()
@@ -155,6 +157,26 @@ function StatisticsPage() {
       </header>
 
       <div className="container">
+        {/* כפתור דוח חשבונות */}
+        <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+          <button
+            onClick={() => setShowAccountsReport(true)}
+            style={{
+              padding: '15px 30px',
+              backgroundColor: '#9b59b6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '10px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              boxShadow: '0 4px 12px rgba(155, 89, 182, 0.3)'
+            }}
+          >
+            📊 דוח חשבונות - לווים ומפקידים
+          </button>
+        </div>
+
         {/* סיכום כללי */}
         <div style={{
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -191,6 +213,11 @@ function StatisticsPage() {
             </div>
           </div>
         </div>
+
+        {/* מודל דוח חשבונות */}
+        {showAccountsReport && (
+          <AllAccountsReport onClose={() => setShowAccountsReport(false)} />
+        )}
 
         {/* סיכום לפי אמצעי תשלום */}
         <div style={{ marginBottom: '30px' }}>

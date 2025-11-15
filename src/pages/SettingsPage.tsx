@@ -35,11 +35,18 @@ function SettingsPage() {
     title: string
     message: string
     confirmText: string
-    cancelText: string
+    cancelText?: string
     onConfirm: () => void
     onCancel?: () => void
-    type: 'warning' | 'danger' | 'info'
+    type: 'warning' | 'danger' | 'info' | 'success'
+    showCancelButton?: boolean
   } | null>(null)
+
+  // State למודל הזנת סיסמה
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false)
+  const [newPasswordInput, setNewPasswordInput] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
 
   // פונקציה להצגת מודל אישור
   const showConfirmModal = (config: {
@@ -49,12 +56,14 @@ function SettingsPage() {
     cancelText?: string
     onConfirm: () => void
     onCancel?: () => void
-    type?: 'warning' | 'danger' | 'info'
+    type?: 'warning' | 'danger' | 'info' | 'success'
+    showCancelButton?: boolean
   }) => {
     setModalConfig({
       isOpen: true,
       cancelText: 'ביטול',
       type: 'warning',
+      showCancelButton: true,
       ...config
     })
   }
@@ -83,7 +92,8 @@ function SettingsPage() {
     showDateWarnings: true,
     trackPaymentMethods: false,
     quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
-    enableMasav: false
+    enableMasav: false,
+    appPassword: ''
   })
 
   // הגדרות מס"ב
@@ -206,7 +216,8 @@ function SettingsPage() {
           showDateWarnings: true,
           trackPaymentMethods: false,
           quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
-          enableMasav: false
+          enableMasav: false,
+          appPassword: ''
         }
         setSettings(defaultSettings)
         db.updateSettings(defaultSettings)
@@ -285,8 +296,8 @@ function SettingsPage() {
 
           {/* הגדרות פונקציות מתקדמות */}
           <div className="form-container" style={{ marginBottom: '30px' }}>
-            <h3 style={{ marginBottom: '20px', color: '#2c3e50' }}>⚙️ פונקציות מתקדמות</h3>
-            <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
+            <h3 style={{ marginBottom: '20px', color: '#2c3e50', textAlign: 'right' }}>⚙️ פונקציות מתקדמות</h3>
+            <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px', textAlign: 'right', direction: 'rtl' }}>
               💡 פונקציות אלו מיועדות למשתמשים מתקדמים. ניתן להפעיל או לכבות אותן לפי הצורך.
             </p>
 
@@ -296,11 +307,12 @@ function SettingsPage() {
                 <select
                   value={settings.enableRecurringLoans ? 'true' : 'false'}
                   onChange={(e) => handleSettingChange('enableRecurringLoans', e.target.value === 'true')}
+                  style={{ color: '#2c3e50', backgroundColor: 'white', width: '100%', minWidth: '150px' }}
                 >
                   <option value="false">כבוי</option>
                   <option value="true">מופעל</option>
                 </select>
-                <small style={{ display: 'block', color: '#666', marginTop: '5px' }}>
+                <small style={{ display: 'block', color: '#666', marginTop: '5px', textAlign: 'right', direction: 'rtl' }}>
                   הלוואות שחוזרות על עצמן באופן אוטומטי
                 </small>
               </div>
@@ -309,11 +321,12 @@ function SettingsPage() {
                 <select
                   value={settings.enableRecurringPayments ? 'true' : 'false'}
                   onChange={(e) => handleSettingChange('enableRecurringPayments', e.target.value === 'true')}
+                  style={{ color: '#2c3e50', backgroundColor: 'white', width: '100%', minWidth: '150px' }}
                 >
                   <option value="false">כבוי</option>
                   <option value="true">מופעל</option>
                 </select>
-                <small style={{ display: 'block', color: '#666', marginTop: '5px' }}>
+                <small style={{ display: 'block', color: '#666', marginTop: '5px', textAlign: 'right', direction: 'rtl' }}>
                   פרעונות קבועים שחוזרים על עצמם
                 </small>
               </div>
@@ -325,11 +338,12 @@ function SettingsPage() {
                 <select
                   value={settings.requireIdNumber ? 'true' : 'false'}
                   onChange={(e) => handleSettingChange('requireIdNumber', e.target.value === 'true')}
+                  style={{ color: '#2c3e50', backgroundColor: 'white', width: '100%', minWidth: '200px' }}
                 >
                   <option value="false">אופציונלי (מומלץ לשימוש אישי)</option>
                   <option value="true">חובה (מומלץ לגמ"ח רשמי)</option>
                 </select>
-                <small style={{ display: 'block', color: '#666', marginTop: '5px' }}>
+                <small style={{ display: 'block', color: '#666', marginTop: '5px', textAlign: 'right', direction: 'rtl' }}>
                   האם לדרוש מספר זהות לכל לווה כדי למנוע כפילויות
                 </small>
               </div>
@@ -338,11 +352,12 @@ function SettingsPage() {
                 <select
                   value={settings.showHebrewDates ? 'true' : 'false'}
                   onChange={(e) => handleSettingChange('showHebrewDates', e.target.value === 'true')}
+                  style={{ color: '#2c3e50', backgroundColor: 'white', width: '100%', minWidth: '150px' }}
                 >
                   <option value="false">כבוי</option>
                   <option value="true">מופעל</option>
                 </select>
-                <small style={{ display: 'block', color: '#666', marginTop: '5px' }}>
+                <small style={{ display: 'block', color: '#666', marginTop: '5px', textAlign: 'right', direction: 'rtl' }}>
                   הצגת תאריכים עבריים לצד התאריכים הגרגוריאניים
                 </small>
               </div>
@@ -354,11 +369,12 @@ function SettingsPage() {
                 <select
                   value={settings.showDateWarnings ? 'true' : 'false'}
                   onChange={(e) => handleSettingChange('showDateWarnings', e.target.value === 'true')}
+                  style={{ color: '#2c3e50', backgroundColor: 'white', width: '100%', minWidth: '150px' }}
                 >
                   <option value="false">כבוי</option>
                   <option value="true">מופעל</option>
                 </select>
-                <small style={{ display: 'block', color: '#666', marginTop: '5px' }}>
+                <small style={{ display: 'block', color: '#666', marginTop: '5px', textAlign: 'right', direction: 'rtl' }}>
                   התראות כשתאריך חל בשבת או בחג (לא מומלץ לשלוח תזכורות)
                 </small>
               </div>
@@ -367,11 +383,12 @@ function SettingsPage() {
                 <select
                   value={settings.trackPaymentMethods ? 'true' : 'false'}
                   onChange={(e) => handleSettingChange('trackPaymentMethods', e.target.value === 'true')}
+                  style={{ color: '#2c3e50', backgroundColor: 'white', width: '100%', minWidth: '150px' }}
                 >
                   <option value="false">כבוי</option>
                   <option value="true">מופעל</option>
                 </select>
-                <small style={{ display: 'block', color: '#666', marginTop: '5px' }}>
+                <small style={{ display: 'block', color: '#666', marginTop: '5px', textAlign: 'right', direction: 'rtl' }}>
                   מעקב מפורט אחרי אמצעי תשלום (מזומן, העברה, צ'ק, אשראי) בהלוואות, פרעונות, הפקדות ותרומות. מאפשר יצירת סטטיסטיקות מפורטות.
                 </small>
               </div>
@@ -383,16 +400,130 @@ function SettingsPage() {
                 <select
                   value={settings.enableMasav ? 'true' : 'false'}
                   onChange={(e) => handleSettingChange('enableMasav', e.target.value === 'true')}
+                  style={{ color: '#2c3e50', backgroundColor: 'white', width: '100%', minWidth: '150px' }}
                 >
                   <option value="false">כבוי</option>
                   <option value="true">מופעל</option>
                 </select>
-                <small style={{ display: 'block', color: '#666', marginTop: '5px' }}>
+                <small style={{ display: 'block', color: '#666', marginTop: '5px', textAlign: 'right', direction: 'rtl' }}>
                   הפעלת מערכת מס"ב לגביית תשלומים אוטומטית מחשבונות בנק
                 </small>
               </div>
               <div className="form-group">
                 {/* שדה ריק לאיזון */}
+              </div>
+            </div>
+          </div>
+
+          {/* הגדרות אבטחה */}
+          <div className="form-container" style={{ marginBottom: '30px' }}>
+            <h3 style={{ marginBottom: '20px', color: '#2c3e50', textAlign: 'right' }}>🔐 הגדרות אבטחה</h3>
+            <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px', textAlign: 'right', direction: 'rtl' }}>
+              💡 הגדר סיסמה להגנה על המערכת. במקרה של שכחה, ניתן לפנות למפתח התוכנה לקבלת קוד שחזור.
+            </p>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>סיסמה נוכחית:</label>
+                <div style={{ position: 'relative', width: '100%' }}>
+                  <div style={{
+                    padding: '15px 60px 15px 15px',
+                    background: '#f8f9fa',
+                    border: '2px solid #dee2e6',
+                    borderRadius: '8px',
+                    textAlign: 'center',
+                    color: '#2c3e50',
+                    fontFamily: 'monospace',
+                    fontSize: '18px',
+                    minHeight: '50px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    wordBreak: 'break-all',
+                    letterSpacing: '2px'
+                  }}>
+                    {settings.appPassword 
+                      ? (showCurrentPassword ? settings.appPassword : '••••••••')
+                      : 'לא הוגדרה'}
+                  </div>
+                  {settings.appPassword && (
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '8px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'white',
+                        border: '1px solid #ddd',
+                        borderRadius: '5px',
+                        cursor: 'pointer',
+                        fontSize: '20px',
+                        padding: '6px 10px',
+                        color: '#666',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                      }}
+                      title={showCurrentPassword ? 'הסתר סיסמה' : 'הצג סיסמה'}
+                    >
+                      {showCurrentPassword ? '🙈' : '👁️'}
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="form-group">
+                <label>פעולות:</label>
+                <button
+                  className="btn"
+                  onClick={() => {
+                    setNewPasswordInput('')
+                    setPasswordModalOpen(true)
+                  }}
+                  style={{
+                    backgroundColor: settings.appPassword ? '#f39c12' : '#27ae60',
+                    color: 'white',
+                    width: '100%'
+                  }}
+                >
+                  {settings.appPassword ? '🔄 שנה סיסמה' : '🔐 הגדר סיסמה'}
+                </button>
+                {settings.appPassword && (
+                  <button
+                    className="btn"
+                    onClick={() => {
+                      showConfirmModal({
+                        title: 'הסרת סיסמה',
+                        message: 'האם אתה בטוח שברצונך להסיר את הסיסמה?\n\nהמערכת תהיה פתוחה לכולם ללא הגנה.',
+                        confirmText: 'הסר סיסמה',
+                        cancelText: 'ביטול',
+                        type: 'danger',
+                        onConfirm: () => {
+                          handleSettingChange('appPassword', '')
+                          sessionStorage.removeItem('gemach_session')
+                          showConfirmModal({
+                            title: '✅ הסיסמה הוסרה',
+                            message: 'הסיסמה הוסרה בהצלחה מהמערכת.',
+                            confirmText: 'הבנתי',
+                            type: 'success',
+                            showCancelButton: false,
+                            onConfirm: () => {}
+                          })
+                        }
+                      })
+                    }}
+                    style={{
+                      backgroundColor: '#e74c3c',
+                      color: 'white',
+                      width: '100%',
+                      marginTop: '10px'
+                    }}
+                  >
+                    🗑️ הסר סיסמה
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -810,6 +941,211 @@ function SettingsPage() {
         🏠
       </button>
 
+      {/* מודל הזנת סיסמה */}
+      {passwordModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000
+          }}
+          onClick={() => {
+            setPasswordModalOpen(false)
+            setShowPassword(false)
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '10px',
+              padding: '30px',
+              maxWidth: '450px',
+              width: '90%',
+              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+              direction: 'rtl'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{
+              marginBottom: '15px',
+              color: '#2c3e50',
+              fontSize: '20px',
+              textAlign: 'center'
+            }}>
+              {settings.appPassword ? '🔄 שינוי סיסמה' : '🔐 הגדרת סיסמה חדשה'}
+            </h3>
+
+            <p style={{
+              marginBottom: '20px',
+              fontSize: '14px',
+              color: '#666',
+              lineHeight: '1.6',
+              textAlign: 'center'
+            }}>
+              {settings.appPassword 
+                ? 'הזן סיסמה חדשה (לפחות 4 תווים)'
+                : 'הגדר סיסמה חדשה להגנה על המערכת (לפחות 4 תווים)'}
+            </p>
+
+            <div style={{ position: 'relative', marginBottom: '10px' }}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={newPasswordInput}
+                onChange={(e) => setNewPasswordInput(e.target.value)}
+                placeholder="הזן סיסמה..."
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newPasswordInput.length >= 4) {
+                    const password = newPasswordInput
+                    setPasswordModalOpen(false)
+                    setShowPassword(false)
+                    showConfirmModal({
+                      title: 'אישור שינוי סיסמה',
+                      message: `האם אתה בטוח שברצונך ${settings.appPassword ? 'לשנות' : 'להגדיר'} את הסיסמה?\n\nשים לב: במקרה של שכחה תצטרך לפנות למפתח התוכנה לקבלת קוד שחזור.\n\n📧 sh5616107@gmail.com`,
+                      confirmText: 'אישור',
+                      cancelText: 'ביטול',
+                      type: 'warning',
+                      onConfirm: () => {
+                        handleSettingChange('appPassword', password)
+                        showConfirmModal({
+                          title: '✅ הסיסמה עודכנה בהצלחה',
+                          message: 'הסיסמה החדשה נשמרה במערכת.\n\nהסיסמה תידרש בכניסה הבאה למערכת.',
+                          confirmText: 'הבנתי',
+                          type: 'success',
+                          showCancelButton: false,
+                          onConfirm: () => {}
+                        })
+                      }
+                    })
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 45px 12px 12px',
+                  fontSize: '16px',
+                  border: '2px solid #ddd',
+                  borderRadius: '8px',
+                  textAlign: 'center',
+                  direction: 'ltr'
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  left: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '20px',
+                  padding: '5px',
+                  color: '#666'
+                }}
+                title={showPassword ? 'הסתר סיסמה' : 'הצג סיסמה'}
+              >
+                {showPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
+
+            {newPasswordInput.length > 0 && newPasswordInput.length < 4 && (
+              <p style={{
+                color: '#e74c3c',
+                fontSize: '13px',
+                marginBottom: '15px',
+                textAlign: 'center'
+              }}>
+                ⚠️ הסיסמה חייבת להכיל לפחות 4 תווים
+              </p>
+            )}
+
+            <p style={{
+              fontSize: '12px',
+              color: '#95a5a6',
+              marginBottom: '20px',
+              textAlign: 'center',
+              lineHeight: '1.5'
+            }}>
+              💡 שים לב: במקרה של שכחת הסיסמה תצטרך לפנות למפתח התוכנה לקבלת קוד שחזור
+              <br />
+              📧 <a href="mailto:sh5616107@gmail.com" style={{ color: '#3498db', textDecoration: 'none' }}>sh5616107@gmail.com</a>
+            </p>
+
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+              <button
+                onClick={() => {
+                  if (newPasswordInput.length < 4) {
+                    return
+                  }
+                  const password = newPasswordInput
+                  setPasswordModalOpen(false)
+                  setShowPassword(false)
+                  showConfirmModal({
+                    title: 'אישור שינוי סיסמה',
+                    message: `האם אתה בטוח שברצונך ${settings.appPassword ? 'לשנות' : 'להגדיר'} את הסיסמה?\n\nשים לב: במקרה של שכחה תצטרך לפנות למפתח התוכנה לקבלת קוד שחזור.\n\n📧 sh5616107@gmail.com`,
+                    confirmText: 'אישור',
+                    cancelText: 'ביטול',
+                    type: 'warning',
+                    onConfirm: () => {
+                      handleSettingChange('appPassword', password)
+                      showConfirmModal({
+                        title: '✅ הסיסמה עודכנה בהצלחה',
+                        message: 'הסיסמה החדשה נשמרה במערכת.\n\nהסיסמה תידרש בכניסה הבאה למערכת.',
+                        confirmText: 'הבנתי',
+                        type: 'success',
+                        showCancelButton: false,
+                        onConfirm: () => {}
+                      })
+                    }
+                  })
+                }}
+                disabled={newPasswordInput.length < 4}
+                style={{
+                  backgroundColor: newPasswordInput.length >= 4 ? '#27ae60' : '#95a5a6',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 24px',
+                  borderRadius: '5px',
+                  fontSize: '16px',
+                  cursor: newPasswordInput.length >= 4 ? 'pointer' : 'not-allowed',
+                  fontWeight: 'bold',
+                  opacity: newPasswordInput.length >= 4 ? 1 : 0.6
+                }}
+              >
+                המשך
+              </button>
+
+              <button
+                onClick={() => {
+                  setPasswordModalOpen(false)
+                  setShowPassword(false)
+                }}
+                style={{
+                  backgroundColor: '#95a5a6',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 24px',
+                  borderRadius: '5px',
+                  fontSize: '16px',
+                  cursor: 'pointer'
+                }}
+              >
+                ביטול
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* מודל אישור */}
       {modalConfig && modalConfig.isOpen && (
         <div
@@ -843,7 +1179,8 @@ function SettingsPage() {
             <h3 style={{
               marginBottom: '20px',
               color: modalConfig.type === 'danger' ? '#e74c3c' :
-                modalConfig.type === 'warning' ? '#f39c12' : '#3498db',
+                modalConfig.type === 'warning' ? '#f39c12' :
+                modalConfig.type === 'success' ? '#27ae60' : '#3498db',
               fontSize: '20px'
             }}>
               {modalConfig.title}
@@ -867,7 +1204,8 @@ function SettingsPage() {
                 }}
                 style={{
                   backgroundColor: modalConfig.type === 'danger' ? '#e74c3c' :
-                    modalConfig.type === 'warning' ? '#f39c12' : '#3498db',
+                    modalConfig.type === 'warning' ? '#f39c12' :
+                    modalConfig.type === 'success' ? '#27ae60' : '#3498db',
                   color: 'white',
                   border: 'none',
                   padding: '12px 24px',
@@ -880,23 +1218,25 @@ function SettingsPage() {
                 {modalConfig.confirmText}
               </button>
 
-              <button
-                onClick={() => {
-                  if (modalConfig.onCancel) modalConfig.onCancel()
-                  closeModal()
-                }}
-                style={{
-                  backgroundColor: '#95a5a6',
-                  color: 'white',
-                  border: 'none',
-                  padding: '12px 24px',
-                  borderRadius: '5px',
-                  fontSize: '16px',
-                  cursor: 'pointer'
-                }}
-              >
-                {modalConfig.cancelText}
-              </button>
+              {modalConfig.showCancelButton !== false && (
+                <button
+                  onClick={() => {
+                    if (modalConfig.onCancel) modalConfig.onCancel()
+                    closeModal()
+                  }}
+                  style={{
+                    backgroundColor: '#95a5a6',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '5px',
+                    fontSize: '16px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {modalConfig.cancelText}
+                </button>
+              )}
             </div>
           </div>
         </div>

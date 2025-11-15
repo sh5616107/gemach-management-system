@@ -6,6 +6,7 @@ export interface DatabaseBorrower {
   lastName: string
   city: string
   phone: string
+  phone2?: string // טלפון נוסף (אופציונלי)
   address: string
   email: string
   idNumber: string // מספר זהות - שדה חובה ויחודי
@@ -308,6 +309,8 @@ export interface DatabaseSettings {
   quickActions: string[] // רשימת כפתורי הפעולות המהירות שיוצגו
   // הגדרות מס"ב
   enableMasav: boolean // הפעלת מערכת מס"ב לגביית תשלומים
+  // הגדרות אבטחה
+  appPassword: string // סיסמה להתחברות למערכת
 }
 
 interface DatabaseFile {
@@ -365,7 +368,8 @@ class GemachDatabase {
       showDateWarnings: true,
       trackPaymentMethods: true,
       quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
-      enableMasav: false // כבוי כברירת מחדל
+      enableMasav: false, // כבוי כברירת מחדל
+      appPassword: '' // ריק כברירת מחדל - יוגדר בכניסה ראשונה
     }
   }
 
@@ -418,7 +422,7 @@ class GemachDatabase {
         masavSettings: masavSettings ? JSON.parse(masavSettings) : undefined,
         lastUpdated: new Date().toISOString(),
         gemachName: gemachName || 'נר שרה',
-        settings: settings ? JSON.parse(settings) : {
+        settings: (settings && settings !== 'undefined') ? JSON.parse(settings) : {
           currency: 'ILS',
           currencySymbol: '₪',
           autoExport: false,
@@ -437,7 +441,8 @@ class GemachDatabase {
           showDateWarnings: true,
           trackPaymentMethods: false,
           quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
-          enableMasav: false
+          enableMasav: false,
+          appPassword: ''
         }
       }
 
@@ -542,7 +547,8 @@ class GemachDatabase {
           showDateWarnings: true,
           trackPaymentMethods: false,
           quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
-          enableMasav: false
+          enableMasav: false,
+          appPassword: ''
         }
       }
       // הוספת הגדרה חדשה למעקב אמצעי תשלום
@@ -1840,7 +1846,8 @@ class GemachDatabase {
         showDateWarnings: true,
         trackPaymentMethods: true,
         quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
-        enableMasav: false
+        enableMasav: false,
+        appPassword: ''
       }
     }
     this.saveData()

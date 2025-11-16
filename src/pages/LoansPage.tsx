@@ -1464,7 +1464,8 @@ function LoansPage() {
       return
     }
 
-    const loan = loans.find(l => l.id === selectedLoanId)
+    // השתמש ב-currentLoan כדי לקבל את הנתונים העדכניים ביותר כולל הערות
+    const loan = currentLoan.id === selectedLoanId ? currentLoan : loans.find(l => l.id === selectedLoanId)
     if (!loan) return
 
     // בדוק אם ההלוואה נפרעה
@@ -1630,6 +1631,9 @@ function LoansPage() {
               <h1 style="font-size: 20px; margin-bottom: 20px; text-decoration: underline;">שטר הלוואה</h1>
               <p style="margin: 8px 0;">אני הח"מ <strong>${borrowerName}</strong></p>
               ${borrowerIdNumber ? `<p style="margin: 8px 0;">ת.ז. <strong>${borrowerIdNumber}</strong></p>` : ''}
+              ${currentBorrower.phone ? `<p style="margin: 8px 0;">טלפון: <strong>${currentBorrower.phone}</strong></p>` : ''}
+              ${currentBorrower.address ? `<p style="margin: 8px 0;">כתובת: <strong>${currentBorrower.address}</strong></p>` : ''}
+              ${currentBorrower.email ? `<p style="margin: 8px 0;">מייל: <strong>${currentBorrower.email}</strong></p>` : ''}
               <p style="margin: 8px 0;">מאשר בזה כי לוויתי מגמ"ח "<strong>${gemachName}</strong>"</p>
               <p style="margin: 8px 0;">סכום של: <strong>${loanAmount} ש"ח</strong></p>
               <p style="margin: 8px 0;">בתאריך: <strong>${loanDate}</strong></p>
@@ -1842,6 +1846,9 @@ function LoansPage() {
                 <h1>שטר הלוואה</h1>
                 <p>אני הח"מ <strong>${borrowerName}</strong></p>
                 ${borrowerIdNumber ? `<p>ת.ז. <strong>${borrowerIdNumber}</strong></p>` : ''}
+                ${currentBorrower.phone ? `<p>טלפון: <strong>${currentBorrower.phone}</strong></p>` : ''}
+                ${currentBorrower.address ? `<p>כתובת: <strong>${currentBorrower.address}</strong></p>` : ''}
+                ${currentBorrower.email ? `<p>מייל: <strong>${currentBorrower.email}</strong></p>` : ''}
                 <p>מאשר בזה כי לוויתי מגמ"ח "<strong>${gemachName}</strong>"</p>
                 <p>סכום של: <strong>${loanAmount} ש"ח</strong></p>
                 <p>בתאריך: <strong>${loanDate}</strong></p>

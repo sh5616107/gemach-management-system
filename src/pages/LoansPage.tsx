@@ -4199,8 +4199,8 @@ function LoansPage() {
                     )}
 
                   </div>
-                  <div className="form-group">
-                    <label>תאריך תחילת פרעון:</label>
+                  <div className="form-group" style={{ display: 'block', width: '100%' }}>
+                    <label style={{ display: 'block', marginBottom: '8px' }}>תאריך תחילת פרעון:</label>
                     <input
                       type="date"
                       value={currentLoan.autoPaymentStartDate || currentLoan.loanDate || getTodayString()}
@@ -4208,7 +4208,15 @@ function LoansPage() {
                       disabled={!currentLoan.autoPayment}
                       style={{
                         backgroundColor: !currentLoan.autoPayment ? '#f5f5f5' : 'white',
-                        cursor: !currentLoan.autoPayment ? 'not-allowed' : 'text'
+                        cursor: !currentLoan.autoPayment ? 'not-allowed' : 'text',
+                        padding: '12px',
+                        fontSize: '16px',
+                        minHeight: '48px',
+                        border: '2px solid #ddd',
+                        borderRadius: '8px',
+                        width: '100%',
+                        boxSizing: 'border-box',
+                        display: 'block'
                       }}
                     />
                     {currentLoan.autoPayment && (
@@ -4257,22 +4265,19 @@ function LoansPage() {
                     )}
                   </div>
                   <div className="form-group">
-                    {/* שדה ריק לאיזון */}
-                  </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group">
                     <label>תאריך רישום במערכת:</label>
                     <input
                       type="text"
                       value={currentLoan.createdDate || new Date().toLocaleDateString('he-IL')}
                       readOnly
-                      style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }}
+                      style={{ 
+                        backgroundColor: '#f5f5f5', 
+                        cursor: 'not-allowed',
+                        border: '2px solid #ddd',
+                        color: '#2c3e50',
+                        fontWeight: '500'
+                      }}
                     />
-                  </div>
-                  <div className="form-group">
-                    {/* שדה ריק לאיזון */}
                   </div>
                 </div>
               </div>

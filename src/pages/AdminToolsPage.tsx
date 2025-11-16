@@ -253,8 +253,8 @@ function AdminToolsPage() {
           </button>
         </div>
 
-        {/* כרטיס קבצי מס"ב */}
-        <div style={{
+        {/* כרטיס קבצי מס"ב - זמנית מושבת */}
+        {/* <div style={{
           background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
           border: '2px solid #3b82f6',
           borderRadius: '15px',
@@ -289,10 +289,10 @@ function AdminToolsPage() {
           }}>
             צור קובץ מס"ב
           </button>
-        </div>
+        </div> */}
 
-        {/* כרטיס היסטוריית מס"ב */}
-        <div style={{
+        {/* כרטיס היסטוריית מס"ב - זמנית מושבת */}
+        {/* <div style={{
           background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)',
           border: '2px solid #0ea5e9',
           borderRadius: '15px',
@@ -327,7 +327,7 @@ function AdminToolsPage() {
           }}>
             צפה בהיסטוריה
           </button>
-        </div>
+        </div> */}
 
         {/* כרטיס יצוא נתונים */}
         <div style={{

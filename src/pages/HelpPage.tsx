@@ -14,19 +14,17 @@ function HelpPage() {
                     <h2 className="form-title">📖 מדריך שימוש במערכת</h2>
 
                     <div style={{ background: '#e8f5e8', padding: '15px', borderRadius: '8px', margin: '20px 0', textAlign: 'center', border: '2px solid #27ae60' }}>
-                        <h3 style={{ color: '#27ae60', margin: '0 0 10px 0' }}>🆕 גרסה 2.9.5 - מה חדש?</h3>
+                        <h3 style={{ color: '#27ae60', margin: '0 0 10px 0' }}>🆕 גרסה 2.9.9 - מה חדש?</h3>
                         <div style={{ textAlign: 'right', fontSize: '14px' }}>
                             <ul style={{ margin: '10px 0', paddingRight: '20px' }}>
-                                <li><strong>תיקון כפתורים</strong> - הסרת אפקטים מוגזמים בלחיצה</li>
-                                <li><strong>תיקון גלילה</strong> - גלילה מהירה ורספונסיבית</li>
-                                <li><strong>תיקון רשימות נפתחות</strong> - הסרת רטט ואנימציות מיותרות</li>
-                                <li><strong>תיקון בחירת סניף</strong> - הסניף נשאר בשורה</li>
-                                <li><strong>תיקון ניקוי טופס</strong> - הלוואה חדשה מתחילה עם שדות ריקים</li>
-                                <li><strong>עדכון אייקון</strong> - אייקון חדש ומעודכן</li>
+                                <li><strong>מודל ברכה חדש</strong> - הצגת תכונות אופציונליות בכניסה למערכת</li>
+                                <li><strong>שיפורים כלליים</strong> - אופטימיזציה של ביצועי המערכת</li>
+                                <li><strong>תיקוני באגים</strong> - תיקונים שונים לשיפור היציבות</li>
                             </ul>
                             <div style={{ marginTop: '15px', padding: '10px', background: 'rgba(255,255,255,0.5)', borderRadius: '5px' }}>
                                 <strong>גרסאות קודמות כללו:</strong>
                                 <ul style={{ margin: '5px 0', paddingRight: '20px', fontSize: '13px' }}>
+                                    <li>תיקון כפתורים וגלילה (2.9.5)</li>
                                     <li>שיפורים בעיצוב וטבלאות (2.9.4)</li>
                                     <li>ניהול ערבים ורשימה שחורה (2.9.3)</li>
                                     <li>טעינה מהירה ללא הבהובים (2.9.3)</li>

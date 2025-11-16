@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { db } from '../database/database'
 import { formatCombinedDate, getDateWarnings } from '../utils/hebrewDate'
 import { CategoryIcons, iconSizes } from '../components/Icons'
+import WelcomeModal from '../components/WelcomeModal'
 
 function HomePage() {
   const navigate = useNavigate()
@@ -100,12 +101,22 @@ function HomePage() {
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [isFabOpen, setIsFabOpen] = useState(false)
   const [quickActions, setQuickActions] = useState<string[]>(['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'])
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false)
 
 
 
   useEffect(() => {
     loadStats()
     loadQuickActionsSettings()
+    
+    // בדוק אם להציג את מודל הברכה
+    const hideWelcome = localStorage.getItem('hideWelcomeModal')
+    if (!hideWelcome) {
+      // הצג את המודל אחרי 1 שנייה
+      setTimeout(() => {
+        setShowWelcomeModal(true)
+      }, 1000)
+    }
   }, [])
 
   const loadQuickActionsSettings = () => {
@@ -1733,6 +1744,11 @@ function HomePage() {
           {isFabOpen ? '✕' : '+'}
         </button>
         </div>
+      )}
+
+      {/* מודל ברכה */}
+      {showWelcomeModal && (
+        <WelcomeModal onClose={() => setShowWelcomeModal(false)} />
       )}
     </div>
   )

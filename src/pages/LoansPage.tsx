@@ -78,24 +78,32 @@ function LoansPage() {
     notes: ''
   })
 
-  const [currentLoan, setCurrentLoan] = useState<Partial<DatabaseLoan>>({
-    borrowerId: 0,
-    amount: undefined,
-    loanDate: new Date().toISOString().split('T')[0], // תאריך היום כברירת מחדל
-    returnDate: '',
-    loanType: 'fixed',
-    isRecurring: false,
-    recurringDay: 1,
-    autoPayment: false,
-    autoPaymentAmount: 0,
-    autoPaymentDay: 1,
-    autoPaymentStartDate: '',
-    autoPaymentFrequency: 1,
-    notes: '',
-    guarantor1: '',
-    guarantor2: '',
-    guarantor1Id: undefined,
-    guarantor2Id: undefined
+  const [currentLoan, setCurrentLoan] = useState<Partial<DatabaseLoan>>(() => {
+    // חשב תאריך פירעון ברירת מחדל
+    const today = new Date()
+    const defaultPeriod = db.getSettings().defaultLoanPeriod || 12
+    const defaultReturnDate = new Date(today)
+    defaultReturnDate.setMonth(defaultReturnDate.getMonth() + defaultPeriod)
+    
+    return {
+      borrowerId: 0,
+      amount: undefined,
+      loanDate: today.toISOString().split('T')[0], // תאריך היום כברירת מחדל
+      returnDate: defaultReturnDate.toISOString().split('T')[0],
+      loanType: 'fixed',
+      isRecurring: false,
+      recurringDay: 1,
+      autoPayment: false,
+      autoPaymentAmount: 0,
+      autoPaymentDay: 1,
+      autoPaymentStartDate: '',
+      autoPaymentFrequency: 1,
+      notes: '',
+      guarantor1: '',
+      guarantor2: '',
+      guarantor1Id: undefined,
+      guarantor2Id: undefined
+    }
   })
 
   const [borrowers, setBorrowers] = useState<DatabaseBorrower[]>([])
@@ -614,14 +622,30 @@ function LoansPage() {
     // כדי שלא תפריע בזמן הקלדה
 
     // בדיקה כשמשנים תאריך הלוואה
-    if (field === 'loanDate' && typeof value === 'string' && value && currentLoan.returnDate) {
+    if (field === 'loanDate' && typeof value === 'string' && value) {
       const loanDate = createLocalDate(value)
-      const returnDate = createLocalDate(currentLoan.returnDate)
-
-      if (loanDate > returnDate) {
-        showNotification(
-          `⚠️ תאריך ההלוואה (${loanDate.toLocaleDateString('he-IL')}) מאוחר מתאריך החזרה (${returnDate.toLocaleDateString('he-IL')})<br>אנא תקן את התאריכים`, 'error'
-        )
+      
+      // אם יש כבר תאריך החזרה, בדוק שהוא לא לפני תאריך ההלוואה
+      if (currentLoan.returnDate) {
+        const returnDate = createLocalDate(currentLoan.returnDate)
+        if (loanDate > returnDate) {
+          showNotification(
+            `⚠️ תאריך ההלוואה (${loanDate.toLocaleDateString('he-IL')}) מאוחר מתאריך החזרה (${returnDate.toLocaleDateString('he-IL')})<br>אנא תקן את התאריכים`, 'error'
+          )
+          return
+        }
+      } else {
+        // אם אין תאריך החזרה, חשב אותו אוטומטי לפי ברירת המחדל
+        const defaultPeriod = db.getSettings().defaultLoanPeriod || 12
+        const calculatedReturnDate = new Date(loanDate)
+        calculatedReturnDate.setMonth(calculatedReturnDate.getMonth() + defaultPeriod)
+        const returnDateString = calculatedReturnDate.toISOString().split('T')[0]
+        
+        setCurrentLoan(prev => ({
+          ...prev,
+          [field]: value,
+          returnDate: returnDateString
+        }))
         return
       }
     }
@@ -1340,12 +1364,19 @@ function LoansPage() {
       return
     }
 
+    // חשב תאריך פירעון ברירת מחדל
+    const today = new Date()
+    const defaultPeriod = db.getSettings().defaultLoanPeriod || 12
+    const defaultReturnDate = new Date(today)
+    defaultReturnDate.setMonth(defaultReturnDate.getMonth() + defaultPeriod)
+    const returnDateString = defaultReturnDate.toISOString().split('T')[0]
+
     // איפוס טופס הלוואה חדשה
     setCurrentLoan({
       borrowerId: selectedBorrowerId,
       amount: undefined,
       loanDate: new Date().toISOString().split('T')[0],
-      returnDate: '',
+      returnDate: returnDateString,
       autoPayment: false,
       autoPaymentAmount: 0,
       autoPaymentDay: 1,

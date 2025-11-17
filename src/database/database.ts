@@ -2650,11 +2650,24 @@ class GemachDatabase {
         }
       })
 
-      // סטטיסטיקות משיכות הפקדות
-      this.dataFile.deposits.filter((d: DatabaseDeposit) => d.status === 'withdrawn').forEach((deposit: DatabaseDeposit) => {
+      // סטטיסטיקות משיכות הפקדות - מטבלת withdrawals החדשה
+      if (this.dataFile.withdrawals) {
+        this.dataFile.withdrawals.forEach((withdrawal: DatabaseWithdrawal) => {
+          const method = withdrawal.paymentMethod || 'unknown'
+          if (stats.withdrawals[method as keyof typeof stats.withdrawals]) {
+            stats.withdrawals[method as keyof typeof stats.withdrawals].count++
+            stats.withdrawals[method as keyof typeof stats.withdrawals].amount += withdrawal.amount
+          }
+        })
+      }
+      
+      // תאימות לאחור - משיכות מהשדות הישנים בהפקדות
+      this.dataFile.deposits.filter((d: DatabaseDeposit) => d.status === 'withdrawn' && d.withdrawalPaymentMethod).forEach((deposit: DatabaseDeposit) => {
         const method = deposit.withdrawalPaymentMethod || 'unknown'
         const amount = deposit.withdrawnAmount || deposit.amount
-        if (stats.withdrawals[method as keyof typeof stats.withdrawals]) {
+        // בדוק אם כבר נספר במשיכות החדשות
+        const alreadyCounted = this.dataFile.withdrawals?.some(w => w.depositId === deposit.id)
+        if (!alreadyCounted && stats.withdrawals[method as keyof typeof stats.withdrawals]) {
           stats.withdrawals[method as keyof typeof stats.withdrawals].count++
           stats.withdrawals[method as keyof typeof stats.withdrawals].amount += amount
         }

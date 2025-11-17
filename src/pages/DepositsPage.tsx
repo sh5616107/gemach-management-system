@@ -7,6 +7,7 @@ import NewDepositForm from '../components/NewDepositForm'
 import EditDepositorForm from '../components/EditDepositorForm'
 import DepositorDetailedReport from '../components/DepositorDetailedReport'
 import EditDepositForm from '../components/EditDepositForm'
+import WithdrawDepositModal from '../components/WithdrawDepositModal'
 
 function DepositsPage() {
   const navigate = useNavigate()
@@ -20,6 +21,7 @@ function DepositsPage() {
   const [showNewDepositForm, setShowNewDepositForm] = useState(false)
   const [showDetailedReport, setShowDetailedReport] = useState(false)
   const [editingDeposit, setEditingDeposit] = useState<any>(null)
+  const [withdrawingDeposit, setWithdrawingDeposit] = useState<{ id: number; balance: number } | null>(null)
   
   // טעינה ראשונית
   useEffect(() => {
@@ -105,26 +107,7 @@ function DepositsPage() {
 
   // פעולות על הפקדה
   const handleWithdrawDeposit = (depositId: number, availableBalance: number) => {
-    const amount = prompt(`כמה לשלם? (זמין: ₪${availableBalance.toLocaleString()})`)
-    if (!amount) return
-
-    const amountNum = Number(amount)
-    if (isNaN(amountNum) || amountNum <= 0) {
-      showNotification('⚠️ סכום לא תקין', 'error')
-      return
-    }
-
-    if (amountNum > availableBalance) {
-      showNotification('⚠️ הסכום גדול מהיתרה הזמינה', 'error')
-      return
-    }
-
-    if (db.withdrawDeposit(depositId, amountNum)) {
-      showNotification(`✅ נמשכו ₪${amountNum.toLocaleString()} בהצלחה!`)
-      loadDepositors()
-    } else {
-      showNotification('❌ שגיאה במשיכת הפקדון', 'error')
-    }
+    setWithdrawingDeposit({ id: depositId, balance: availableBalance })
   }
 
   const handlePrintDepositDocument = (deposit: any) => {
@@ -534,6 +517,20 @@ function DepositsPage() {
             loadDepositors()
           }}
           onCancel={() => setEditingDeposit(null)}
+          showNotification={showNotification}
+        />
+      )}
+
+      {withdrawingDeposit && (
+        <WithdrawDepositModal
+          depositId={withdrawingDeposit.id}
+          availableBalance={withdrawingDeposit.balance}
+          depositorName={selectedDepositor.name}
+          onSuccess={() => {
+            setWithdrawingDeposit(null)
+            loadDepositors()
+          }}
+          onCancel={() => setWithdrawingDeposit(null)}
           showNotification={showNotification}
         />
       )}

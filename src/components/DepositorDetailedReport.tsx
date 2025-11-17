@@ -61,8 +61,26 @@ function DepositorDetailedReport({ depositor, onClose }: DepositorDetailedReport
     transaction.balance = runningBalance
   })
 
-  const handlePrint = () => {
-    window.print()
+  const handlePrint = async () => {
+    // בדוק אם רצים ב-Electron
+    if (window.electronAPI && window.electronAPI.printReport) {
+      // הכן את תוכן הדוח להדפסה
+      const reportContent = document.querySelector('.report-content')
+      if (reportContent) {
+        try {
+          const result = await window.electronAPI.printReport(reportContent.innerHTML)
+          if (!result.success) {
+            alert('שגיאה בהדפסה: ' + (result.error || 'שגיאה לא ידועה'))
+          }
+        } catch (error) {
+          console.error('שגיאה בהדפסה:', error)
+          alert('שגיאה בהדפסה')
+        }
+      }
+    } else {
+      // דפדפן רגיל - הדפס רק את תוכן הדוח
+      window.print()
+    }
   }
 
   return (
@@ -79,7 +97,7 @@ function DepositorDetailedReport({ depositor, onClose }: DepositorDetailedReport
       zIndex: 1000,
       padding: '20px'
     }}>
-      <div style={{
+      <div className="report-content" style={{
         backgroundColor: 'white',
         borderRadius: '10px',
         padding: '30px',
@@ -282,8 +300,38 @@ function DepositorDetailedReport({ depositor, onClose }: DepositorDetailedReport
             .no-print {
               display: none !important;
             }
-            body {
-              padding: 20px;
+            
+            /* הסתר את הרקע האפור והמודל */
+            body > div:first-child {
+              background: white !important;
+            }
+            
+            /* הצג רק את תוכן הדוח */
+            .report-content {
+              position: static !important;
+              max-width: 100% !important;
+              max-height: none !important;
+              overflow: visible !important;
+              border-radius: 0 !important;
+              box-shadow: none !important;
+              padding: 20px !important;
+            }
+            
+            /* הסתר את כל האלמנטים מלבד הדוח */
+            body * {
+              visibility: hidden;
+            }
+            
+            .report-content,
+            .report-content * {
+              visibility: visible;
+            }
+            
+            .report-content {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 100%;
             }
           }
         `}</style>

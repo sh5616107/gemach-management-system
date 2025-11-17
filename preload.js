@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // פונקציות הדפסה
   printDocument: () => ipcRenderer.invoke('print-document'),
   printToPDF: () => ipcRenderer.invoke('print-to-pdf'),
+  printReport: (htmlContent) => ipcRenderer.invoke('print-report', htmlContent),
   
   // פונקציות עדכון
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),

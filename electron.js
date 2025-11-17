@@ -544,6 +544,82 @@ ipcMain.handle('print-to-pdf', async () => {
   }
 })
 
+// הדפסת דוח מותאם אישית
+ipcMain.handle('print-report', async (event, htmlContent) => {
+  try {
+    // צור חלון זמני להדפסה
+    const printWindow = new BrowserWindow({
+      show: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    })
+
+    // טען את תוכן הדוח
+    const fullHtml = `
+      <!DOCTYPE html>
+      <html dir="rtl">
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              direction: rtl;
+              padding: 20px;
+              margin: 0;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            th, td {
+              border: 1px solid #ddd;
+              padding: 8px;
+              text-align: right;
+            }
+            th {
+              background-color: #3498db;
+              color: white;
+            }
+            @media print {
+              body {
+                padding: 10mm;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${htmlContent}
+        </body>
+      </html>
+    `
+
+    await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(fullHtml)}`)
+
+    // המתן לטעינה מלאה
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    // הדפס
+    await printWindow.webContents.print({
+      silent: false,
+      printBackground: true,
+      color: true,
+      margins: {
+        marginType: 'default'
+      }
+    })
+
+    // סגור את החלון הזמני
+    printWindow.close()
+
+    return { success: true }
+  } catch (error) {
+    console.error('שגיאה בהדפסת דוח:', error)
+    return { success: false, error: error.message }
+  }
+})
+
 // פונקציה לבדיקת עדכונים ידנית עם תצוגה מקדימה
 function checkForUpdates() {
   if (isDev) {

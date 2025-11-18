@@ -23,8 +23,8 @@
   },
   "build": {
     "appId": "com.gemach.management",
-    "productName": "מערכת ניהול גמח",
-    "artifactName": "${productName}-Setup-${version}.${ext}",
+    "productName": "GemachManagementSystem",
+    "artifactName": "gemach-management-system-setup-${version}.${ext}",
     "directories": {
       "output": "dist-electron"
     },

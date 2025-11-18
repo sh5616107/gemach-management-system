@@ -13,7 +13,7 @@
   "scripts": {
     "electron": "electron .",
     "electron-dev": "ELECTRON_IS_DEV=true electron .",
-    "build-electron": "npm run build && electron-builder --publish never",
+    "build-electron": "npm run build && electron-builder",
     "dist": "npm run build && electron-builder --publish=never",
     "pack": "electron-builder --dir",
     "postinstall": "electron-builder install-app-deps"

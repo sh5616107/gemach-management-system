@@ -108,7 +108,7 @@ jobs:
           ---
           **פותח עבור קהילת הגמ"חים בישראל 🇮🇱**
         files: |
-          dist-electron/*Setup*.exe
+          dist-electron/gemach-management-system-setup-*.exe
         draft: false
         prerelease: false
         fail_on_unmatched_files: false

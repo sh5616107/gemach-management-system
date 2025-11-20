@@ -55,22 +55,23 @@ function App() {
   useEffect(() => {
     const performanceMode = localStorage.getItem('performance_mode') || 'normal'
     
-    // הסר כל CSS קיים
-    const existingLinks = document.querySelectorAll('link[data-css-mode]')
-    existingLinks.forEach(link => link.remove())
-    
-    // טען CSS מתאים
-    const link = document.createElement('link')
-    link.setAttribute('data-css-mode', 'true')
-    link.rel = 'stylesheet'
-    
     if (performanceMode === 'light') {
-      link.href = '/src/index-light.css'
+      // במצב קל - טען את index-light.css
+      const lightCss = document.createElement('link')
+      lightCss.rel = 'stylesheet'
+      lightCss.id = 'light-mode-css'
+      lightCss.href = './index-light.css'
+      
+      // הסר CSS קל קיים
+      const existing = document.getElementById('light-mode-css')
+      if (existing) existing.remove()
+      
+      document.head.appendChild(lightCss)
     } else {
-      link.href = '/src/index.css'
+      // במצב רגיל - הסר CSS קל אם קיים
+      const existing = document.getElementById('light-mode-css')
+      if (existing) existing.remove()
     }
-    
-    document.head.appendChild(link)
   }, [])
 
   // אופטימיזציה לטעינה באלקטרון

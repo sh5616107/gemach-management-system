@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { HashRouter } from 'react-router-dom'
 import App from './App.tsx'
-// CSS נטען דינמית ב-App.tsx לפי מצב ביצועים
+import './index.css' // CSS רגיל תמיד נטען
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

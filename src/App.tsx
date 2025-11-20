@@ -66,12 +66,19 @@ function App() {
       const lightCss = document.createElement('link')
       lightCss.rel = 'stylesheet'
       lightCss.id = 'light-mode-css'
-      lightCss.href = './index-light.css'
+      
+      // נסה מספר נתיבים אפשריים
+      const baseUrl = window.location.href.replace(/index\.html.*$/, '')
+      lightCss.href = baseUrl + 'index-light.css'
       
       // הוסף לראש המסמך
       document.head.appendChild(lightCss)
       
-      console.log('✅ מצב קל: טעינת index-light.css')
+      console.log('✅ מצב קל: טעינת index-light.css מ-', lightCss.href)
+      
+      // בדוק אם הקובץ נטען בהצלחה
+      lightCss.onload = () => console.log('✅ index-light.css נטען בהצלחה!')
+      lightCss.onerror = () => console.error('❌ שגיאה בטעינת index-light.css')
     } else {
       console.log('✅ מצב רגיל: משתמש ב-index.css בלבד')
     }

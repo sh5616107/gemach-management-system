@@ -55,6 +55,12 @@ function App() {
   useEffect(() => {
     const performanceMode = localStorage.getItem('performance_mode') || 'normal'
     
+    // הסר CSS קל קיים תמיד קודם
+    const existing = document.getElementById('light-mode-css')
+    if (existing) {
+      existing.remove()
+    }
+    
     if (performanceMode === 'light') {
       // במצב קל - טען את index-light.css
       const lightCss = document.createElement('link')
@@ -62,15 +68,12 @@ function App() {
       lightCss.id = 'light-mode-css'
       lightCss.href = './index-light.css'
       
-      // הסר CSS קל קיים
-      const existing = document.getElementById('light-mode-css')
-      if (existing) existing.remove()
-      
+      // הוסף לראש המסמך
       document.head.appendChild(lightCss)
+      
+      console.log('✅ מצב קל: טעינת index-light.css')
     } else {
-      // במצב רגיל - הסר CSS קל אם קיים
-      const existing = document.getElementById('light-mode-css')
-      if (existing) existing.remove()
+      console.log('✅ מצב רגיל: משתמש ב-index.css בלבד')
     }
   }, [])
 

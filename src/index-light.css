@@ -1,4 +1,15 @@
-/* גרסה קלה ומהירה - ללא אפקטים כבדים */
+/* 
+ * גרסה קלה ומהירה - ללא אנימציות ואפקטים כבדים
+ * מיועדת למחשבים חלשים ולשיפור ביצועים באלקטרון
+ * 
+ * הבדלים מהגרסה הרגילה:
+ * ❌ ללא אנימציות רקע
+ * ❌ ללא blur/backdrop-filter
+ * ❌ ללא transitions
+ * ❌ ללא transforms
+ * ❌ ללא אפקטי hover מורכבים
+ * ✅ רק עיצוב בסיסי ונקי
+ */
 
 * {
   margin: 0;
@@ -28,10 +39,9 @@ body {
 }
 
 .header {
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.2);
   padding: 18px 35px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -83,10 +93,6 @@ body {
   cursor: pointer;
 }
 
-.category:hover {
-  transform: translateY(-4px);
-}
-
 .category-image {
   width: 140px;
   height: 140px;
@@ -115,13 +121,22 @@ body {
   box-shadow: var(--shadow-md);
 }
 
+.form-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
 .form-group {
-  margin-bottom: 15px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .form-group label {
-  display: block;
-  margin-bottom: 5px;
+  min-width: 60px;
   font-weight: bold;
   color: var(--text-dark);
 }
@@ -129,11 +144,12 @@ body {
 .form-group input,
 .form-group select,
 .form-group textarea {
-  width: 100%;
-  padding: 10px;
+  flex: 1;
+  padding: 10px 14px;
   border: 2px solid var(--border-color);
   border-radius: 6px;
   font-size: 14px;
+  background: var(--bg-white);
 }
 
 .form-group input:focus,
@@ -141,6 +157,7 @@ body {
 .form-group textarea:focus {
   outline: none;
   border-color: var(--primary-color);
+  background-color: var(--bg-white);
 }
 
 .btn {
@@ -150,6 +167,7 @@ body {
   cursor: pointer;
   font-size: 15px;
   font-weight: 600;
+  box-shadow: var(--shadow-sm);
 }
 
 .btn-primary {
@@ -179,29 +197,73 @@ body {
   background: #DC2626;
 }
 
+.btn-secondary {
+  background: #6B7280;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #4B5563;
+}
+
+.btn-warning {
+  background: var(--warning-color);
+  color: white;
+}
+
+.btn-warning:hover {
+  background: #D97706;
+}
+
 .table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin-top: 20px;
   background: white;
   border-radius: 10px;
   overflow: hidden;
+  box-shadow: var(--shadow-md);
+  min-width: 800px;
+}
+
+.table-container {
+  overflow-x: auto;
+  width: 100%;
+  border-radius: 10px;
+  padding: 0 10px;
+  margin: 0 -10px;
+}
+
+.table th,
+.table td {
+  padding: 14px 16px;
+  text-align: center;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .table th {
   background: var(--primary-color);
   color: white;
-  padding: 14px;
-  text-align: center;
-}
-
-.table td {
-  padding: 12px;
-  text-align: center;
-  border-bottom: 1px solid var(--border-color);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .table tbody tr:hover {
   background: #F9FAFB;
+}
+
+.table tbody tr:nth-child(even) {
+  background: rgba(249, 250, 251, 0.6);
+}
+
+.table tbody tr:nth-child(even):hover {
+  background: #F3F4F6;
 }
 
 .back-btn {
@@ -221,4 +283,340 @@ body {
 
 .back-btn:hover {
   background: var(--primary-hover);
+}
+
+/* יישור טבלאות */
+.table th, .table td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.table th:first-child, .table td:first-child {
+  text-align: center;
+}
+
+.table th:last-child, .table td:last-child {
+  text-align: center;
+}
+
+/* יישור מיוחד לעמודות מספריות */
+.table .amount-column {
+  text-align: left;
+  direction: ltr;
+  font-family: 'Courier New', monospace;
+}
+
+/* יישור לעמודות תאריכים */
+.table .date-column {
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* יישור לעמודות שמות */
+.table .name-column {
+  text-align: right;
+}
+
+/* כפתורי פרטים */
+.details-button {
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.details-button:hover {
+  background: #2980b9;
+}
+
+.details-button.deposit {
+  background: #3498db;
+}
+
+.details-button.withdrawal {
+  background: #e67e22;
+}
+
+.details-button.donation {
+  background: #9b59b6;
+}
+
+/* שיפורים לסקרולבר */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F3F4F6;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-hover);
+}
+
+/* שיפורים לסלקט */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%234A90E2' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 12px center;
+  padding-left: 36px;
+}
+
+/* שיפורים לצ'קבוקס */
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary-color);
+}
+
+/* שיפורים לרדיו */
+input[type="radio"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--primary-color);
+}
+
+/* שיפורים לאלרטים */
+.alert {
+  padding: 16px 20px;
+  border-radius: 10px;
+  margin: 16px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.alert-success {
+  background: #D1FAE5;
+  border-right: 4px solid #10B981;
+  color: #065F46;
+}
+
+.alert-error {
+  background: #FEE2E2;
+  border-right: 4px solid #EF4444;
+  color: #991B1B;
+}
+
+.alert-warning {
+  background: #FEF3C7;
+  border-right: 4px solid #F59E0B;
+  color: #92400E;
+}
+
+.alert-info {
+  background: #DBEAFE;
+  border-right: 4px solid #3B82F6;
+  color: #1E40AF;
+}
+
+/* שיפורים לכרטיסים */
+.card {
+  background: var(--bg-white);
+  border-radius: 10px;
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+}
+
+.card-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 16px;
+}
+
+.card-content {
+  color: var(--text-light);
+  line-height: 1.6;
+}
+
+/* שיפורים לטולטיפ */
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  background-color: rgba(44, 62, 80, 0.95);
+  color: white;
+  text-align: center;
+  border-radius: 6px;
+  padding: 8px 12px;
+  position: absolute;
+  z-index: 1000;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  font-size: 13px;
+  white-space: nowrap;
+  box-shadow: var(--shadow-md);
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* שיפורים רספונסיביים */
+@media (max-width: 768px) {
+  .main-title {
+    font-size: 36px;
+  }
+  
+  .category-image {
+    width: 100px;
+    height: 100px;
+    font-size: 42px;
+  }
+  
+  .category-title {
+    font-size: 18px;
+  }
+  
+  .form-container {
+    padding: 20px;
+  }
+  
+  .btn {
+    padding: 10px 18px;
+    font-size: 14px;
+  }
+  
+  .table th,
+  .table td {
+    padding: 10px 8px;
+    font-size: 13px;
+  }
+}
+
+/* תגיות סטטוס */
+.status-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  box-shadow: var(--shadow-sm);
+}
+
+.status-badge.active {
+  background: #10B981;
+  color: white;
+}
+
+.status-badge.completed {
+  background: #6B7280;
+  color: white;
+}
+
+.status-badge.overdue {
+  background: #EF4444;
+  color: white;
+}
+
+.status-badge.warning {
+  background: #F59E0B;
+  color: white;
+}
+
+/* שיפור לפוקוס נגישות */
+*:focus-visible {
+  outline: 3px solid var(--primary-color);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* נושא כהה */
+body.dark-theme {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  color: #ecf0f1;
+}
+
+body.dark-theme .header {
+  background: rgba(44, 62, 80, 0.9);
+  border-bottom: 2px solid rgba(236, 240, 241, 0.2);
+}
+
+body.dark-theme .main-content {
+  background: rgba(52, 73, 94, 0.3);
+}
+
+body.dark-theme .category-image {
+  background: rgba(236, 240, 241, 0.9);
+  color: #2c3e50;
+}
+
+body.dark-theme .category-title {
+  color: #ecf0f1;
+}
+
+body.dark-theme .info-section {
+  background: rgba(52, 73, 94, 0.4);
+  border: 2px solid rgba(236, 240, 241, 0.3);
+}
+
+body.dark-theme .form-container {
+  background: rgba(52, 73, 94, 0.4);
+  border: 2px solid rgba(236, 240, 241, 0.3);
+}
+
+body.dark-theme input, 
+body.dark-theme select, 
+body.dark-theme textarea {
+  background: rgba(44, 62, 80, 0.8);
+  color: #ecf0f1;
+  border: 1px solid rgba(236, 240, 241, 0.3);
+}
+
+body.dark-theme .table {
+  background: rgba(52, 73, 94, 0.6);
+}
+
+body.dark-theme .table th {
+  background: rgba(44, 62, 80, 0.8);
+  color: #ecf0f1;
+}
+
+body.dark-theme .table td {
+  color: #ecf0f1;
+  border-bottom: 1px solid rgba(236, 240, 241, 0.2);
+}
+
+/* נושא מותאם אישית */
+body.custom-theme {
+  background: linear-gradient(135deg, var(--custom-bg-color, #87CEEB) 0%, var(--custom-bg-color, #87CEEB) 100%);
+}
+
+body.custom-theme .category {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+body.custom-theme .info-section {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+body.custom-theme .form-container {
+  background: rgba(255, 255, 255, 0.8);
 }

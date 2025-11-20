@@ -610,13 +610,16 @@ function SettingsPage() {
               </p>
               <div style={{ fontSize: '13px', color: '#374151', lineHeight: '1.6' }}>
                 <p style={{ margin: '5px 0' }}>
-                  <strong>מצב רגיל:</strong> כולל אנימציות רקע, אפקטי hover מתקדמים, זוהר, blur ועוד
+                  <strong>מצב רגיל:</strong> כולל אנימציות רקע מתנועעות, אפקטי hover עם transforms, blur/backdrop-filter, אפקטי זוהר, אנימציות כניסה, ריפל בכפתורים ועוד
                 </p>
                 <p style={{ margin: '5px 0' }}>
-                  <strong>מצב קל:</strong> ללא אנימציות כבדות - רק עיצוב בסיסי ונקי
+                  <strong>מצב קל:</strong> ללא אנימציות, ללא transforms, ללא blur - רק עיצוב בסיסי ונקי. מומלץ מאוד למחשבים חלשים ולשימוש באלקטרון
                 </p>
                 <p style={{ margin: '10px 0 5px 0', fontSize: '12px', color: '#6b7280' }}>
-                  ⚡ מצב קל משפר ביצועים ב-50-70% במחשבים חלשים
+                  ⚡ מצב קל משפר ביצועים ב-50-70% במחשבים חלשים ומקל על השימוש באלקטרון
+                </p>
+                <p style={{ margin: '5px 0', fontSize: '12px', color: '#dc2626', fontWeight: 'bold' }}>
+                  ⚠️ חשוב: המערכת תרענן אוטומטית אחרי שינוי המצב
                 </p>
               </div>
             </div>

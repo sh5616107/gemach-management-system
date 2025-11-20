@@ -1,6 +1,6 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import './index.css' // CSS רגיל
+// CSS נטען דינמית לפי מצב ביצועים - לא מייבאים כאן!
 import LoginPage from './pages/LoginPage'
 import HomePage from './pages/HomePage'
 import LoansPage from './pages/LoansPage'
@@ -55,20 +55,22 @@ function App() {
   useEffect(() => {
     const performanceMode = localStorage.getItem('performance_mode') || 'normal'
     
-    // הסר CSS קיים
-    const existingLink = document.getElementById('performance-css')
-    if (existingLink) {
-      existingLink.remove()
-    }
+    // הסר כל CSS קיים
+    const existingLinks = document.querySelectorAll('link[data-css-mode]')
+    existingLinks.forEach(link => link.remove())
     
     // טען CSS מתאים
+    const link = document.createElement('link')
+    link.setAttribute('data-css-mode', 'true')
+    link.rel = 'stylesheet'
+    
     if (performanceMode === 'light') {
-      const link = document.createElement('link')
-      link.id = 'performance-css'
-      link.rel = 'stylesheet'
       link.href = '/src/index-light.css'
-      document.head.appendChild(link)
+    } else {
+      link.href = '/src/index.css'
     }
+    
+    document.head.appendChild(link)
   }, [])
 
   // אופטימיזציה לטעינה באלקטרון

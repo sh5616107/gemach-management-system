@@ -529,17 +529,60 @@ function GuarantorDebtsReport({ isOpen, onClose }: GuarantorDebtsReportProps) {
             <div style={{
               textAlign: 'center',
               padding: '60px 20px',
-              background: '#f0fdf4',
+              background: debts.length === 0 ? '#f0f9ff' : '#f0fdf4',
               borderRadius: '15px',
-              border: '2px solid #86efac'
+              border: debts.length === 0 ? '2px solid #93c5fd' : '2px solid #86efac'
             }}>
-              <div style={{ fontSize: '64px', marginBottom: '20px' }}>📋</div>
-              <h3 style={{ color: '#16a34a', margin: '0 0 10px 0' }}>אין תוצאות</h3>
-              <p style={{ color: '#15803d', fontSize: '16px' }}>
+              <div style={{ fontSize: '64px', marginBottom: '20px' }}>
+                {debts.length === 0 ? '🤝' : '📋'}
+              </div>
+              <h3 style={{ 
+                color: debts.length === 0 ? '#2563eb' : '#16a34a', 
+                margin: '0 0 10px 0' 
+              }}>
+                {debts.length === 0 ? 'אין חובות ערבים' : 'אין תוצאות'}
+              </h3>
+              <p style={{ 
+                color: debts.length === 0 ? '#1e40af' : '#15803d', 
+                fontSize: '16px',
+                marginBottom: '20px'
+              }}>
                 {debts.length === 0 
-                  ? 'לא נמצאו חובות ערבים'
+                  ? 'לא קיימים חובות ערבים במערכת כרגע'
                   : 'לא נמצאו תוצאות התואמות לפילטרים שנבחרו'}
               </p>
+              {debts.length === 0 && (
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.7)',
+                  padding: '20px',
+                  borderRadius: '10px',
+                  marginTop: '20px',
+                  textAlign: 'right'
+                }}>
+                  <h4 style={{ color: '#1e40af', marginBottom: '10px' }}>💡 איך נוצרים חובות ערבים?</h4>
+                  <ul style={{ color: '#475569', fontSize: '14px', lineHeight: '1.8' }}>
+                    <li>חובות ערבים נוצרים כאשר מעבירים הלוואה לערב</li>
+                    <li>עבור ל"ניהול הלוואות" → בחר הלוואה → "העבר לערב"</li>
+                    <li>לאחר ההעברה, החוב יופיע כאן בדוח</li>
+                  </ul>
+                  <button
+                    onClick={onClose}
+                    style={{
+                      marginTop: '15px',
+                      background: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      padding: '10px 20px',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    הבנתי, סגור
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

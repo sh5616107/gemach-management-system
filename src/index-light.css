@@ -62,6 +62,7 @@ body {
   border-radius: 50%;
   cursor: pointer;
   font-size: 20px;
+  transition: background-color 0.2s ease;
 }
 
 .close-btn:hover {
@@ -91,6 +92,11 @@ body {
 .category {
   text-align: center;
   cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.category:hover {
+  transform: translateY(-4px);
 }
 
 .category-image {

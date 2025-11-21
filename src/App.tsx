@@ -51,37 +51,10 @@ function App() {
     setIsLoggedIn(true)
   }
 
-  // טעינת CSS לפי מצב ביצועים
+  // אופטימיזציה לטעינה באלקטרון
   useEffect(() => {
-    const performanceMode = localStorage.getItem('performance_mode') || 'normal'
-    
-    // הסר CSS קל קיים תמיד קודם
-    const existing = document.getElementById('light-mode-css')
-    if (existing) {
-      existing.remove()
-    }
-    
-    if (performanceMode === 'light') {
-      // במצב קל - טען את index-light.css
-      const lightCss = document.createElement('link')
-      lightCss.rel = 'stylesheet'
-      lightCss.id = 'light-mode-css'
-      
-      // נסה מספר נתיבים אפשריים
-      const baseUrl = window.location.href.replace(/index\.html.*$/, '')
-      lightCss.href = baseUrl + 'index-light.css'
-      
-      // הוסף לראש המסמך
-      document.head.appendChild(lightCss)
-      
-      console.log('✅ מצב קל: טעינת index-light.css מ-', lightCss.href)
-      
-      // בדוק אם הקובץ נטען בהצלחה
-      lightCss.onload = () => console.log('✅ index-light.css נטען בהצלחה!')
-      lightCss.onerror = () => console.error('❌ שגיאה בטעינת index-light.css')
-    } else {
-      console.log('✅ מצב רגיל: משתמש ב-index.css בלבד')
-    }
+    // סמן שהאפליקציה נטענה
+    document.body.classList.add('loaded')
   }, [])
 
   // אופטימיזציה לטעינה באלקטרון

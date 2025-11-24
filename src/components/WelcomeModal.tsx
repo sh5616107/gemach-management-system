@@ -59,7 +59,7 @@ function WelcomeModal({ onClose }: WelcomeModalProps) {
             ברוכים הבאים למערכת ניהול הגמ"ח!
           </h2>
           <p style={{ color: '#666', fontSize: '14px', margin: 0 }}>
-            גרסה 2.9.9
+            גרסה 2.9.40
           </p>
         </div>
 
@@ -133,7 +133,7 @@ function WelcomeModal({ onClose }: WelcomeModalProps) {
             marginBottom: '20px'
           }}>
             <h4 style={{ color: '#e74c3c', margin: '0 0 10px 0', fontSize: '16px' }}>
-              🆕 חדש בגרסה 2.9.9:
+              🆕 חדש בגרסה 2.9.40:
             </h4>
             <ul style={{ paddingRight: '20px', fontSize: '14px', color: '#555', margin: 0 }}>
               <li>שיפורים כלליים ותיקוני באגים</li>

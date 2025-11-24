@@ -23,6 +23,19 @@ function DepositsPage() {
   const [editingDeposit, setEditingDeposit] = useState<any>(null)
   const [withdrawingDeposit, setWithdrawingDeposit] = useState<{ id: number; balance: number } | null>(null)
   
+  // State למודל אישור
+  const [modalConfig, setModalConfig] = useState<{
+    isOpen: boolean
+    title: string
+    message: string
+    confirmText: string
+    cancelText?: string
+    onConfirm: () => void
+    onCancel?: () => void
+    type: 'warning' | 'danger' | 'info' | 'success'
+    showCancelButton?: boolean
+  } | null>(null)
+  
   // טעינה ראשונית
   useEffect(() => {
     loadDepositors()
@@ -73,6 +86,31 @@ function DepositsPage() {
     }, 3000)
   }
 
+  // פונקציה להצגת מודל אישור
+  const showConfirmModal = (config: {
+    title: string
+    message: string
+    confirmText: string
+    cancelText?: string
+    onConfirm: () => void
+    onCancel?: () => void
+    type?: 'warning' | 'danger' | 'info' | 'success'
+    showCancelButton?: boolean
+  }) => {
+    setModalConfig({
+      isOpen: true,
+      cancelText: 'ביטול',
+      type: 'warning',
+      showCancelButton: true,
+      ...config
+    })
+  }
+
+  // פונקציה לסגירת המודל
+  const closeModal = () => {
+    setModalConfig(null)
+  }
+
   // סינון מפקידים
   const filteredDepositors = depositors.filter(depositor => {
     const searchLower = searchTerm.toLowerCase()
@@ -94,15 +132,23 @@ function DepositsPage() {
   }
 
   const handleDeleteDepositor = (depositor: DatabaseDepositor) => {
-    if (window.confirm(`האם אתה בטוח שברצונך למחוק את המפקיד ${depositor.name}?`)) {
-      const result = db.deleteDepositor(depositor.id)
-      if (result.success) {
-        showNotification('✅ המפקיד נמחק בהצלחה')
-        loadDepositors()
-      } else {
-        showNotification(`❌ ${result.error}`, 'error')
+    showConfirmModal({
+      title: 'מחיקת מפקיד',
+      message: `האם אתה בטוח שברצונך למחוק את המפקיד ${depositor.name}?\n\nפעולה זו תמחק גם את כל ההפקדות הקשורות למפקיד זה.`,
+      confirmText: 'מחק',
+      cancelText: 'ביטול',
+      type: 'danger',
+      onConfirm: () => {
+        const result = db.deleteDepositor(depositor.id)
+        if (result.success) {
+          showNotification('✅ המפקיד נמחק בהצלחה')
+          setSelectedDepositor(null)
+          loadDepositors()
+        } else {
+          showNotification(`❌ ${result.error}`, 'error')
+        }
       }
-    }
+    })
   }
 
   // פעולות על הפקדה
@@ -348,6 +394,102 @@ function DepositsPage() {
           />
         )}
         </div>
+
+        {/* מודל אישור */}
+        {modalConfig && modalConfig.isOpen && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10000
+            }}
+            onClick={closeModal}
+          >
+            <div
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '10px',
+                padding: '30px',
+                maxWidth: '400px',
+                width: '90%',
+                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+                textAlign: 'center',
+                direction: 'rtl'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 style={{
+                marginBottom: '20px',
+                color: modalConfig.type === 'danger' ? '#e74c3c' :
+                  modalConfig.type === 'warning' ? '#f39c12' :
+                  modalConfig.type === 'success' ? '#27ae60' : '#3498db',
+                fontSize: '20px'
+              }}>
+                {modalConfig.title}
+              </h3>
+
+              <p style={{
+                marginBottom: '30px',
+                lineHeight: '1.5',
+                fontSize: '16px',
+                color: '#2c3e50',
+                whiteSpace: 'pre-line'
+              }}>
+                {modalConfig.message}
+              </p>
+
+              <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+                <button
+                  onClick={() => {
+                    modalConfig.onConfirm()
+                    closeModal()
+                  }}
+                  style={{
+                    backgroundColor: modalConfig.type === 'danger' ? '#e74c3c' :
+                      modalConfig.type === 'warning' ? '#f39c12' :
+                      modalConfig.type === 'success' ? '#27ae60' : '#3498db',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '5px',
+                    fontSize: '16px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  {modalConfig.confirmText}
+                </button>
+
+                {modalConfig.showCancelButton !== false && (
+                  <button
+                    onClick={() => {
+                      if (modalConfig.onCancel) modalConfig.onCancel()
+                      closeModal()
+                    }}
+                    style={{
+                      backgroundColor: '#95a5a6',
+                      color: 'white',
+                      border: 'none',
+                      padding: '12px 24px',
+                      borderRadius: '5px',
+                      fontSize: '16px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {modalConfig.cancelText}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -616,11 +758,18 @@ function DepositsPage() {
                   </button>
                   <button
                     onClick={() => {
-                      if (window.confirm('האם למחוק את ההפקדה המתוכננת?')) {
-                        db.deleteDeposit(deposit.id)
-                        loadDepositors()
-                        showNotification('✅ הפקדה מתוכננת נמחקה')
-                      }
+                      showConfirmModal({
+                        title: 'מחיקת הפקדה מתוכננת',
+                        message: 'האם אתה בטוח שברצונך למחוק את ההפקדה המתוכננת?',
+                        confirmText: 'מחק',
+                        cancelText: 'ביטול',
+                        type: 'danger',
+                        onConfirm: () => {
+                          db.deleteDeposit(deposit.id)
+                          loadDepositors()
+                          showNotification('✅ הפקדה מתוכננת נמחקה')
+                        }
+                      })
                     }}
                     style={{
                       flex: 1,
@@ -780,6 +929,34 @@ function DepositsPage() {
                   >
                     ✏️ ערוך
                   </button>
+                  <button
+                    onClick={() => {
+                      showConfirmModal({
+                        title: 'מחיקת הפקדה',
+                        message: 'האם אתה בטוח שברצונך למחוק את ההפקדה?\n\nפעולה זו תמחק את ההפקדה וכל המשיכות הקשורות אליה.',
+                        confirmText: 'מחק',
+                        cancelText: 'ביטול',
+                        type: 'danger',
+                        onConfirm: () => {
+                          db.deleteDeposit(deposit.id)
+                          loadDepositors()
+                          showNotification('✅ ההפקדה נמחקה בהצלחה')
+                        }
+                      })
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      backgroundColor: '#e74c3c',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '5px',
+                      cursor: 'pointer',
+                      fontSize: '14px'
+                    }}
+                  >
+                    🗑️ מחק
+                  </button>
                 </div>
               </div>
             )
@@ -787,6 +964,102 @@ function DepositsPage() {
         </div>
       )}
       </div>
+
+      {/* מודל אישור */}
+      {modalConfig && modalConfig.isOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000
+          }}
+          onClick={closeModal}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '10px',
+              padding: '30px',
+              maxWidth: '400px',
+              width: '90%',
+              boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+              textAlign: 'center',
+              direction: 'rtl'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{
+              marginBottom: '20px',
+              color: modalConfig.type === 'danger' ? '#e74c3c' :
+                modalConfig.type === 'warning' ? '#f39c12' :
+                modalConfig.type === 'success' ? '#27ae60' : '#3498db',
+              fontSize: '20px'
+            }}>
+              {modalConfig.title}
+            </h3>
+
+            <p style={{
+              marginBottom: '30px',
+              lineHeight: '1.5',
+              fontSize: '16px',
+              color: '#2c3e50',
+              whiteSpace: 'pre-line'
+            }}>
+              {modalConfig.message}
+            </p>
+
+            <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
+              <button
+                onClick={() => {
+                  modalConfig.onConfirm()
+                  closeModal()
+                }}
+                style={{
+                  backgroundColor: modalConfig.type === 'danger' ? '#e74c3c' :
+                    modalConfig.type === 'warning' ? '#f39c12' :
+                    modalConfig.type === 'success' ? '#27ae60' : '#3498db',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 24px',
+                  borderRadius: '5px',
+                  fontSize: '16px',
+                  cursor: 'pointer',
+                  fontWeight: 'bold'
+                }}
+              >
+                {modalConfig.confirmText}
+              </button>
+
+              {modalConfig.showCancelButton !== false && (
+                <button
+                  onClick={() => {
+                    if (modalConfig.onCancel) modalConfig.onCancel()
+                    closeModal()
+                  }}
+                  style={{
+                    backgroundColor: '#95a5a6',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px 24px',
+                    borderRadius: '5px',
+                    fontSize: '16px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {modalConfig.cancelText}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

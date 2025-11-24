@@ -45,6 +45,7 @@ function SettingsPage() {
   // State למודל הזנת סיסמה
   const [passwordModalOpen, setPasswordModalOpen] = useState(false)
   const [newPasswordInput, setNewPasswordInput] = useState('')
+  const [passwordHintInput, setPasswordHintInput] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
 
@@ -93,20 +94,21 @@ function SettingsPage() {
     trackPaymentMethods: false,
     quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
     enableMasav: false,
-    appPassword: ''
+    appPassword: '',
+    passwordHint: ''
   })
 
-  // הגדרות מס"ב
-  const [masavSettings, setMasavSettings] = useState({
+  // הגדרות מס"ב - מוקפא כרגע
+  /* const [masavSettings, setMasavSettings] = useState({
     institutionCode: '',
     senderCode: '',
     institutionName: '',
     lastReferenceNumber: 0
-  })
+  }) */
 
   useEffect(() => {
     loadSettings()
-    loadMasavSettings()
+    // loadMasavSettings() // מוקפא כרגע
   }, [])
 
   useEffect(() => {
@@ -136,7 +138,7 @@ function SettingsPage() {
     setSettings(currentSettings)
   }
 
-  const loadMasavSettings = () => {
+  /* const loadMasavSettings = () => {
     const settings = db.getMasavSettings()
     if (settings) {
       setMasavSettings(settings)
@@ -161,7 +163,7 @@ function SettingsPage() {
   const saveMasavSettings = () => {
     db.updateMasavSettings(masavSettings)
     showNotification('הגדרות מס"ב נשמרו בהצלחה', 'success')
-  }
+  } */
 
   const handleSettingChange = (key: keyof DatabaseSettings, value: any) => {
     const newSettings = { ...settings, [key]: value }
@@ -217,7 +219,8 @@ function SettingsPage() {
           trackPaymentMethods: false,
           quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
           enableMasav: false,
-          appPassword: ''
+          appPassword: '',
+          passwordHint: ''
         }
         setSettings(defaultSettings)
         db.updateSettings(defaultSettings)
@@ -394,6 +397,7 @@ function SettingsPage() {
               </div>
             </div>
 
+            {/* מערכת מס"ב - מוקפאת כרגע, התשתית מוכנה לעתיד
             <div className="form-row">
               <div className="form-group">
                 <label>מערכת מס"ב:</label>
@@ -410,9 +414,10 @@ function SettingsPage() {
                 </small>
               </div>
               <div className="form-group">
-                {/* שדה ריק לאיזון */}
+                שדה ריק לאיזון
               </div>
             </div>
+            */}
           </div>
 
           {/* הגדרות אבטחה */}
@@ -480,6 +485,7 @@ function SettingsPage() {
                   className="btn"
                   onClick={() => {
                     setNewPasswordInput('')
+                    setPasswordHintInput(settings.passwordHint || '')
                     setPasswordModalOpen(true)
                   }}
                   style={{
@@ -502,6 +508,7 @@ function SettingsPage() {
                         type: 'danger',
                         onConfirm: () => {
                           handleSettingChange('appPassword', '')
+                          handleSettingChange('passwordHint', '')
                           sessionStorage.removeItem('gemach_session')
                           showConfirmModal({
                             title: '✅ הסיסמה הוסרה',
@@ -752,7 +759,20 @@ function SettingsPage() {
                 <p><strong>תאריכים עבריים:</strong> {settings.showHebrewDates ? '✅ מופעל' : '❌ כבוי'}</p>
                 <p><strong>אזהרות חגים ושבתות:</strong> {settings.showDateWarnings ? '✅ מופעל' : '❌ כבוי'}</p>
                 <p><strong>מעקב אמצעי תשלום:</strong> {settings.trackPaymentMethods ? '✅ מופעל' : '❌ כבוי'}</p>
-                <p><strong>מערכת מס"ב:</strong> {settings.enableMasav ? '✅ מופעל' : '❌ כבוי'}</p>
+                {/* <p><strong>מערכת מס"ב:</strong> {settings.enableMasav ? '✅ מופעל' : '❌ כבוי'}</p> */}
+              </div>
+
+              {/* הגדרות אבטחה */}
+              <div style={{
+                padding: '15px',
+                background: 'rgba(231, 76, 60, 0.1)',
+                borderRadius: '8px'
+              }}>
+                <h4 style={{ marginBottom: '10px', color: '#2c3e50' }}>� יאבטחה</h4>
+                <p><strong>סיסמה:</strong> {settings.appPassword ? '✅ מוגדרת' : '❌ לא מוגדרת'}</p>
+                {settings.appPassword && settings.passwordHint && (
+                  <p><strong>רמז לסיסמה:</strong> {settings.passwordHint}</p>
+                )}
               </div>
 
               {/* הגדרות ייצוא ותצוגה */}
@@ -807,7 +827,7 @@ function SettingsPage() {
                 </div>
               </div>
 
-              {/* הגדרות מס"ב - מוצג רק אם מופעל */}
+              {/* הגדרות מס"ב - מוקפא כרגע, התשתית מוכנה לעתיד
               {settings.enableMasav && (
                 <div style={{
                   padding: '15px',
@@ -911,6 +931,7 @@ function SettingsPage() {
                 </div>
                 </div>
               )}
+              */}
             </div>
           </div>
 
@@ -997,7 +1018,7 @@ function SettingsPage() {
                 : 'הגדר סיסמה חדשה להגנה על המערכת (לפחות 4 תווים)'}
             </p>
 
-            <div style={{ position: 'relative', marginBottom: '10px' }}>
+            <div style={{ position: 'relative', marginBottom: '15px' }}>
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={newPasswordInput}
@@ -1007,6 +1028,7 @@ function SettingsPage() {
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && newPasswordInput.length >= 4) {
                     const password = newPasswordInput
+                    const hint = passwordHintInput
                     setPasswordModalOpen(false)
                     setShowPassword(false)
                     showConfirmModal({
@@ -1017,6 +1039,7 @@ function SettingsPage() {
                       type: 'warning',
                       onConfirm: () => {
                         handleSettingChange('appPassword', password)
+                        handleSettingChange('passwordHint', hint)
                         showConfirmModal({
                           title: '✅ הסיסמה עודכנה בהצלחה',
                           message: 'הסיסמה החדשה נשמרה במערכת.\n\nהסיסמה תידרש בכניסה הבאה למערכת.',
@@ -1071,6 +1094,42 @@ function SettingsPage() {
               </p>
             )}
 
+            <div style={{ marginBottom: '10px' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '8px',
+                color: '#2c3e50',
+                fontSize: '14px',
+                textAlign: 'right'
+              }}>
+                💡 רמז לסיסמה (אופציונלי):
+              </label>
+              <input
+                type="text"
+                value={passwordHintInput}
+                onChange={(e) => setPasswordHintInput(e.target.value)}
+                placeholder="לדוגמה: תאריך לידה של..."
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  fontSize: '14px',
+                  border: '2px solid #ddd',
+                  borderRadius: '8px',
+                  textAlign: 'right',
+                  direction: 'rtl'
+                }}
+              />
+              <small style={{
+                display: 'block',
+                marginTop: '5px',
+                fontSize: '12px',
+                color: '#7f8c8d',
+                textAlign: 'right'
+              }}>
+                הרמז יוצג לך אם תקליד סיסמה שגויה
+              </small>
+            </div>
+
             <p style={{
               fontSize: '12px',
               color: '#95a5a6',
@@ -1090,6 +1149,7 @@ function SettingsPage() {
                     return
                   }
                   const password = newPasswordInput
+                  const hint = passwordHintInput
                   setPasswordModalOpen(false)
                   setShowPassword(false)
                   showConfirmModal({
@@ -1100,6 +1160,7 @@ function SettingsPage() {
                     type: 'warning',
                     onConfirm: () => {
                       handleSettingChange('appPassword', password)
+                      handleSettingChange('passwordHint', hint)
                       showConfirmModal({
                         title: '✅ הסיסמה עודכנה בהצלחה',
                         message: 'הסיסמה החדשה נשמרה במערכת.\n\nהסיסמה תידרש בכניסה הבאה למערכת.',

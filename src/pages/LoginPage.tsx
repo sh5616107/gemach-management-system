@@ -109,10 +109,18 @@ function LoginPage({ onLogin }: LoginPageProps) {
         setLockTimer(300)
         alert('🔒 יותר מדי ניסיונות שגויים!\n\nהמערכת ננעלה ל-5 דקות.')
       } else {
+        // הצג רמז אם קיים
+        const passwordHint = settings.passwordHint
+        let message = `הסיסמה שהזנת אינה נכונה.\n\nנותרו ${5 - newAttempts} ניסיונות לפני נעילה.`
+        
+        if (passwordHint && passwordHint.trim() !== '') {
+          message += `\n\n💡 רמז: ${passwordHint}`
+        }
+        
         setModalConfig({
           isOpen: true,
           title: '❌ סיסמה שגויה',
-          message: `הסיסמה שהזנת אינה נכונה.\n\nנותרו ${5 - newAttempts} ניסיונות לפני נעילה.`,
+          message: message,
           confirmText: 'הבנתי',
           type: 'error'
         })

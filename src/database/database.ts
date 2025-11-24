@@ -311,6 +311,7 @@ export interface DatabaseSettings {
   enableMasav: boolean // הפעלת מערכת מס"ב לגביית תשלומים
   // הגדרות אבטחה
   appPassword: string // סיסמה להתחברות למערכת
+  passwordHint?: string // רמז לסיסמה (אופציונלי)
 }
 
 interface DatabaseFile {
@@ -369,7 +370,8 @@ class GemachDatabase {
       trackPaymentMethods: true,
       quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
       enableMasav: false, // כבוי כברירת מחדל
-      appPassword: '' // ריק כברירת מחדל - יוגדר בכניסה ראשונה
+      appPassword: '', // ריק כברירת מחדל - יוגדר בכניסה ראשונה
+      passwordHint: '' // רמז לסיסמה (אופציונלי)
     }
   }
 
@@ -548,7 +550,8 @@ class GemachDatabase {
           trackPaymentMethods: false,
           quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
           enableMasav: false,
-          appPassword: ''
+          appPassword: '',
+          passwordHint: ''
         }
       }
       // הוספת הגדרה חדשה למעקב אמצעי תשלום
@@ -558,6 +561,10 @@ class GemachDatabase {
       // הוספת הגדרה חדשה למס"ב
       if (this.dataFile.settings.enableMasav === undefined) {
         this.dataFile.settings.enableMasav = false
+      }
+      // הוספת הגדרה חדשה לרמז סיסמה
+      if (this.dataFile.settings.passwordHint === undefined) {
+        this.dataFile.settings.passwordHint = ''
       }
       this.saveData()
       return true

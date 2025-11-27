@@ -61,6 +61,13 @@ function BorrowerReportPage() {
 
         const recurringGroups = groupRecurringLoans(recurringLoans)
 
+        // טען הוצאות ששולמו על ידי הלווה
+        const borrowerName = `${borrower.firstName} ${borrower.lastName}`
+        const borrowerExpenses = db.getExpenses().filter(expense => 
+            expense.paidBy === 'borrower' && expense.borrowerName === borrowerName
+        )
+        const totalExpenses = borrowerExpenses.reduce((sum, exp) => sum + exp.amount, 0)
+
         setReportData({
             borrower,
             regularActiveLoans: regularActiveLoans.map(loan => ({
@@ -74,10 +81,12 @@ function BorrowerReportPage() {
                 ...loan,
                 balance: db.getLoanBalance(loan.id)
             })),
+            borrowerExpenses,
             statistics: {
                 totalBalance,
                 activeLoansCount: allActiveLoans.length,
-                futureLoansCount: allFutureLoans.length
+                futureLoansCount: allFutureLoans.length,
+                totalExpenses
             }
         })
     }
@@ -391,6 +400,49 @@ function BorrowerReportPage() {
                     </div>
                     ` : ''}
 
+                    ${reportData.borrowerExpenses && reportData.borrowerExpenses.length > 0 ? `
+                    <!-- הוצאות ששילם הלווה -->
+                    <div class="section">
+                        <h2>💸 הוצאות ששילם הלווה (${reportData.borrowerExpenses.length})</h2>
+                        <div style="background-color: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                            <div style="font-size: 14px; color: #856404; margin-bottom: 8px;">
+                                💡 <strong>הסבר:</strong> אלו הוצאות שהלווה שילם עבור הגמ"ח (כמו עמלות בנק, הוצאות משרד וכו')
+                            </div>
+                            <div style="font-size: 18px; font-weight: bold; color: #856404;">
+                                סה"כ הוצאות: ${formatCurrency(reportData.statistics.totalExpenses || 0)}
+                            </div>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>תאריך</th>
+                                    <th>סוג הוצאה</th>
+                                    <th>תיאור</th>
+                                    <th>סכום</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${reportData.borrowerExpenses.map((expense: any) => {
+                                    const typeLabels: any = {
+                                        'bank_fee': '🏦 עמלת בנק',
+                                        'office': '🏢 הוצאות משרד',
+                                        'salary': '💼 שכר טרחה',
+                                        'other': '📌 אחר'
+                                    }
+                                    return `
+                                        <tr>
+                                            <td>${formatDate(expense.date)}</td>
+                                            <td>${typeLabels[expense.type] || expense.type}</td>
+                                            <td>${expense.description}</td>
+                                            <td style="font-weight: bold;">${formatCurrency(expense.amount)}</td>
+                                        </tr>
+                                    `
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    ` : ''}
+
                     <div class="footer">
                         <p>דו"ח נוצר בתאריך: ${db.getSettings().showHebrewDates ? formatCombinedDate(new Date()) : new Date().toLocaleDateString('he-IL')}</p>
                     </div>
@@ -486,6 +538,14 @@ function BorrowerReportPage() {
                                     </div>
                                     <div>יתרת חוב</div>
                                 </div>
+                                {reportData.statistics.totalExpenses > 0 && (
+                                    <div className="stat-card" style={{ backgroundColor: '#fff3cd', border: '2px solid #ffc107' }}>
+                                        <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#856404' }}>
+                                            {formatCurrency(reportData.statistics.totalExpenses)}
+                                        </div>
+                                        <div style={{ color: '#856404' }}>💸 הוצאות ששילם</div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -672,6 +732,59 @@ function BorrowerReportPage() {
                                                     </td>
                                                 </tr>
                                             ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* הוצאות ששילם הלווה */}
+                        {reportData.borrowerExpenses && reportData.borrowerExpenses.length > 0 && (
+                            <div className="info-section">
+                                <h3 className="info-title">💸 הוצאות ששילם הלווה ({reportData.borrowerExpenses.length})</h3>
+                                <div style={{ 
+                                    backgroundColor: '#fff3cd', 
+                                    border: '2px solid #ffc107',
+                                    borderRadius: '8px',
+                                    padding: '15px',
+                                    marginBottom: '15px'
+                                }}>
+                                    <div style={{ fontSize: '14px', color: '#856404', marginBottom: '8px' }}>
+                                        💡 <strong>הסבר:</strong> אלו הוצאות שהלווה שילם עבור הגמ"ח (כמו עמלות בנק, הוצאות משרד וכו')
+                                    </div>
+                                    <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#856404' }}>
+                                        סה"כ הוצאות: {formatCurrency(reportData.statistics.totalExpenses || 0)}
+                                    </div>
+                                </div>
+                                <div className="table-container">
+                                    <table className="table">
+                                        <thead>
+                                            <tr>
+                                                <th>תאריך</th>
+                                                <th>סוג הוצאה</th>
+                                                <th>תיאור</th>
+                                                <th>סכום</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {reportData.borrowerExpenses.map((expense: any) => {
+                                                const typeLabels: any = {
+                                                    'bank_fee': '🏦 עמלת בנק',
+                                                    'office': '🏢 הוצאות משרד',
+                                                    'salary': '💼 שכר טרחה',
+                                                    'other': '📌 אחר'
+                                                }
+                                                return (
+                                                    <tr key={expense.id}>
+                                                        <td>{formatDate(expense.date)}</td>
+                                                        <td>{typeLabels[expense.type] || expense.type}</td>
+                                                        <td>{expense.description}</td>
+                                                        <td style={{ color: '#e74c3c', fontWeight: 'bold' }}>
+                                                            {formatCurrency(expense.amount)}
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            })}
                                         </tbody>
                                     </table>
                                 </div>

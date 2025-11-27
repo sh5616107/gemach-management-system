@@ -19,6 +19,7 @@ function WithdrawDepositModal({
   showNotification
 }: WithdrawDepositModalProps) {
   const [amount, setAmount] = useState('')
+  const [withdrawalDate, setWithdrawalDate] = useState(new Date().toISOString().split('T')[0])
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | 'check' | 'credit' | 'other'>('cash')
   const [paymentDetails, setPaymentDetails] = useState({
     // העברה בנקאית
@@ -91,7 +92,7 @@ function WithdrawDepositModal({
     }
 
     // ביצוע המשיכה
-    if (db.withdrawDeposit(depositId, amountNum, paymentMethod, detailsJson)) {
+    if (db.withdrawDeposit(depositId, amountNum, paymentMethod, detailsJson, withdrawalDate)) {
       showNotification(`✅ נמשכו ₪${amountNum.toLocaleString()} בהצלחה!`)
       onSuccess()
     } else {
@@ -163,6 +164,29 @@ function WithdrawDepositModal({
                 borderRadius: '5px'
               }}
             />
+          </div>
+
+          {/* תאריך משיכה */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
+              📅 תאריך משיכה *
+            </label>
+            <input
+              type="date"
+              value={withdrawalDate}
+              onChange={(e) => setWithdrawalDate(e.target.value)}
+              required
+              style={{
+                width: '100%',
+                padding: '10px',
+                fontSize: '16px',
+                border: '2px solid #ddd',
+                borderRadius: '5px'
+              }}
+            />
+            <small style={{ color: '#666', fontSize: '12px', display: 'block', marginTop: '5px' }}>
+              💡 ניתן לשנות את התאריך למשיכה שבוצעה בעבר
+            </small>
           </div>
 
           {/* אמצעי תשלום */}

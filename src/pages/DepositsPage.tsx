@@ -8,6 +8,7 @@ import EditDepositorForm from '../components/EditDepositorForm'
 import DepositorDetailedReport from '../components/DepositorDetailedReport'
 import EditDepositForm from '../components/EditDepositForm'
 import WithdrawDepositModal from '../components/WithdrawDepositModal'
+import WithdrawalsListModal from '../components/WithdrawalsListModal'
 
 function DepositsPage() {
   const navigate = useNavigate()
@@ -22,6 +23,7 @@ function DepositsPage() {
   const [showDetailedReport, setShowDetailedReport] = useState(false)
   const [editingDeposit, setEditingDeposit] = useState<any>(null)
   const [withdrawingDeposit, setWithdrawingDeposit] = useState<{ id: number; balance: number } | null>(null)
+  const [viewingWithdrawals, setViewingWithdrawals] = useState<number | null>(null)
   
   // State למודל אישור
   const [modalConfig, setModalConfig] = useState<{
@@ -914,6 +916,23 @@ function DepositsPage() {
                       </button>
                     </>
                   )}
+                  {withdrawnAmount > 0 && (
+                    <button
+                      onClick={() => setViewingWithdrawals(deposit.id)}
+                      style={{
+                        flex: 1,
+                        padding: '10px',
+                        backgroundColor: '#16a085',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '5px',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      👁️ משיכות ({db.getWithdrawalsByDepositId(deposit.id).length})
+                    </button>
+                  )}
                   <button
                     onClick={() => setEditingDeposit(deposit)}
                     style={{
@@ -1059,6 +1078,19 @@ function DepositsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* מודל צפייה במשיכות */}
+      {viewingWithdrawals && selectedDepositor && (
+        <WithdrawalsListModal
+          depositId={viewingWithdrawals}
+          depositorName={selectedDepositor.name}
+          onClose={() => setViewingWithdrawals(null)}
+          onSuccess={() => {
+            loadDepositors()
+          }}
+          showNotification={showNotification}
+        />
       )}
     </div>
   )

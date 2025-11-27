@@ -1573,7 +1573,7 @@ class GemachDatabase {
     this.saveData()
   }
 
-  withdrawDeposit(id: number, amount: number, withdrawalMethod?: string, withdrawalDetails?: string): boolean {
+  withdrawDeposit(id: number, amount: number, withdrawalMethod?: string, withdrawalDetails?: string, withdrawalDate?: string): boolean {
     const deposit = this.dataFile.deposits.find(d => d.id === id)
     if (deposit && deposit.status === 'active') {
       const currentWithdrawn = this.getTotalWithdrawnAmount(id)
@@ -1585,7 +1585,7 @@ class GemachDatabase {
           id: this.getNextId(this.dataFile.withdrawals),
           depositId: id,
           amount: amount,
-          date: new Date().toISOString().split('T')[0],
+          date: withdrawalDate || new Date().toISOString().split('T')[0],
           paymentMethod: withdrawalMethod as 'cash' | 'transfer' | 'check' | 'credit' | 'other' | undefined,
           paymentDetails: withdrawalDetails,
           paymentDetailsComplete: true,
@@ -1596,7 +1596,7 @@ class GemachDatabase {
 
         // עדכון ההפקדה (לתאימות לאחור)
         deposit.withdrawnAmount = newTotalWithdrawn
-        deposit.withdrawnDate = new Date().toISOString().split('T')[0]
+        deposit.withdrawnDate = withdrawalDate || new Date().toISOString().split('T')[0]
         deposit.withdrawalPaymentMethod = withdrawalMethod as 'cash' | 'transfer' | 'check' | 'credit' | 'other' | undefined
         deposit.withdrawalPaymentDetails = withdrawalDetails
 
@@ -1609,6 +1609,92 @@ class GemachDatabase {
       }
     }
     return false
+  }
+
+  // מחיקת משיכה
+  deleteWithdrawal(withdrawalId: number): { success: boolean; error?: string } {
+    const withdrawal = this.dataFile.withdrawals.find(w => w.id === withdrawalId)
+    if (!withdrawal) {
+      return { success: false, error: 'משיכה לא נמצאה' }
+    }
+
+    const deposit = this.dataFile.deposits.find(d => d.id === withdrawal.depositId)
+    if (!deposit) {
+      return { success: false, error: 'הפקדה לא נמצאה' }
+    }
+
+    // מחיקת המשיכה
+    this.dataFile.withdrawals = this.dataFile.withdrawals.filter(w => w.id !== withdrawalId)
+
+    // עדכון ההפקדה
+    const newTotalWithdrawn = this.getTotalWithdrawnAmount(deposit.id)
+    deposit.withdrawnAmount = newTotalWithdrawn
+
+    // אם ההפקדה הייתה במצב withdrawn והיא כבר לא מלאה, החזר אותה ל-active
+    if (deposit.status === 'withdrawn' && newTotalWithdrawn < deposit.amount) {
+      deposit.status = 'active'
+    }
+
+    // עדכון תאריך משיכה אחרונה
+    const lastWithdrawal = this.dataFile.withdrawals
+      .filter(w => w.depositId === deposit.id)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
+    
+    if (lastWithdrawal) {
+      deposit.withdrawnDate = lastWithdrawal.date
+      deposit.withdrawalPaymentMethod = lastWithdrawal.paymentMethod
+      deposit.withdrawalPaymentDetails = lastWithdrawal.paymentDetails
+    } else {
+      deposit.withdrawnDate = undefined
+      deposit.withdrawalPaymentMethod = undefined
+      deposit.withdrawalPaymentDetails = undefined
+    }
+
+    this.saveData()
+    return { success: true }
+  }
+
+  // עדכון משיכה
+  updateWithdrawal(withdrawalId: number, updates: { amount?: number; date?: string; notes?: string }): { success: boolean; error?: string } {
+    const withdrawal = this.dataFile.withdrawals.find(w => w.id === withdrawalId)
+    if (!withdrawal) {
+      return { success: false, error: 'משיכה לא נמצאה' }
+    }
+
+    const deposit = this.dataFile.deposits.find(d => d.id === withdrawal.depositId)
+    if (!deposit) {
+      return { success: false, error: 'הפקדה לא נמצאה' }
+    }
+
+    // עדכון הנתונים
+    if (updates.amount !== undefined) withdrawal.amount = updates.amount
+    if (updates.date !== undefined) withdrawal.date = updates.date
+    if (updates.notes !== undefined) withdrawal.notes = updates.notes
+
+    // עדכון סכום משיכה כולל בהפקדה
+    const newTotalWithdrawn = this.getTotalWithdrawnAmount(deposit.id)
+    deposit.withdrawnAmount = newTotalWithdrawn
+
+    // עדכון סטטוס ההפקדה
+    if (newTotalWithdrawn >= deposit.amount) {
+      deposit.status = 'withdrawn'
+    } else {
+      deposit.status = 'active'
+    }
+
+    // עדכון תאריך משיכה אחרונה
+    const lastWithdrawal = this.dataFile.withdrawals
+      .filter(w => w.depositId === deposit.id)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
+    
+    if (lastWithdrawal) {
+      deposit.withdrawnDate = lastWithdrawal.date
+      deposit.withdrawalPaymentMethod = lastWithdrawal.paymentMethod
+      deposit.withdrawalPaymentDetails = lastWithdrawal.paymentDetails
+    }
+
+    this.saveData()
+    return { success: true }
   }
 
   // פונקציות עזר למשיכות
@@ -1632,11 +1718,6 @@ class GemachDatabase {
     this.dataFile.withdrawals.push(newWithdrawal)
     this.saveData()
     return newWithdrawal
-  }
-
-  deleteWithdrawal(id: number): void {
-    this.dataFile.withdrawals = this.dataFile.withdrawals.filter(w => w.id !== id)
-    this.saveData()
   }
 
   // תרומות

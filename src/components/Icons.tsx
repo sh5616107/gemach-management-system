@@ -71,6 +71,7 @@ export const CategoryIcons = {
   Loans: CircleDollarSign,
   Deposits: PiggyBank,
   Donations: Coins,
+  CashFlow: Wallet,
   Statistics: BarChart3,
   BorrowerReport: FileText,
   AdminTools: Wrench,

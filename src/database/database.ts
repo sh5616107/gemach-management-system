@@ -251,6 +251,22 @@ export interface DatabaseWarningLetter {
   notes?: string             // הערות נוספות
 }
 
+export interface DatabaseExpense {
+  id: number
+  type: 'bank_fee' | 'office' | 'salary' | 'other' // סוג הוצאה
+  amount: number
+  date: string
+  description: string
+  paidBy: 'gemach' | 'borrower' | 'donor' // מי שילם
+  borrowerId?: number // אם לווה שילם
+  borrowerName?: string // שם הלווה (לשמירה מהירה)
+  donorName?: string // אם תורם שילם
+  loanId?: number // קישור להלוואה (אם רלוונטי)
+  paymentMethod?: 'cash' | 'transfer' | 'check' | 'credit' | 'other'
+  receiptNumber?: string // מספר קבלה/אסמכתא
+  notes?: string
+}
+
 // ממשקים למערכת מס"ב
 export interface MasavSettings {
   institutionCode: string        // קוד מוסד/נושא (8 ספרות)
@@ -312,6 +328,11 @@ export interface DatabaseSettings {
   // הגדרות אבטחה
   appPassword: string // סיסמה להתחברות למערכת
   passwordHint?: string // רמז לסיסמה (אופציונלי)
+  // הגדרות עמלות
+  enableCommission: boolean // האם לגבות עמלה על הלוואות
+  commissionType: 'percentage' | 'fixed' // סוג עמלה: אחוז או סכום קבוע
+  commissionValue: number // ערך העמלה (אחוז או סכום)
+  commissionAutoRecord: boolean // רישום אוטומטי כהכנסה בקופה
 }
 
 interface DatabaseFile {
@@ -326,6 +347,7 @@ interface DatabaseFile {
   blacklist: DatabaseBlacklistEntry[] // טבלת רשימה שחורה
   warningLetters: DatabaseWarningLetter[] // טבלת מכתבי התראה
   guarantorDebts: DatabaseGuarantorDebt[] // טבלת חובות ערבים
+  expenses: DatabaseExpense[] // טבלת הוצאות
   masavSettings?: MasavSettings // הגדרות מס"ב
   masavFiles: MasavFileRecord[] // קבצי מס"ב
   lastUpdated: string
@@ -347,6 +369,7 @@ class GemachDatabase {
     guarantors: [],
     blacklist: [],
     warningLetters: [],
+    expenses: [],
     lastUpdated: new Date().toISOString(),
     gemachName: 'נר שרה',
     settings: {
@@ -371,7 +394,11 @@ class GemachDatabase {
       quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
       enableMasav: false, // כבוי כברירת מחדל
       appPassword: '', // ריק כברירת מחדל - יוגדר בכניסה ראשונה
-      passwordHint: '' // רמז לסיסמה (אופציונלי)
+      passwordHint: '', // רמז לסיסמה (אופציונלי)
+      enableCommission: false, // כבוי כברירת מחדל
+      commissionType: 'percentage',
+      commissionValue: 0,
+      commissionAutoRecord: true
     }
   }
 
@@ -403,6 +430,7 @@ class GemachDatabase {
       const blacklist = localStorage.getItem('gemach_blacklist')
       const warningLetters = localStorage.getItem('gemach_warning_letters')
       const guarantorDebts = localStorage.getItem('gemach_guarantor_debts')
+      const expenses = localStorage.getItem('gemach_expenses')
 
       const gemachName = localStorage.getItem('gemach_name')
       const settings = localStorage.getItem('gemach_settings')
@@ -420,6 +448,7 @@ class GemachDatabase {
         blacklist: blacklist ? JSON.parse(blacklist) : [],
         warningLetters: warningLetters ? JSON.parse(warningLetters) : [],
         guarantorDebts: guarantorDebts ? JSON.parse(guarantorDebts) : [],
+        expenses: expenses ? JSON.parse(expenses) : [],
         masavFiles: [],
         masavSettings: masavSettings ? JSON.parse(masavSettings) : undefined,
         lastUpdated: new Date().toISOString(),
@@ -444,7 +473,12 @@ class GemachDatabase {
           trackPaymentMethods: false,
           quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
           enableMasav: false,
-          appPassword: ''
+          appPassword: '',
+          passwordHint: '',
+          enableCommission: false,
+          commissionType: 'percentage',
+          commissionValue: 0,
+          commissionAutoRecord: true
         }
       }
 
@@ -475,6 +509,7 @@ class GemachDatabase {
       localStorage.setItem('gemach_blacklist', JSON.stringify(this.dataFile.blacklist))
       localStorage.setItem('gemach_warning_letters', JSON.stringify(this.dataFile.warningLetters))
       localStorage.setItem('gemach_guarantor_debts', JSON.stringify(this.dataFile.guarantorDebts))
+      localStorage.setItem('gemach_expenses', JSON.stringify(this.dataFile.expenses))
       localStorage.setItem('gemach_name', this.dataFile.gemachName)
       localStorage.setItem('gemach_settings', JSON.stringify(this.dataFile.settings))
       localStorage.setItem('gemach_masav_settings', JSON.stringify(this.dataFile.masavSettings))
@@ -493,7 +528,8 @@ class GemachDatabase {
         guarantors: this.dataFile.guarantors.length,
         blacklist: this.dataFile.blacklist.length,
         warningLetters: this.dataFile.warningLetters.length,
-        guarantorDebts: this.dataFile.guarantorDebts.length
+        guarantorDebts: this.dataFile.guarantorDebts.length,
+        expenses: this.dataFile.expenses.length
       })
     } catch (error) {
       console.error('שגיאה בשמירת נתונים:', error)
@@ -527,6 +563,7 @@ class GemachDatabase {
         blacklist: importedData.blacklist || [],
         warningLetters: importedData.warningLetters || [],
         guarantorDebts: importedData.guarantorDebts || [],
+        expenses: importedData.expenses || [],
         masavFiles: importedData.masavFiles || [],
         lastUpdated: new Date().toISOString(),
         gemachName: importedData.gemachName || 'נר שרה',
@@ -551,7 +588,11 @@ class GemachDatabase {
           quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
           enableMasav: false,
           appPassword: '',
-          passwordHint: ''
+          passwordHint: '',
+          enableCommission: false,
+          commissionType: 'percentage',
+          commissionValue: 0,
+          commissionAutoRecord: true
         }
       }
       // הוספת הגדרה חדשה למעקב אמצעי תשלום
@@ -1748,6 +1789,51 @@ class GemachDatabase {
     this.saveData()
   }
 
+  // הוצאות
+  addExpense(expense: Omit<DatabaseExpense, 'id'>): DatabaseExpense {
+    const newExpense: DatabaseExpense = {
+      ...expense,
+      id: this.getNextId(this.dataFile.expenses)
+    }
+    this.dataFile.expenses.push(newExpense)
+    this.saveData()
+    return newExpense
+  }
+
+  getExpenses(): DatabaseExpense[] {
+    return this.dataFile.expenses.sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    )
+  }
+
+  updateExpense(id: number, updates: Partial<DatabaseExpense>): void {
+    const index = this.dataFile.expenses.findIndex(expense => expense.id === id)
+    if (index !== -1) {
+      this.dataFile.expenses[index] = { ...this.dataFile.expenses[index], ...updates }
+      this.saveData()
+    }
+  }
+
+  deleteExpense(id: number): void {
+    this.dataFile.expenses = this.dataFile.expenses.filter(expense => expense.id !== id)
+    this.saveData()
+  }
+
+  // חישוב מאזן קופה
+  getCashBalance(): {
+    totalIncome: number
+    totalExpenses: number
+    balance: number
+  } {
+    const totalIncome = this.dataFile.donations.reduce((sum, d) => sum + d.amount, 0)
+    const totalExpenses = this.dataFile.expenses.reduce((sum, e) => sum + e.amount, 0)
+    return {
+      totalIncome,
+      totalExpenses,
+      balance: totalIncome - totalExpenses
+    }
+  }
+
   // פונקציה נוספת לבדיקת מצב
   debugInfo() {
     return {
@@ -1912,6 +1998,7 @@ class GemachDatabase {
       blacklist: [],
       warningLetters: [],
       guarantorDebts: [],
+      expenses: [],
       masavFiles: [],
       lastUpdated: new Date().toISOString(),
       gemachName: 'נר שרה',
@@ -1935,7 +2022,12 @@ class GemachDatabase {
         trackPaymentMethods: true,
         quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
         enableMasav: false,
-        appPassword: ''
+        appPassword: '',
+        passwordHint: '',
+        enableCommission: false,
+        commissionType: 'percentage',
+        commissionValue: 0,
+        commissionAutoRecord: true
       }
     }
     this.saveData()
@@ -4092,6 +4184,44 @@ class GemachDatabase {
   }
 
 
+  // ===== פונקציות ניהול הוצאות =====
+
+  // קבלת הוצאה לפי ID
+  getExpenseById(id: number): DatabaseExpense | undefined {
+    return this.dataFile.expenses.find(e => e.id === id)
+  }
+
+  // קבלת סיכום הוצאות לפי תקופה
+  getExpensesSummary(startDate?: string, endDate?: string): {
+    total: number
+    byType: Record<string, number>
+    byPayer: Record<string, number>
+    count: number
+  } {
+    let expenses = this.dataFile.expenses
+
+    if (startDate) {
+      expenses = expenses.filter(e => e.date >= startDate)
+    }
+    if (endDate) {
+      expenses = expenses.filter(e => e.date <= endDate)
+    }
+
+    const summary = {
+      total: 0,
+      byType: {} as Record<string, number>,
+      byPayer: {} as Record<string, number>,
+      count: expenses.length
+    }
+
+    expenses.forEach(expense => {
+      summary.total += expense.amount
+      summary.byType[expense.type] = (summary.byType[expense.type] || 0) + expense.amount
+      summary.byPayer[expense.paidBy] = (summary.byPayer[expense.paidBy] || 0) + expense.amount
+    })
+
+    return summary
+  }
 }
 
 export const db = new GemachDatabase()

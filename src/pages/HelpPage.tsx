@@ -106,6 +106,29 @@ function HelpPage() {
                                     <li>לחץ "שמור לווה"</li>
                                 </ul>
 
+                                <div style={{ backgroundColor: '#e8f5e9', padding: '15px', borderRadius: '8px', marginTop: '15px', border: '2px solid #4caf50' }}>
+                                    <h4 style={{ color: '#2e7d32', marginBottom: '10px' }}>⚙️ התאמת שמות שדות אישית</h4>
+                                    <p style={{ marginBottom: '10px' }}>ניתן להתאים את שמות השדות לצרכים שלך (למשל: עבור ישיבות, כוללים וכו'):</p>
+                                    <ol>
+                                        <li>בטופס "פרטי הלווה" לחץ על <strong>"⚙️ ערוך שדות"</strong></li>
+                                        <li>לחץ על <strong>✏️</strong> ליד השדה שברצונך לשנות</li>
+                                        <li>הקלד שם חדש (למשל: "ועד בישיבה" במקום "עיר")</li>
+                                        <li>לחץ <strong>✓</strong> לשמירה</li>
+                                        <li>לחץ <strong>"💾 שמור שדות"</strong> לסיום</li>
+                                    </ol>
+                                    <p style={{ fontSize: '13px', color: '#666', marginTop: '10px' }}>
+                                        💡 <strong>השינוי ישתקף בכל המערכת</strong> - טפסים, דוחות ושטרות
+                                    </p>
+                                    <div style={{ marginTop: '10px', fontSize: '13px' }}>
+                                        <strong>דוגמאות שימושיות:</strong>
+                                        <ul style={{ marginTop: '5px' }}>
+                                            <li>עיר → ועד בישיבה / כולל / קבוצה</li>
+                                            <li>כתובת → כיתה / שכבה / מחלקה</li>
+                                            <li>מייל → הערות / תפקיד / סטטוס</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
                                 <h4>מתן הלוואה:</h4>
                                 <ul>
                                     <li>לחץ על "ניהול הלוואות"</li>

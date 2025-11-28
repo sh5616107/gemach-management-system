@@ -333,6 +333,12 @@ export interface DatabaseSettings {
   commissionType: 'percentage' | 'fixed' // סוג עמלה: אחוז או סכום קבוע
   commissionValue: number // ערך העמלה (אחוז או סכום)
   commissionAutoRecord: boolean // רישום אוטומטי כהכנסה בקופה
+  // הגדרות שמות שדות מותאמים אישית
+  customFieldLabels?: {
+    city?: string // שם מותאם לשדה "עיר" (ברירת מחדל: "עיר")
+    address?: string // שם מותאם לשדה "כתובת" (ברירת מחדל: "כתובת")
+    email?: string // שם מותאם לשדה "מייל" (ברירת מחדל: "מייל")
+  }
 }
 
 interface DatabaseFile {
@@ -2091,6 +2097,25 @@ class GemachDatabase {
   updateSettings(newSettings: Partial<DatabaseSettings>): void {
     this.dataFile.settings = { ...this.dataFile.settings, ...newSettings }
     this.saveData()
+  }
+
+  // עדכון שם שדה מותאם אישית
+  updateCustomFieldLabel(field: 'city' | 'address' | 'email', label: string): void {
+    if (!this.dataFile.settings.customFieldLabels) {
+      this.dataFile.settings.customFieldLabels = {}
+    }
+    this.dataFile.settings.customFieldLabels[field] = label
+    this.saveData()
+  }
+
+  // קבלת שם שדה מותאם אישית
+  getCustomFieldLabel(field: 'city' | 'address' | 'email'): string {
+    const defaults = {
+      city: 'עיר',
+      address: 'כתובת',
+      email: 'מייל'
+    }
+    return this.dataFile.settings.customFieldLabels?.[field] || defaults[field]
   }
 
   getCurrencySymbol(): string {

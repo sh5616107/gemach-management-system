@@ -117,6 +117,16 @@ function LoansPage() {
   const [guarantorSearchTerm, setGuarantorSearchTerm] = useState('')
   const [selectedGuarantorDebt, setSelectedGuarantorDebt] = useState<DatabaseGuarantorDebt | null>(null)
   const [showGuarantorDebtPaymentModal, setShowGuarantorDebtPaymentModal] = useState(false)
+  
+  // State לחיפוש לווים
+  const [borrowerSearchTerm, setBorrowerSearchTerm] = useState('')
+  const [borrowerSearchResults, setBorrowerSearchResults] = useState<DatabaseBorrower[]>([])
+  const [showBorrowerSearchResults, setShowBorrowerSearchResults] = useState(false)
+  
+  // State לעריכת שמות שדות
+  const [isEditingFieldLabels, setIsEditingFieldLabels] = useState(false)
+  const [editingField, setEditingField] = useState<'city' | 'address' | 'email' | null>(null)
+  const [tempFieldLabel, setTempFieldLabel] = useState('')
   // הכפתורים הועברו לדף "כלים מתקדמים"
 
 
@@ -255,12 +265,20 @@ function LoansPage() {
   // נקה את טופס ההלוואה כשעוברים למצב loan ואין הלוואה נבחרת
   useEffect(() => {
     if (mode === 'loan' && !selectedLoanId && selectedBorrowerId) {
-      // אם אין הלוואה נבחרת, אפס את הטופס
+      // אם אין הלוואה נבחרת, אפס את הטופס עם תאריך פירעון ברירת מחדל
+      const today = new Date()
+      const defaultPeriod = db.getSettings().defaultLoanPeriod || 12
+      const defaultReturnDate = new Date(today)
+      defaultReturnDate.setMonth(defaultReturnDate.getMonth() + defaultPeriod)
+      const returnDateString = defaultReturnDate.toISOString().split('T')[0]
+      
+      console.log('🔍 useEffect - מאפס טופס עם תאריך פירעון:', returnDateString)
+      
       setCurrentLoan({
         borrowerId: selectedBorrowerId,
         amount: undefined,
-        loanDate: new Date().toISOString().split('T')[0],
-        returnDate: '',
+        loanDate: today.toISOString().split('T')[0],
+        returnDate: returnDateString,
         loanType: 'fixed',
         isRecurring: false,
         recurringDay: 1,
@@ -489,7 +507,45 @@ function LoansPage() {
 
 
 
+  const performBorrowerSearch = (term: string) => {
+    if (!term.trim()) {
+      setBorrowerSearchResults([])
+      setShowBorrowerSearchResults(false)
+      return
+    }
+
+    const searchTerm = term.trim().toLowerCase()
+    const results = borrowers.filter(b => {
+      // חיפוש לפי שם מלא
+      const fullName = `${b.firstName || ''} ${b.lastName || ''}`.toLowerCase()
+      if (fullName.includes(searchTerm)) return true
+
+      // חיפוש לפי שם פרטי או משפחה בנפרד
+      if (b.firstName && b.firstName.toLowerCase().includes(searchTerm)) return true
+      if (b.lastName && b.lastName.toLowerCase().includes(searchTerm)) return true
+
+      // חיפוש לפי מספר זהות (עם או בלי מקפים/רווחים)
+      if (b.idNumber) {
+        const cleanId = b.idNumber.replace(/[\s-]/g, '')
+        const cleanSearchTerm = searchTerm.replace(/[\s-]/g, '')
+        if (cleanId.includes(cleanSearchTerm)) return true
+      }
+
+      // חיפוש לפי טלפון
+      if (b.phone && b.phone.toLowerCase().includes(searchTerm)) return true
+
+      // חיפוש לפי עיר
+      if (b.city && b.city.toLowerCase().includes(searchTerm)) return true
+
+      return false
+    })
+
+    setBorrowerSearchResults(results)
+    setShowBorrowerSearchResults(results.length > 0)
+  }
+
   const selectBorrower = (borrowerId: number) => {
+    console.log('🔍 selectBorrower - נקרא עם borrowerId:', borrowerId)
     const borrower = borrowers.find(b => b.id === borrowerId)
     if (borrower) {
       setCurrentBorrower(borrower)
@@ -497,6 +553,7 @@ function LoansPage() {
 
       // בדוק אם יש הלוואות קיימות ללווה
       const borrowerLoans = loans.filter(loan => loan.borrowerId === borrowerId)
+      console.log('🔍 selectBorrower - מספר הלוואות קיימות:', borrowerLoans.length)
 
       if (borrowerLoans.length > 0) {
         // יש הלוואות קיימות - בחר את האחרונה או זו עם היתרה הגבוהה ביותר
@@ -505,17 +562,26 @@ function LoansPage() {
           .sort((a, b) => db.getLoanBalance(b.id) - db.getLoanBalance(a.id))[0] ||
           borrowerLoans.sort((a, b) => b.id - a.id)[0] // אם אין פעילות, קח את האחרונה
 
+        console.log('🔍 selectBorrower - יש הלוואות קיימות, טוען הלוואה:', activeLoan.id, 'תאריך פירעון:', activeLoan.returnDate)
         setSelectedLoanId(activeLoan.id)
         setCurrentLoan(activeLoan)
         setPayments(db.getPaymentsByLoanId(activeLoan.id))
       } else {
-        // אין הלוואות קיימות - צור הלוואה חדשה עם שדות ריקים
-        setCurrentLoan({
+        // אין הלוואות קיימות - צור הלוואה חדשה עם תאריך פירעון ברירת מחדל
+        const today = new Date()
+        const defaultPeriod = db.getSettings().defaultLoanPeriod || 12
+        const defaultReturnDate = new Date(today)
+        defaultReturnDate.setMonth(defaultReturnDate.getMonth() + defaultPeriod)
+        const returnDateString = defaultReturnDate.toISOString().split('T')[0]
+        
+        console.log('🔍 selectBorrower - אין הלוואות קיימות, תאריך פירעון:', returnDateString, 'תקופה:', defaultPeriod, 'חודשים')
+        
+        const newLoanData = {
           borrowerId,
           amount: undefined,
-          loanDate: new Date().toISOString().split('T')[0],
-          returnDate: '',
-          loanType: 'fixed',
+          loanDate: today.toISOString().split('T')[0],
+          returnDate: returnDateString,
+          loanType: 'fixed' as 'fixed' | 'flexible',
           isRecurring: false,
           recurringDay: 1,
           autoPayment: false,
@@ -528,7 +594,10 @@ function LoansPage() {
           guarantor2: '',
           guarantor1Id: undefined,
           guarantor2Id: undefined
-        })
+        }
+        
+        console.log('🔍 selectBorrower - נתוני הלוואה חדשה:', newLoanData)
+        setCurrentLoan(newLoanData)
         setSelectedLoanId(null)
         setPayments([])
       }
@@ -1371,12 +1440,17 @@ function LoansPage() {
     defaultReturnDate.setMonth(defaultReturnDate.getMonth() + defaultPeriod)
     const returnDateString = defaultReturnDate.toISOString().split('T')[0]
 
+    console.log('🔍 newLoan - תאריך פירעון:', returnDateString, 'תקופה:', defaultPeriod, 'חודשים')
+
     // איפוס טופס הלוואה חדשה
-    setCurrentLoan({
+    const newLoanData = {
       borrowerId: selectedBorrowerId,
       amount: undefined,
       loanDate: new Date().toISOString().split('T')[0],
       returnDate: returnDateString,
+      loanType: 'fixed' as 'fixed' | 'flexible',
+      isRecurring: false,
+      recurringDay: 1,
       autoPayment: false,
       autoPaymentAmount: 0,
       autoPaymentDay: 1,
@@ -1387,7 +1461,10 @@ function LoansPage() {
       guarantor2: '',
       guarantor1Id: undefined,
       guarantor2Id: undefined
-    })
+    }
+    
+    console.log('🔍 newLoan - נתוני הלוואה חדשה:', newLoanData)
+    setCurrentLoan(newLoanData)
     setSelectedLoanId(null)
     setPayments([])
     setMode('loan')
@@ -2634,29 +2711,205 @@ function LoansPage() {
               fontSize: '16px',
               display: 'flex',
               alignItems: 'center',
-              gap: '10px',
+              justifyContent: 'space-between',
               boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)'
             }}>
-              <span style={{ fontSize: '20px' }}>👤</span>
-              פרטי הלווה
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '20px' }}>👤</span>
+                פרטי הלווה
+              </div>
+              <button
+                onClick={() => {
+                  setIsEditingFieldLabels(!isEditingFieldLabels)
+                  if (isEditingFieldLabels) {
+                    // שמירה אוטומטית בעת יציאה ממצב עריכה
+                    setEditingField(null)
+                  }
+                }}
+                style={{
+                  backgroundColor: isEditingFieldLabels ? '#27ae60' : 'rgba(255,255,255,0.2)',
+                  color: 'white',
+                  border: '2px solid white',
+                  padding: '6px 12px',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+              >
+                {isEditingFieldLabels ? '💾 שמור שדות' : '⚙️ ערוך שדות'}
+              </button>
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label>בחר לווה:</label>
+            {/* חיפוש ובחירת לווה */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: '1fr 1fr', 
+              gap: '20px', 
+              marginBottom: '20px',
+              maxWidth: '900px',
+              margin: '0 auto 20px auto'
+            }}>
+              {/* חיפוש מהיר */}
+              <div style={{ position: 'relative' }}>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                  🔍 חיפוש מהיר:
+                </label>
+                <input
+                  type="text"
+                  placeholder="חיפוש לווה (שם, ת.ז, טלפון, עיר)..."
+                  value={borrowerSearchTerm}
+                  onChange={(e) => {
+                    setBorrowerSearchTerm(e.target.value)
+                    performBorrowerSearch(e.target.value)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      if (borrowerSearchResults.length === 1) {
+                        selectBorrower(borrowerSearchResults[0].id)
+                        setBorrowerSearchTerm('')
+                        setShowBorrowerSearchResults(false)
+                      } else if (borrowerSearchResults.length > 1) {
+                        setShowBorrowerSearchResults(true)
+                      } else if (borrowerSearchTerm.trim()) {
+                        showNotification('❌ לא נמצא לווה התואם לחיפוש', 'error')
+                      }
+                    }
+                  }}
+                  className="form-input"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    fontSize: '14px',
+                    border: '2px solid #667eea',
+                    borderRadius: '5px'
+                  }}
+                />
+                
+                {/* תוצאות חיפוש */}
+                {showBorrowerSearchResults && borrowerSearchResults.length > 0 && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    backgroundColor: 'white',
+                    border: '2px solid #667eea',
+                    borderRadius: '5px',
+                    marginTop: '5px',
+                    maxHeight: '300px',
+                    overflowY: 'auto',
+                    zIndex: 1000,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                  }}>
+                    {borrowerSearchResults.map(borrower => (
+                      <div
+                        key={borrower.id}
+                        onClick={() => {
+                          selectBorrower(borrower.id)
+                          setBorrowerSearchTerm('')
+                          setShowBorrowerSearchResults(false)
+                        }}
+                        style={{
+                          padding: '12px',
+                          cursor: 'pointer',
+                          borderBottom: '1px solid #ecf0f1',
+                          transition: 'background-color 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8f9fa'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+                      >
+                        <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                          {borrower.firstName} {borrower.lastName}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#7f8c8d' }}>
+                          ת.ז: {borrower.idNumber} | טלפון: {borrower.phone}
+                          {borrower.city && ` | ${borrower.city}`}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* בחירה מרשימה */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+                  📋 או בחר מהרשימה:
+                </label>
                 <select
                   value={selectedBorrowerId || ''}
-                  onChange={(e) => e.target.value ? selectBorrower(Number(e.target.value)) : newBorrower()}
+                  onChange={(e) => {
+                    if (e.target.value) {
+                      selectBorrower(Number(e.target.value))
+                      setBorrowerSearchTerm('')
+                      setShowBorrowerSearchResults(false)
+                    } else {
+                      newBorrower()
+                    }
+                  }}
+                  className="form-input"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    fontSize: '14px'
+                  }}
                 >
-                  <option value="">לווה חדש</option>
+                  <option value="">➕ לווה חדש</option>
                   {borrowers.map(borrower => (
                     <option key={borrower.id} value={borrower.id}>
-                      {borrower.firstName} {borrower.lastName}
+                      {borrower.firstName} {borrower.lastName} - {borrower.phone}
                     </option>
                   ))}
                 </select>
               </div>
             </div>
+
+            {/* לווה נבחר */}
+            {selectedBorrowerId && currentBorrower && currentBorrower.id && (
+              <div style={{
+                maxWidth: '900px',
+                margin: '0 auto 20px auto',
+                padding: '15px',
+                backgroundColor: '#e8f5e9',
+                border: '2px solid #4caf50',
+                borderRadius: '8px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '5px' }}>
+                    ✅ {currentBorrower.firstName} {currentBorrower.lastName}
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#666' }}>
+                    ת.ז: {currentBorrower.idNumber} | טלפון: {currentBorrower.phone}
+                    {currentBorrower.city && ` | ${currentBorrower.city}`}
+                  </div>
+                </div>
+                <button
+                  className="btn"
+                  onClick={() => {
+                    setSelectedBorrowerId(null)
+                    setCurrentBorrower({} as DatabaseBorrower)
+                    setSelectedLoanId(null)
+                    setBorrowerSearchTerm('')
+                    setMode('borrower')
+                  }}
+                  style={{
+                    backgroundColor: '#e74c3c',
+                    color: 'white',
+                    padding: '8px 15px',
+                    fontSize: '14px'
+                  }}
+                >
+                  ✕ נקה בחירה
+                </button>
+              </div>
+            )}
 
             <div className="form-row">
               <div className="form-group">
@@ -2740,7 +2993,82 @@ function LoansPage() {
 
             <div className="form-row">
               <div className="form-group">
-                <label>עיר:</label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {editingField === 'city' ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <input
+                        type="text"
+                        value={tempFieldLabel}
+                        onChange={(e) => setTempFieldLabel(e.target.value)}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '13px',
+                          border: '2px solid #667eea',
+                          borderRadius: '3px',
+                          width: '150px'
+                        }}
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => {
+                          if (tempFieldLabel.trim()) {
+                            db.updateCustomFieldLabel('city', tempFieldLabel.trim())
+                            showNotification('✅ שם השדה עודכן בהצלחה')
+                          }
+                          setEditingField(null)
+                        }}
+                        style={{
+                          backgroundColor: '#27ae60',
+                          color: 'white',
+                          border: 'none',
+                          padding: '4px 8px',
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        ✓
+                      </button>
+                      <button
+                        onClick={() => setEditingField(null)}
+                        style={{
+                          backgroundColor: '#e74c3c',
+                          color: 'white',
+                          border: 'none',
+                          padding: '4px 8px',
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      {db.getCustomFieldLabel('city')}:
+                      {isEditingFieldLabels && (
+                        <button
+                          onClick={() => {
+                            setEditingField('city')
+                            setTempFieldLabel(db.getCustomFieldLabel('city'))
+                          }}
+                          style={{
+                            backgroundColor: '#f39c12',
+                            color: 'white',
+                            border: 'none',
+                            padding: '2px 6px',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            fontSize: '11px'
+                          }}
+                        >
+                          ✏️
+                        </button>
+                      )}
+                    </>
+                  )}
+                </label>
                 <input
                   key={`city-${selectedBorrowerId || 'new'}`}
                   type="text"
@@ -2777,7 +3105,82 @@ function LoansPage() {
 
             <div className="form-row">
               <div className="form-group">
-                <label>כתובת:</label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {editingField === 'address' ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <input
+                        type="text"
+                        value={tempFieldLabel}
+                        onChange={(e) => setTempFieldLabel(e.target.value)}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '13px',
+                          border: '2px solid #667eea',
+                          borderRadius: '3px',
+                          width: '150px'
+                        }}
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => {
+                          if (tempFieldLabel.trim()) {
+                            db.updateCustomFieldLabel('address', tempFieldLabel.trim())
+                            showNotification('✅ שם השדה עודכן בהצלחה')
+                          }
+                          setEditingField(null)
+                        }}
+                        style={{
+                          backgroundColor: '#27ae60',
+                          color: 'white',
+                          border: 'none',
+                          padding: '4px 8px',
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        ✓
+                      </button>
+                      <button
+                        onClick={() => setEditingField(null)}
+                        style={{
+                          backgroundColor: '#e74c3c',
+                          color: 'white',
+                          border: 'none',
+                          padding: '4px 8px',
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      {db.getCustomFieldLabel('address')}:
+                      {isEditingFieldLabels && (
+                        <button
+                          onClick={() => {
+                            setEditingField('address')
+                            setTempFieldLabel(db.getCustomFieldLabel('address'))
+                          }}
+                          style={{
+                            backgroundColor: '#f39c12',
+                            color: 'white',
+                            border: 'none',
+                            padding: '2px 6px',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            fontSize: '11px'
+                          }}
+                        >
+                          ✏️
+                        </button>
+                      )}
+                    </>
+                  )}
+                </label>
                 <input
                   key={`address-${selectedBorrowerId || 'new'}`}
                   type="text"
@@ -2786,7 +3189,82 @@ function LoansPage() {
                 />
               </div>
               <div className="form-group">
-                <label>מייל:</label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {editingField === 'email' ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <input
+                        type="text"
+                        value={tempFieldLabel}
+                        onChange={(e) => setTempFieldLabel(e.target.value)}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '13px',
+                          border: '2px solid #667eea',
+                          borderRadius: '3px',
+                          width: '150px'
+                        }}
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => {
+                          if (tempFieldLabel.trim()) {
+                            db.updateCustomFieldLabel('email', tempFieldLabel.trim())
+                            showNotification('✅ שם השדה עודכן בהצלחה')
+                          }
+                          setEditingField(null)
+                        }}
+                        style={{
+                          backgroundColor: '#27ae60',
+                          color: 'white',
+                          border: 'none',
+                          padding: '4px 8px',
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        ✓
+                      </button>
+                      <button
+                        onClick={() => setEditingField(null)}
+                        style={{
+                          backgroundColor: '#e74c3c',
+                          color: 'white',
+                          border: 'none',
+                          padding: '4px 8px',
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      {db.getCustomFieldLabel('email')}:
+                      {isEditingFieldLabels && (
+                        <button
+                          onClick={() => {
+                            setEditingField('email')
+                            setTempFieldLabel(db.getCustomFieldLabel('email'))
+                          }}
+                          style={{
+                            backgroundColor: '#f39c12',
+                            color: 'white',
+                            border: 'none',
+                            padding: '2px 6px',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            fontSize: '11px'
+                          }}
+                        >
+                          ✏️
+                        </button>
+                      )}
+                    </>
+                  )}
+                </label>
                 <input
                   key={`email-${selectedBorrowerId || 'new'}`}
                   type="email"
@@ -3923,9 +4401,14 @@ function LoansPage() {
                 <label>תאריך החזרה מתוכנן:</label>
                 <input
                   type="date"
-                  value={currentLoan.returnDate || ''}
+                  value={(() => {
+                    const val = currentLoan.returnDate || ''
+                    console.log('🔍 שדה תאריך החזרה - ערך נוכחי:', val, 'loanType:', currentLoan.loanType)
+                    return val
+                  })()}
                   onChange={(e) => {
                     // עדכון הערך ללא בדיקה
+                    console.log('🔍 שדה תאריך החזרה - שינוי ל:', e.target.value)
                     setCurrentLoan(prev => ({ ...prev, returnDate: e.target.value }))
                   }}
                   onBlur={(e) => {

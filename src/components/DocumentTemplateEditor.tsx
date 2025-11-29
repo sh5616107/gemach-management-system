@@ -15,13 +15,19 @@ export const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({ 
   const defaultDepositText = 'מאשר בזה כי הפקדתי בגמ"ח'
   
   const [loanText, setLoanText] = useState(db.getLoanDocumentTemplate() || defaultLoanText)
+  const [loanFooter, setLoanFooter] = useState(db.getLoanDocumentFooter() || '')
   const [paymentText, setPaymentText] = useState(db.getPaymentReceiptTemplate() || defaultPaymentText)
+  const [paymentFooter, setPaymentFooter] = useState(db.getPaymentReceiptFooter() || '')
   const [depositText, setDepositText] = useState(db.getDepositReceiptTemplate() || defaultDepositText)
+  const [depositFooter, setDepositFooter] = useState(db.getDepositReceiptFooter() || '')
 
   const handleSave = () => {
     db.setLoanDocumentTemplate(loanText)
+    db.setLoanDocumentFooter(loanFooter)
     db.setPaymentReceiptTemplate(paymentText)
+    db.setPaymentReceiptFooter(paymentFooter)
     db.setDepositReceiptTemplate(depositText)
+    db.setDepositReceiptFooter(depositFooter)
     
     // הצג הודעה שלא חוסמת
     if (onSave) {
@@ -32,17 +38,20 @@ export const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({ 
   }
 
   const handleReset = (type: 'loan' | 'payment' | 'deposit') => {
-    if (!window.confirm('האם אתה בטוח שברצונך לאפס את הטקסט לברירת המחדל?')) return
+    if (!window.confirm('האם אתה בטוח שברצונך לאפס את הטקסטים לברירת המחדל?')) return
 
     switch (type) {
       case 'loan':
         setLoanText(defaultLoanText)
+        setLoanFooter('')
         break
       case 'payment':
         setPaymentText(defaultPaymentText)
+        setPaymentFooter('')
         break
       case 'deposit':
         setDepositText(defaultDepositText)
+        setDepositFooter('')
         break
     }
   }
@@ -63,7 +72,7 @@ ${loanText} "קרן חסד"
 אני מתחייב להחזיר עד: 01/07/2024
 
 ערב ראשון: משה לוי
-ערב שני: דוד כהן`
+ערב שני: דוד כהן${loanFooter ? `\n\n${loanFooter}` : ''}`
       case 'payment':
         return `דוגמה לשובר פרעון:
 
@@ -76,7 +85,7 @@ ${loanText} "קרן חסד"
 
 ${paymentText}
 
-גמ"ח "קרן חסד"`
+גמ"ח "קרן חסד"${paymentFooter ? `\n\n${paymentFooter}` : ''}`
       case 'deposit':
         return `דוגמה לשטר הפקדה:
 
@@ -90,7 +99,7 @@ ${depositText} "קרן חסד"
 בתאריך: 01/01/2024
 תאריך החזרה משוער: 01/01/2025
 
-תודה על ההפקדה!`
+תודה על ההפקדה!${depositFooter ? `\n\n${depositFooter}` : ''}`
     }
   }
 
@@ -188,7 +197,7 @@ ${depositText} "קרן חסד"
           {/* עורך */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <h3 style={{ margin: 0, color: '#2c3e50' }}>ערוך טקסט</h3>
+              <h3 style={{ margin: 0, color: '#2c3e50' }}>ערוך טקסטים</h3>
               <button
                 onClick={() => handleReset(activeTab)}
                 style={{
@@ -204,6 +213,10 @@ ${depositText} "קרן חסד"
                 🔄 אפס לברירת מחדל
               </button>
             </div>
+            
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#2c3e50', fontSize: '14px' }}>
+              טקסט ראשי:
+            </label>
             <textarea
               value={
                 activeTab === 'loan' ? loanText :
@@ -218,7 +231,35 @@ ${depositText} "קרן חסד"
               placeholder="הקלד את הטקסט שיופיע במסמך..."
               style={{
                 width: '100%',
-                height: '150px',
+                height: '100px',
+                padding: '15px',
+                fontSize: '16px',
+                border: '2px solid #bdc3c7',
+                borderRadius: '8px',
+                resize: 'vertical',
+                direction: 'rtl',
+                marginBottom: '15px'
+              }}
+            />
+            
+            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold', color: '#2c3e50', fontSize: '14px' }}>
+              טקסט סיום (אופציונלי):
+            </label>
+            <textarea
+              value={
+                activeTab === 'loan' ? loanFooter :
+                activeTab === 'payment' ? paymentFooter :
+                depositFooter
+              }
+              onChange={(e) => {
+                if (activeTab === 'loan') setLoanFooter(e.target.value)
+                else if (activeTab === 'payment') setPaymentFooter(e.target.value)
+                else setDepositFooter(e.target.value)
+              }}
+              placeholder="טקסט נוסף שיופיע בסוף המסמך (למשל: תנאים מיוחדים, הערות...)"
+              style={{
+                width: '100%',
+                height: '100px',
                 padding: '15px',
                 fontSize: '16px',
                 border: '2px solid #bdc3c7',
@@ -238,7 +279,7 @@ ${depositText} "קרן חסד"
                 padding: '15px',
                 borderRadius: '8px',
                 border: '2px solid #e9ecef',
-                height: '150px',
+                height: '250px',
                 overflow: 'auto',
                 whiteSpace: 'pre-wrap',
                 fontSize: '14px',

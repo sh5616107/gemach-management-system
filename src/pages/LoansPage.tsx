@@ -1596,6 +1596,8 @@ function LoansPage() {
   const createPrintContent = (loan: any, borrowerName: string, balance: number, withBlankGuarantors = false) => {
     const gemachName = db.getGemachName()
     const gemachLogo = db.getGemachLogo()
+    const loanText = db.getLoanDocumentTemplate()
+    const loanFooter = db.getLoanDocumentFooter()
     const loanAmount = loan.amount.toLocaleString()
     const returnDate = db.getSettings().showHebrewDates ?
       formatCombinedDate(loan.returnDate) :
@@ -1617,7 +1619,7 @@ function LoansPage() {
             <h1 style="font-size: 20px; margin-bottom: 20px; text-decoration: underline;">שטר הלוואה</h1>
             <p style="margin: 8px 0;">אני הח"מ <strong>${borrowerName}</strong></p>
             ${borrowerIdNumber ? `<p style="margin: 8px 0;">ת.ז. <strong>${borrowerIdNumber}</strong></p>` : ''}
-            <p style="margin: 8px 0;">מאשר בזה כי לוויתי מגמ"ח "<strong>${gemachName}</strong>"</p>
+            <p style="margin: 8px 0;">${loanText} "<strong>${gemachName}</strong>"</p>
             <p style="margin: 8px 0;">סכום של: <strong>${loanAmount} ש"ח</strong></p>
             <p style="margin: 8px 0;">בתאריך: <strong>${loanDate}</strong></p>
             <p style="margin: 8px 0;">אני מתחייב להחזיר את הסכום עד לתאריך: <strong>${returnDate}</strong></p>
@@ -1631,6 +1633,7 @@ function LoansPage() {
               </div>
             ` : ''}
             <p style="margin: 8px 0;">תאריך הפקת השטר: <strong>${db.getSettings().showHebrewDates ? formatCombinedDate(new Date()) : new Date().toLocaleDateString('he-IL')}</strong></p>
+            ${loanFooter ? `<div style="margin: 20px 0; padding: 15px; background: #f0f8ff; border-right: 4px solid #3498db; border-radius: 5px;"><p style="margin: 0; white-space: pre-wrap;">${loanFooter}</p></div>` : ''}
             <div style="display: flex; justify-content: space-between; margin-top: 40px;">
               <div>
                 <p>חתימת הלווה:</p>
@@ -1686,6 +1689,8 @@ function LoansPage() {
   const printLoanDocument = (loan: any, borrowerName: string, balance: number, withBlankGuarantors = false) => {
     const gemachName = db.getGemachName()
     const gemachLogo = db.getGemachLogo()
+    const loanText = db.getLoanDocumentTemplate()
+    const loanFooter = db.getLoanDocumentFooter()
     const loanAmount = loan.amount.toLocaleString()
     const returnDate = db.getSettings().showHebrewDates ?
       formatCombinedDate(loan.returnDate) :
@@ -1714,7 +1719,7 @@ function LoansPage() {
               ${currentBorrower.phone ? `<p style="margin: 8px 0;">טלפון: <strong>${currentBorrower.phone}</strong></p>` : ''}
               ${currentBorrower.address ? `<p style="margin: 8px 0;">כתובת: <strong>${currentBorrower.address}</strong></p>` : ''}
               ${currentBorrower.email ? `<p style="margin: 8px 0;">מייל: <strong>${currentBorrower.email}</strong></p>` : ''}
-              <p style="margin: 8px 0;">מאשר בזה כי לוויתי מגמ"ח "<strong>${gemachName}</strong>"</p>
+              <p style="margin: 8px 0;">${loanText} "<strong>${gemachName}</strong>"</p>
               <p style="margin: 8px 0;">סכום של: <strong>${loanAmount} ש"ח</strong></p>
               <p style="margin: 8px 0;">בתאריך: <strong>${loanDate}</strong></p>
               ${loan.loanType === 'flexible' ?
@@ -1764,6 +1769,7 @@ function LoansPage() {
                 </div>
               ` : ''}
               <p style="margin: 8px 0;">תאריך הפקת השטר: <strong>${db.getSettings().showHebrewDates ? formatCombinedDate(new Date()) : new Date().toLocaleDateString('he-IL')}</strong></p>
+              ${loanFooter ? `<div style="margin: 20px 0; padding: 15px; background: #f0f8ff; border-right: 4px solid #3498db; border-radius: 5px;"><p style="margin: 0; white-space: pre-wrap;">${loanFooter}</p></div>` : ''}
               <div style="display: flex; justify-content: space-between; margin-top: 40px; flex-wrap: wrap; gap: 20px;">
                 <div>
                   <p>חתימת הלווה:</p>
@@ -1930,7 +1936,7 @@ function LoansPage() {
                 ${currentBorrower.phone ? `<p>טלפון: <strong>${currentBorrower.phone}</strong></p>` : ''}
                 ${currentBorrower.address ? `<p>כתובת: <strong>${currentBorrower.address}</strong></p>` : ''}
                 ${currentBorrower.email ? `<p>מייל: <strong>${currentBorrower.email}</strong></p>` : ''}
-                <p>מאשר בזה כי לוויתי מגמ"ח "<strong>${gemachName}</strong>"</p>
+                <p>${loanText} "<strong>${gemachName}</strong>"</p>
                 <p>סכום של: <strong>${loanAmount} ש"ח</strong></p>
                 <p>בתאריך: <strong>${loanDate}</strong></p>
                 ${loan.loanType === 'flexible' ?
@@ -1980,6 +1986,7 @@ function LoansPage() {
                   </div>
                 ` : ''}
                 <p>תאריך הפקת השטר: <strong>${db.getSettings().showHebrewDates ? formatCombinedDate(new Date()) : new Date().toLocaleDateString('he-IL')}</strong></p>
+                ${loanFooter ? `<div style="margin: 20px 0; padding: 15px; background: #f0f8ff; border-right: 4px solid #3498db; border-radius: 5px;"><p style="margin: 0; white-space: pre-wrap;">${loanFooter}</p></div>` : ''}
                 <div class="signature-section">
                   <div>
                     <p>חתימת הלווה:</p>
@@ -2033,6 +2040,8 @@ function LoansPage() {
   const printPaymentReceipt = (payment: DatabasePayment, loan: any, borrowerName: string) => {
     const gemachName = db.getGemachName()
     const gemachLogo = db.getGemachLogo()
+    const paymentText = db.getPaymentReceiptTemplate()
+    const paymentFooter = db.getPaymentReceiptFooter()
     const settings = db.getSettings()
 
     // חישוב יתרת חוב לאחר הפרעון הספציפי הזה
@@ -2148,6 +2157,8 @@ function LoansPage() {
               </div>
 
               <div style="text-align: center; margin: 20px 0; padding: 15px; border-top: 1px solid #bdc3c7;">
+                <p style="margin: 10px 0; font-size: 16px; color: #27ae60; font-weight: bold;">${paymentText}</p>
+                ${paymentFooter ? `<div style="margin: 15px 0; padding: 10px; background: #f0f8ff; border-radius: 5px;"><p style="margin: 0; white-space: pre-wrap; font-size: 14px;">${paymentFooter}</p></div>` : ''}
                 <p style="margin: 5px 0; font-weight: bold;">גמ"ח "${gemachName}"</p>
                 <p style="margin: 5px 0; font-size: 12px;">תאריך הפקת השובר: ${receiptDate}</p>
               </div>
@@ -2360,6 +2371,8 @@ function LoansPage() {
                 </div>
 
                 <div class="footer">
+                  <p style="margin: 10px 0; font-size: 16px; color: #27ae60; font-weight: bold;">${paymentText}</p>
+                  ${paymentFooter ? `<div style="margin: 15px 0; padding: 10px; background: #f0f8ff; border-radius: 5px;"><p style="margin: 0; white-space: pre-wrap; font-size: 14px;">${paymentFooter}</p></div>` : ''}
                   <p style="margin: 5px 0; font-weight: bold;">גמ"ח "${gemachName}"</p>
                   <p style="margin: 5px 0; font-size: 12px;">תאריך הפקת השובר: ${receiptDate}</p>
                 </div>

@@ -160,6 +160,8 @@ function DepositsPage() {
 
   const handlePrintDepositDocument = (deposit: any) => {
     const gemachName = db.getGemachName()
+    const depositText = db.getDepositReceiptTemplate()
+    const depositFooter = db.getDepositReceiptFooter()
     const depositorName = selectedDepositor?.name || deposit.depositorName
     const amount = deposit.amount.toLocaleString()
     const depositDate = new Date(deposit.depositDate).toLocaleDateString('he-IL')
@@ -255,7 +257,7 @@ function DepositsPage() {
               <h1>שטר הפקדה</h1>
               <p>מספר הפקדה: <strong>${depositNumber}</strong></p>
               <p>אנו הח"מ מגמ"ח "<strong>${gemachName}</strong>"</p>
-              <p>מאשרים בזה כי קיבלנו מאת <strong>${depositorName}</strong></p>
+              <p>${depositText} מאת <strong>${depositorName}</strong></p>
               ${selectedDepositor?.idNumber ? `<p>ת.ז. <strong>${db.formatIdNumber(selectedDepositor.idNumber)}</strong></p>` : ''}
               <p>סכום של: <strong>${amount} ש"ח</strong></p>
               <p>בתאריך: <strong>${depositDate}</strong></p>
@@ -282,6 +284,7 @@ function DepositsPage() {
                 </div>
               ` : ''}
               <p>תאריך הפקה: <strong>${new Date().toLocaleDateString('he-IL')}</strong></p>
+              ${depositFooter ? `<div style="margin: 20px 0; padding: 15px; background: #f0f8ff; border-right: 4px solid #9b59b6; border-radius: 5px;"><p style="margin: 0; white-space: pre-wrap;">${depositFooter}</p></div>` : ''}
               <div class="signature-section">
                 <div>
                   <p>חתימת המפקיד:</p>

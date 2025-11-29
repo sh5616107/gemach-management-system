@@ -138,6 +138,8 @@ function BorrowerReportPage() {
     const printReport = () => {
         if (!reportData) return
 
+        const gemachLogo = db.getGemachLogo()
+
         // פתח חלון חדש להדפסה
         const printWindow = window.open('', '_blank', 'width=800,height=600')
         if (!printWindow) return
@@ -251,6 +253,7 @@ function BorrowerReportPage() {
                 </div>
                 
                 <div class="container">
+                    ${gemachLogo ? `<div style="text-align: center; margin-bottom: 30px;"><img src="${gemachLogo}" alt="לוגו" style="max-width: 300px; max-height: 120px; object-fit: contain;" /></div>` : ''}
                     <h1>דו"ח לווה מפורט</h1>
                     
                     <!-- פרטי הלווה -->

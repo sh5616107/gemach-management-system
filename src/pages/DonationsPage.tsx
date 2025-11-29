@@ -99,6 +99,7 @@ function DonationsPage() {
 
   const generateReceipt = (donation: DatabaseDonation) => {
     const gemachName = db.getGemachName()
+    const gemachLogo = db.getGemachLogo()
     const donorName = `${donation.donorName} ${donation.donorLastName}`
     const amount = donation.amount.toLocaleString()
     const donationDate = db.getSettings().showHebrewDates ?
@@ -115,6 +116,7 @@ function DonationsPage() {
         <div id="print-content" style="display: none;">
           <div style="font-family: Arial, sans-serif; direction: rtl; text-align: center; padding: 20px; line-height: 1.4; font-size: 14px; margin: 0;">
             <div style="max-width: 400px; margin: 0 auto; text-align: right; border: 2px solid #000; padding: 20px;">
+              ${gemachLogo ? `<div style="text-align: center; margin-bottom: 20px;"><img src="${gemachLogo}" alt="לוגו" style="max-width: 200px; max-height: 80px; object-fit: contain;" /></div>` : ''}
               <div style="text-align: left; font-size: 12px; margin-bottom: 20px;">קבלה מס': ${receiptNumber}</div>
               <h1 style="font-size: 20px; margin-bottom: 20px; text-decoration: underline;">קבלה על תרומה</h1>
               <p style="margin: 8px 0;">התקבל מאת: <strong>${donorName}</strong></p>
@@ -270,6 +272,7 @@ function DonationsPage() {
                 <button class="print-btn close-btn" onclick="window.close()">❌ סגור</button>
               </div>
               <div class="content">
+                ${gemachLogo ? `<div style="text-align: center; margin-bottom: 20px;"><img src="${gemachLogo}" alt="לוגו" style="max-width: 200px; max-height: 80px; object-fit: contain;" /></div>` : ''}
                 <div class="receipt-number">קבלה מס': ${receiptNumber}</div>
                 <h1>קבלה על תרומה</h1>
                 <p>התקבל מאת: <strong>${donorName}</strong></p>

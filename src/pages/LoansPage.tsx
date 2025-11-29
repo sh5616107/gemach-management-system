@@ -1595,6 +1595,7 @@ function LoansPage() {
 
   const createPrintContent = (loan: any, borrowerName: string, balance: number, withBlankGuarantors = false) => {
     const gemachName = db.getGemachName()
+    const gemachLogo = db.getGemachLogo()
     const loanAmount = loan.amount.toLocaleString()
     const returnDate = db.getSettings().showHebrewDates ?
       formatCombinedDate(loan.returnDate) :
@@ -1612,6 +1613,7 @@ function LoansPage() {
       <div id="print-content" style="display: none;">
         <div style="font-family: Arial, sans-serif; direction: rtl; text-align: center; padding: 20px; line-height: 1.4; font-size: 14px; margin: 0;">
           <div style="max-width: 500px; margin: 0 auto; text-align: right;">
+            ${gemachLogo ? `<div style="text-align: center; margin-bottom: 20px;"><img src="${gemachLogo}" alt="לוגו" style="max-width: 250px; max-height: 100px; object-fit: contain;" /></div>` : ''}
             <h1 style="font-size: 20px; margin-bottom: 20px; text-decoration: underline;">שטר הלוואה</h1>
             <p style="margin: 8px 0;">אני הח"מ <strong>${borrowerName}</strong></p>
             ${borrowerIdNumber ? `<p style="margin: 8px 0;">ת.ז. <strong>${borrowerIdNumber}</strong></p>` : ''}
@@ -1683,6 +1685,7 @@ function LoansPage() {
 
   const printLoanDocument = (loan: any, borrowerName: string, balance: number, withBlankGuarantors = false) => {
     const gemachName = db.getGemachName()
+    const gemachLogo = db.getGemachLogo()
     const loanAmount = loan.amount.toLocaleString()
     const returnDate = db.getSettings().showHebrewDates ?
       formatCombinedDate(loan.returnDate) :
@@ -1920,6 +1923,7 @@ function LoansPage() {
                 <button class="print-btn close-btn" onclick="window.close()">❌ סגור</button>
               </div>
               <div class="content">
+                ${gemachLogo ? `<div style="text-align: center; margin-bottom: 20px;"><img src="${gemachLogo}" alt="לוגו" style="max-width: 250px; max-height: 100px; object-fit: contain;" /></div>` : ''}
                 <h1>שטר הלוואה</h1>
                 <p>אני הח"מ <strong>${borrowerName}</strong></p>
                 ${borrowerIdNumber ? `<p>ת.ז. <strong>${borrowerIdNumber}</strong></p>` : ''}
@@ -2028,6 +2032,7 @@ function LoansPage() {
 
   const printPaymentReceipt = (payment: DatabasePayment, loan: any, borrowerName: string) => {
     const gemachName = db.getGemachName()
+    const gemachLogo = db.getGemachLogo()
     const settings = db.getSettings()
 
     // חישוב יתרת חוב לאחר הפרעון הספציפי הזה
@@ -2068,6 +2073,7 @@ function LoansPage() {
         <div id="print-content" style="display: none;">
           <div style="font-family: Arial, sans-serif; direction: rtl; text-align: center; padding: 20px; line-height: 1.4; font-size: 14px; margin: 0;">
             <div style="max-width: 500px; margin: 0 auto; text-align: right;">
+              ${gemachLogo ? `<div style="text-align: center; margin-bottom: 20px;"><img src="${gemachLogo}" alt="לוגו" style="max-width: 250px; max-height: 100px; object-fit: contain;" /></div>` : ''}
               <h1 style="font-size: 20px; margin-bottom: 20px; text-decoration: underline;">שובר פרעון</h1>
               
               <div style="border: 2px solid #2c3e50; padding: 15px; margin: 15px 0; background: #f8f9fa;">
@@ -2279,6 +2285,7 @@ function LoansPage() {
                 <button class="print-btn close-btn" onclick="window.close()">❌ סגור</button>
               </div>
               <div class="content">
+                ${gemachLogo ? `<div style="text-align: center; margin-bottom: 20px;"><img src="${gemachLogo}" alt="לוגו" style="max-width: 250px; max-height: 100px; object-fit: contain;" /></div>` : ''}
                 <h1>שובר פרעון</h1>
                 
                 <div class="receipt-header">

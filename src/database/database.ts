@@ -358,6 +358,7 @@ interface DatabaseFile {
   masavFiles: MasavFileRecord[] // קבצי מס"ב
   lastUpdated: string
   gemachName: string
+  gemachLogo?: string // לוגו הגמ"ח (Base64)
   settings: DatabaseSettings
 }
 
@@ -2059,6 +2060,21 @@ class GemachDatabase {
 
   setGemachName(name: string): void {
     this.dataFile.gemachName = name
+    this.saveData()
+  }
+
+  // ניהול לוגו הגמ"ח
+  getGemachLogo(): string | null {
+    return this.dataFile.gemachLogo || null
+  }
+
+  setGemachLogo(logoBase64: string): void {
+    this.dataFile.gemachLogo = logoBase64
+    this.saveData()
+  }
+
+  removeGemachLogo(): void {
+    this.dataFile.gemachLogo = undefined
     this.saveData()
   }
 

@@ -4,6 +4,7 @@ import { db } from '../database/database'
 import { formatCombinedDate, getDateWarnings } from '../utils/hebrewDate'
 import { CategoryIcons, iconSizes } from '../components/Icons'
 import WelcomeModal from '../components/WelcomeModal'
+import { LogoUploadModal } from '../components/LogoUploadModal'
 
 function HomePage() {
   const navigate = useNavigate()
@@ -84,7 +85,9 @@ function HomePage() {
     lastUpdated: ''
   })
   const [gemachName, setGemachName] = useState('')
+  const [gemachLogo, setGemachLogo] = useState<string | null>(null)
   const [isEditingName, setIsEditingName] = useState(false)
+  const [showLogoModal, setShowLogoModal] = useState(false)
   const [headerTitle, setHeaderTitle] = useState('')
   const [isEditingHeader, setIsEditingHeader] = useState(false)
   const [footerText, setFooterText] = useState('')
@@ -215,6 +218,7 @@ function HomePage() {
   const loadStats = () => {
     setStats(db.getStats())
     setGemachName(db.getGemachName())
+    setGemachLogo(db.getGemachLogo())
     setHeaderTitle(db.getHeaderTitle())
     setFooterText(db.getFooterText())
     setContactText(db.getContactText())
@@ -399,6 +403,40 @@ function HomePage() {
 
       <main className="main-content">
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+          {/* לוגו הגמח */}
+          {gemachLogo && (
+            <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
+              <img
+                src={gemachLogo}
+                alt="לוגו הגמח"
+                style={{
+                  maxWidth: '300px',
+                  maxHeight: '120px',
+                  objectFit: 'contain'
+                }}
+              />
+              <button
+                onClick={() => setShowLogoModal(true)}
+                style={{
+                  backgroundColor: 'transparent',
+                  border: '2px solid #3498db',
+                  color: '#3498db',
+                  borderRadius: '50%',
+                  width: '35px',
+                  height: '35px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+                title="ערוך לוגו"
+              >
+                ✏️
+              </button>
+            </div>
+          )}
+
           {isEditingName ? (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
               <input
@@ -455,16 +493,36 @@ function HomePage() {
               </button>
             </div>
           ) : (
-            <h1
-              className="main-title"
-              onClick={() => setIsEditingName(true)}
-              onDoubleClick={() => setIsEditingName(true)}
-              style={{ cursor: 'pointer', position: 'relative' }}
-              title="לחץ או לחץ פעמיים לעריכת שם הגמח"
-            >
-              {gemachName}
-              <span style={{ fontSize: '14px', marginLeft: '10px', opacity: 0.7 }}>✏️</span>
-            </h1>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
+              <h1
+                className="main-title"
+                onClick={() => setIsEditingName(true)}
+                onDoubleClick={() => setIsEditingName(true)}
+                style={{ cursor: 'pointer', position: 'relative', margin: 0 }}
+                title="לחץ או לחץ פעמיים לעריכת שם הגמח"
+              >
+                {gemachName}
+                <span style={{ fontSize: '14px', marginLeft: '10px', opacity: 0.7 }}>✏️</span>
+              </h1>
+              {!gemachLogo && (
+                <button
+                  onClick={() => setShowLogoModal(true)}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: '2px solid #9b59b6',
+                    color: '#9b59b6',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                  title="הוסף לוגו"
+                >
+                  🖼️ הוסף לוגו
+                </button>
+              )}
+            </div>
           )}
         </div>
 
@@ -1749,6 +1807,24 @@ function HomePage() {
       {/* מודל ברכה */}
       {showWelcomeModal && (
         <WelcomeModal onClose={() => setShowWelcomeModal(false)} />
+      )}
+
+      {/* מודל העלאת לוגו */}
+      {showLogoModal && (
+        <LogoUploadModal
+          currentLogo={gemachLogo}
+          onSave={(logoBase64) => {
+            db.setGemachLogo(logoBase64)
+            setGemachLogo(logoBase64)
+            showNotification('הלוגו נשמר בהצלחה! 🎉', 'success')
+          }}
+          onRemove={() => {
+            db.removeGemachLogo()
+            setGemachLogo(null)
+            showNotification('הלוגו נמחק בהצלחה', 'info')
+          }}
+          onClose={() => setShowLogoModal(false)}
+        />
       )}
     </div>
   )

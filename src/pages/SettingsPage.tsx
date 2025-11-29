@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { db, DatabaseSettings } from '../database/database'
+import { DocumentTemplateEditor } from '../components/DocumentTemplateEditor'
 
 function SettingsPage() {
   const navigate = useNavigate()
@@ -47,6 +48,9 @@ function SettingsPage() {
   const [newPasswordInput, setNewPasswordInput] = useState('')
   const [passwordHintInput, setPasswordHintInput] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+
+  // State למודל עריכת תבניות
+  const [showTemplateEditor, setShowTemplateEditor] = useState(false)
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
 
   // פונקציה להצגת מודל אישור
@@ -95,7 +99,11 @@ function SettingsPage() {
     quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
     enableMasav: false,
     appPassword: '',
-    passwordHint: ''
+    passwordHint: '',
+    enableCommission: false,
+    commissionType: 'percentage',
+    commissionValue: 0,
+    commissionAutoRecord: false
   })
 
   // הגדרות מס"ב - מוקפא כרגע
@@ -220,7 +228,11 @@ function SettingsPage() {
           quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
           enableMasav: false,
           appPassword: '',
-          passwordHint: ''
+          passwordHint: '',
+          enableCommission: false,
+          commissionType: 'percentage',
+          commissionValue: 0,
+          commissionAutoRecord: false
         }
         setSettings(defaultSettings)
         db.updateSettings(defaultSettings)
@@ -744,6 +756,24 @@ function SettingsPage() {
                 <p><strong>דוגמה:</strong> {settings.currencySymbol}1,000</p>
                 <p><strong>תקופת הלוואה ברירת מחדל:</strong> {settings.defaultLoanPeriod} חודשים</p>
                 <p><strong>התראות איחור:</strong> {settings.showOverdueWarnings ? '✅ מופעל' : '❌ כבוי'}</p>
+                
+                <button
+                  onClick={() => setShowTemplateEditor(true)}
+                  style={{
+                    marginTop: '15px',
+                    width: '100%',
+                    backgroundColor: '#3498db',
+                    color: 'white',
+                    border: 'none',
+                    padding: '12px',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  📝 ערוך תבניות מסמכים
+                </button>
               </div>
 
               {/* הגדרות פונקציות מתקדמות */}
@@ -768,7 +798,7 @@ function SettingsPage() {
                 background: 'rgba(231, 76, 60, 0.1)',
                 borderRadius: '8px'
               }}>
-                <h4 style={{ marginBottom: '10px', color: '#2c3e50' }}>� יאבטחה</h4>
+                <h4 style={{ marginBottom: '10px', color: '#2c3e50' }}>אבטחה</h4>
                 <p><strong>סיסמה:</strong> {settings.appPassword ? '✅ מוגדרת' : '❌ לא מוגדרת'}</p>
                 {settings.appPassword && settings.passwordHint && (
                   <p><strong>רמז לסיסמה:</strong> {settings.passwordHint}</p>
@@ -1304,6 +1334,14 @@ function SettingsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* מודל עריכת תבניות */}
+      {showTemplateEditor && (
+        <DocumentTemplateEditor 
+          onClose={() => setShowTemplateEditor(false)}
+          onSave={() => showNotification('✅ הטקסטים נשמרו בהצלחה!', 'success')}
+        />
       )}
     </div>
   )

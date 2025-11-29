@@ -328,6 +328,10 @@ export interface DatabaseSettings {
   // הגדרות אבטחה
   appPassword: string // סיסמה להתחברות למערכת
   passwordHint?: string // רמז לסיסמה (אופציונלי)
+  // תבניות מסמכים
+  loanDocumentTemplate?: string // תבנית שטר הלוואה
+  paymentReceiptTemplate?: string // תבנית שובר פרעון
+  depositReceiptTemplate?: string // תבנית שטר הפקדה
   // הגדרות עמלות
   enableCommission: boolean // האם לגבות עמלה על הלוואות
   commissionType: 'percentage' | 'fixed' // סוג עמלה: אחוז או סכום קבוע
@@ -2112,6 +2116,34 @@ class GemachDatabase {
 
   updateSettings(newSettings: Partial<DatabaseSettings>): void {
     this.dataFile.settings = { ...this.dataFile.settings, ...newSettings }
+    this.saveData()
+  }
+
+  // ניהול טקסטים מותאמים במסמכים
+  getLoanDocumentTemplate(): string {
+    return this.dataFile.settings.loanDocumentTemplate || 'מאשר בזה כי לוויתי מגמ"ח'
+  }
+
+  setLoanDocumentTemplate(text: string): void {
+    this.dataFile.settings.loanDocumentTemplate = text
+    this.saveData()
+  }
+
+  getPaymentReceiptTemplate(): string {
+    return this.dataFile.settings.paymentReceiptTemplate || 'תודה על הפרעון!'
+  }
+
+  setPaymentReceiptTemplate(text: string): void {
+    this.dataFile.settings.paymentReceiptTemplate = text
+    this.saveData()
+  }
+
+  getDepositReceiptTemplate(): string {
+    return this.dataFile.settings.depositReceiptTemplate || 'מאשר בזה כי הפקדתי בגמ"ח'
+  }
+
+  setDepositReceiptTemplate(text: string): void {
+    this.dataFile.settings.depositReceiptTemplate = text
     this.saveData()
   }
 

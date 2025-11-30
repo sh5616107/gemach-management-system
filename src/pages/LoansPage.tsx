@@ -310,14 +310,17 @@ function LoansPage() {
       ).join(', ')
       
       // הצגת התראה למשתמש
-      const shouldAddToBlacklist = window.confirm(
-        `⚠️ נמצאו ${overdueDebts.length} ערבים שלא פרעו בזמן:\n${guarantorNames}\n\nהאם להוסיף אותם לרשימה השחורה?`
-      )
-      
-      if (shouldAddToBlacklist) {
-        const addedCount = db.addOverdueGuarantorsToBlacklist(overdueDebts)
-        showNotification(`🚫 ${addedCount} ערבים נוספו לרשימה השחורה`)
-      }
+      showConfirmModal({
+        title: 'ערבים שלא פרעו בזמן',
+        message: `⚠️ נמצאו ${overdueDebts.length} ערבים שלא פרעו בזמן:\n${guarantorNames}\n\nהאם להוסיף אותם לרשימה השחורה?`,
+        confirmText: 'הוסף לרשימה שחורה',
+        cancelText: 'ביטול',
+        type: 'warning',
+        onConfirm: () => {
+          const addedCount = db.addOverdueGuarantorsToBlacklist(overdueDebts)
+          showNotification(`🚫 ${addedCount} ערבים נוספו לרשימה השחורה`)
+        }
+      })
     }
 
     setBorrowers(newBorrowers)
@@ -4045,14 +4048,21 @@ function LoansPage() {
                                 return
                               }
 
-                              if (window.confirm(`האם אתה בטוח שברצונך למחוק את הערב ${guarantor.firstName} ${guarantor.lastName}?\n\nפעולה זו לא ניתנת לביטול.`)) {
-                                if (db.deleteGuarantor(guarantor.id)) {
-                                  loadGuarantors()
-                                  showNotification('✅ הערב נמחק בהצלחה!')
-                                } else {
-                                  showNotification('❌ שגיאה במחיקת הערב', 'error')
+                              showConfirmModal({
+                                title: 'מחיקת ערב',
+                                message: `האם אתה בטוח שברצונך למחוק את הערב ${guarantor.firstName} ${guarantor.lastName}?\n\nפעולה זו לא ניתנת לביטול.`,
+                                confirmText: 'מחק ערב',
+                                cancelText: 'ביטול',
+                                type: 'danger',
+                                onConfirm: () => {
+                                  if (db.deleteGuarantor(guarantor.id)) {
+                                    loadGuarantors()
+                                    showNotification('✅ הערב נמחק בהצלחה!')
+                                  } else {
+                                    showNotification('❌ שגיאה במחיקת הערב', 'error')
+                                  }
                                 }
-                              }
+                              })
                             }}
                             style={{
                               padding: '6px 12px',

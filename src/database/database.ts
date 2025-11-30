@@ -447,6 +447,7 @@ class GemachDatabase {
       const expenses = localStorage.getItem('gemach_expenses')
 
       const gemachName = localStorage.getItem('gemach_name')
+      const gemachLogo = localStorage.getItem('gemach_logo')
       const settings = localStorage.getItem('gemach_settings')
       const masavSettings = localStorage.getItem('gemach_masav_settings')
 
@@ -467,6 +468,7 @@ class GemachDatabase {
         masavSettings: masavSettings ? JSON.parse(masavSettings) : undefined,
         lastUpdated: new Date().toISOString(),
         gemachName: gemachName || 'נר שרה',
+        gemachLogo: gemachLogo || undefined,
         settings: (settings && settings !== 'undefined') ? JSON.parse(settings) : {
           currency: 'ILS',
           currencySymbol: '₪',
@@ -525,6 +527,9 @@ class GemachDatabase {
       localStorage.setItem('gemach_guarantor_debts', JSON.stringify(this.dataFile.guarantorDebts))
       localStorage.setItem('gemach_expenses', JSON.stringify(this.dataFile.expenses))
       localStorage.setItem('gemach_name', this.dataFile.gemachName)
+      if (this.dataFile.gemachLogo) {
+        localStorage.setItem('gemach_logo', this.dataFile.gemachLogo)
+      }
       localStorage.setItem('gemach_settings', JSON.stringify(this.dataFile.settings))
       localStorage.setItem('gemach_masav_settings', JSON.stringify(this.dataFile.masavSettings))
 
@@ -2076,13 +2081,23 @@ class GemachDatabase {
   }
 
   setGemachLogo(logoBase64: string): void {
-    this.dataFile.gemachLogo = logoBase64
-    this.saveData()
+    console.log('💾 Database: שומר לוגו, גודל:', logoBase64.length, 'תווים')
+    try {
+      this.dataFile.gemachLogo = logoBase64
+      this.saveData()
+      console.log('✅ Database: הלוגו נשמר בהצלחה')
+    } catch (error) {
+      console.error('❌ Database: שגיאה בשמירת הלוגו:', error)
+      throw error
+    }
   }
 
   removeGemachLogo(): void {
+    console.log('🗑️ Database: מוחק לוגו')
     this.dataFile.gemachLogo = undefined
+    localStorage.removeItem('gemach_logo')
     this.saveData()
+    console.log('✅ Database: הלוגו נמחק בהצלחה')
   }
 
   getHeaderTitle(): string {

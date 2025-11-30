@@ -48,8 +48,15 @@ export const LogoUploadModal: React.FC<LogoUploadModalProps> = ({
 
   const handleSave = () => {
     if (previewLogo) {
-      onSave(previewLogo)
-      onClose()
+      console.log('💾 שומר לוגו, גודל:', previewLogo.length, 'תווים')
+      try {
+        onSave(previewLogo)
+        console.log('✅ הלוגו נשמר בהצלחה')
+        onClose()
+      } catch (error) {
+        console.error('❌ שגיאה בשמירת הלוגו:', error)
+        setError('שגיאה בשמירת הלוגו: ' + (error as Error).message)
+      }
     }
   }
 

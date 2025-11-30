@@ -15,6 +15,7 @@ export const LogoUploadModal: React.FC<LogoUploadModalProps> = ({
 }) => {
   const [previewLogo, setPreviewLogo] = useState<string | null>(currentLogo)
   const [error, setError] = useState<string>('')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,11 +62,13 @@ export const LogoUploadModal: React.FC<LogoUploadModalProps> = ({
   }
 
   const handleRemove = () => {
-    if (window.confirm('האם אתה בטוח שברצונך למחוק את הלוגו?')) {
-      onRemove()
-      setPreviewLogo(null)
-      onClose()
-    }
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDelete = () => {
+    onRemove()
+    setPreviewLogo(null)
+    onClose()
   }
 
   return (
@@ -247,6 +250,79 @@ export const LogoUploadModal: React.FC<LogoUploadModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* מודל אישור מחיקה */}
+      {showDeleteConfirm && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 2000
+          }}
+          onClick={() => setShowDeleteConfirm(false)}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '30px',
+              maxWidth: '400px',
+              width: '90%',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+              textAlign: 'center'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: '48px', marginBottom: '20px' }}>🗑️</div>
+            <h3 style={{ marginBottom: '15px', color: '#2c3e50' }}>
+              האם אתה בטוח שברצונך למחוק את הלוגו?
+            </h3>
+            <p style={{ color: '#7f8c8d', marginBottom: '25px' }}>
+              פעולה זו לא ניתנת לביטול
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={confirmDelete}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#e74c3c',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: 'bold'
+                }}
+              >
+                כן, מחק
+              </button>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#95a5a6',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '16px'
+                }}
+              >
+                ביטול
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

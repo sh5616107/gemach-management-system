@@ -8,6 +8,7 @@ interface DocumentTemplateEditorProps {
 
 export const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({ onClose, onSave }) => {
   const [activeTab, setActiveTab] = useState<'loan' | 'payment' | 'deposit'>('loan')
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
   
   // ברירות מחדל פשוטות
   const defaultLoanText = 'מאשר בזה כי לוויתי מגמ"ח'
@@ -37,10 +38,12 @@ export const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({ 
     onClose()
   }
 
-  const handleReset = (type: 'loan' | 'payment' | 'deposit') => {
-    if (!window.confirm('האם אתה בטוח שברצונך לאפס את הטקסטים לברירת המחדל?')) return
+  const handleReset = () => {
+    setShowResetConfirm(true)
+  }
 
-    switch (type) {
+  const confirmReset = () => {
+    switch (activeTab) {
       case 'loan':
         setLoanText(defaultLoanText)
         setLoanFooter('')
@@ -54,6 +57,7 @@ export const DocumentTemplateEditor: React.FC<DocumentTemplateEditorProps> = ({ 
         setDepositFooter('')
         break
     }
+    setShowResetConfirm(false)
   }
 
   const getExampleText = (type: 'loan' | 'payment' | 'deposit') => {
@@ -199,7 +203,7 @@ ${depositText} "קרן חסד"
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
               <h3 style={{ margin: 0, color: '#2c3e50' }}>ערוך טקסטים</h3>
               <button
-                onClick={() => handleReset(activeTab)}
+                onClick={handleReset}
                 style={{
                   backgroundColor: '#e74c3c',
                   color: 'white',
@@ -327,6 +331,79 @@ ${depositText} "קרן חסד"
           </button>
         </div>
       </div>
+
+      {/* מודל אישור איפוס */}
+      {showResetConfirm && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 2000
+          }}
+          onClick={() => setShowResetConfirm(false)}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '30px',
+              maxWidth: '400px',
+              width: '90%',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+              textAlign: 'center'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: '48px', marginBottom: '20px' }}>🔄</div>
+            <h3 style={{ marginBottom: '15px', color: '#2c3e50' }}>
+              האם אתה בטוח שברצונך לאפס את הטקסטים לברירת המחדל?
+            </h3>
+            <p style={{ color: '#7f8c8d', marginBottom: '25px' }}>
+              השינויים שביצעת יאבדו
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={confirmReset}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#e74c3c',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: 'bold'
+                }}
+              >
+                כן, אפס
+              </button>
+              <button
+                onClick={() => setShowResetConfirm(false)}
+                style={{
+                  flex: 1,
+                  backgroundColor: '#95a5a6',
+                  color: 'white',
+                  border: 'none',
+                  padding: '12px 20px',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '16px'
+                }}
+              >
+                ביטול
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

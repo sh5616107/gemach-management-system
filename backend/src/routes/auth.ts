@@ -97,6 +97,6 @@ function generateToken(username: string): string {
   return jwt.sign(
     { username, sub: 1 },
     secret,
-    { expiresIn }
+    { expiresIn: expiresIn as string }
   );
 }

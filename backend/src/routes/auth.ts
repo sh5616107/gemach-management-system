@@ -92,11 +92,10 @@ authRouter.post('/set-password', async (req, res) => {
 // פונקציה ליצירת טוקן
 function generateToken(username: string): string {
   const secret = process.env.JWT_SECRET || 'default-secret-change-this';
-  const expiresIn = process.env.JWT_EXPIRES_IN || '24h';
   
   return jwt.sign(
     { username, sub: 1 },
     secret,
-    { expiresIn: expiresIn as string }
+    { expiresIn: '24h' }
   );
 }

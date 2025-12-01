@@ -15,6 +15,10 @@ build/
 .env.development.local
 .env.test.local
 .env.production.local
+backend/.env
+backend/.env.local
+backend/.env.development.local
+backend/.env.production.local
 
 # IDE files
 .vscode/

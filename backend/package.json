@@ -14,32 +14,37 @@
     "prisma:studio": "prisma studio",
     "db:seed": "ts-node prisma/seed.ts"
   },
-  "keywords": ["gemach", "loans", "api"],
+  "keywords": [
+    "gemach",
+    "loans",
+    "api"
+  ],
   "author": "Gemach System Developer",
   "license": "MIT",
   "dependencies": {
     "@prisma/client": "^5.7.0",
-    "express": "^4.18.2",
+    "axios": "^1.6.2",
+    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "bcrypt": "^5.1.1",
-    "jsonwebtoken": "^9.0.2",
+    "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
     "helmet": "^7.1.0",
-    "nodemailer": "^6.9.7",
-    "axios": "^1.6.2",
-    "node-cron": "^3.0.3"
+    "jsonwebtoken": "^9.0.2",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.7"
   },
   "devDependencies": {
-    "@types/express": "^4.17.21",
-    "@types/cors": "^2.8.17",
     "@types/bcrypt": "^5.0.2",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.10.5",
-    "@types/nodemailer": "^6.4.14",
     "@types/node-cron": "^3.0.11",
+    "@types/nodemailer": "^6.4.14",
     "prisma": "^5.7.0",
-    "typescript": "^5.3.3",
-    "ts-node-dev": "^2.0.0"
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.3.3"
   }
 }

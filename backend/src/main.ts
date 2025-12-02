@@ -36,6 +36,23 @@ app.use('/api/borrowers', borrowersRouter);
 app.use('/api/loans', loansRouter);
 app.use('/api/settings', settingsRouter);
 
+// Root route - דף בית
+app.get('/', (req: express.Request, res: express.Response) => {
+  res.json({
+    name: 'Gemach Management System API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      health: '/health',
+      auth: '/api/auth/*',
+      borrowers: '/api/borrowers',
+      loans: '/api/loans',
+      settings: '/api/settings'
+    },
+    documentation: 'https://github.com/sh5616107/gemach-management-system'
+  });
+});
+
 // Health check
 app.get('/health', (req: express.Request, res: express.Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

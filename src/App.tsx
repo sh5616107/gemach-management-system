@@ -2,6 +2,7 @@ import { Routes, Route, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 // CSS נטען דינמית לפי מצב ביצועים - לא מייבאים כאן!
 import LoginPage from './pages/LoginPage'
+import LoginPageAPI from './pages/LoginPageAPI'
 import HomePage from './pages/HomePage'
 import LoansPage from './pages/LoansPage'
 import DepositsPage from './pages/DepositsPage'
@@ -82,7 +83,7 @@ function App() {
 
   // אם לא מחובר, הצג מסך התחברות
   if (!isLoggedIn) {
-    return <LoginPage onLogin={handleLogin} />
+    return <LoginPageAPI onLogin={handleLogin} />
   }
 
   return (

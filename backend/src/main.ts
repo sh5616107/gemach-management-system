@@ -7,6 +7,12 @@ import { borrowersRouter } from './routes/borrowers';
 import { loansRouter } from './routes/loans';
 import { authRouter } from './routes/auth';
 import { settingsRouter } from './routes/settings';
+import { depositorsRouter } from './routes/depositors';
+import { depositsRouter } from './routes/deposits';
+import { donationsRouter } from './routes/donations';
+import { paymentsRouter } from './routes/payments';
+import { guarantorsRouter } from './routes/guarantors';
+import { statisticsRouter } from './routes/statistics';
 
 // טען משתני סביבה
 dotenv.config();
@@ -35,6 +41,12 @@ app.use('/api/auth', authRouter);
 app.use('/api/borrowers', borrowersRouter);
 app.use('/api/loans', loansRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/depositors', depositorsRouter);
+app.use('/api/deposits', depositsRouter);
+app.use('/api/donations', donationsRouter);
+app.use('/api/payments', paymentsRouter);
+app.use('/api/guarantors', guarantorsRouter);
+app.use('/api/statistics', statisticsRouter);
 
 // Root route - דף בית
 app.get('/', (req: express.Request, res: express.Response) => {
@@ -47,7 +59,13 @@ app.get('/', (req: express.Request, res: express.Response) => {
       auth: '/api/auth/*',
       borrowers: '/api/borrowers',
       loans: '/api/loans',
-      settings: '/api/settings'
+      settings: '/api/settings',
+      depositors: '/api/depositors',
+      deposits: '/api/deposits',
+      donations: '/api/donations',
+      payments: '/api/payments',
+      guarantors: '/api/guarantors',
+      statistics: '/api/statistics'
     },
     documentation: 'https://github.com/sh5616107/gemach-management-system'
   });

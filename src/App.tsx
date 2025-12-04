@@ -16,7 +16,6 @@ import StatisticsPage from './pages/StatisticsPage'
 // import MasavFileGeneratorPage from './pages/MasavFileGeneratorPage'
 // import MasavHistoryPage from './pages/MasavHistoryPage'
 // import MasavValidatorPage from './pages/MasavValidatorPage'
-import { db } from './database/database'
 
 // קומפוננט לאיפוס גלילה בכל מעבר דף
 function ScrollToTop() {
@@ -33,13 +32,12 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
-  // בדיקה אם יש סיסמה מוגדרת ואם המשתמש מחובר
+  // בדיקה אם המשתמש מחובר
   useEffect(() => {
-    const settings = db.getSettings()
     const sessionToken = sessionStorage.getItem('gemach_session')
     
-    // אם אין סיסמה מוגדרת או יש טוקן סשן תקף - אפשר כניסה
-    if (!settings.appPassword || sessionToken === 'authenticated') {
+    // בדוק רק אם יש טוקן סשן תקף
+    if (sessionToken === 'authenticated') {
       setIsLoggedIn(true)
     }
     

@@ -9,6 +9,10 @@ import { api } from './client';
 // בדוק אם להשתמש ב-API או ב-DB מקומי
 const USE_API = import.meta.env.VITE_USE_API === 'true';
 
+console.log('🔍 Environment Variables Debug:');
+console.log('  VITE_USE_API:', import.meta.env.VITE_USE_API);
+console.log('  VITE_API_URL:', import.meta.env.VITE_API_URL);
+console.log('  USE_API (computed):', USE_API);
 console.log('🔧 Data Service Mode:', USE_API ? 'API (Web)' : 'Local DB (Electron)');
 
 export const dataService = {

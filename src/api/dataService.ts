@@ -24,14 +24,16 @@ export const dataService = {
     if (USE_API) {
       return await api.getBorrower(id);
     }
-    return db.getBorrower(id);
+    // מקומי - מחפש בין כל הלווים
+    const borrowers = db.getBorrowers();
+    return borrowers.find(b => b.id === id);
   },
 
   createBorrower: async (data: any) => {
     if (USE_API) {
       return await api.createBorrower(data);
     }
-    return db.createBorrower(data);
+    return db.addBorrower(data);
   },
 
   updateBorrower: async (id: number, data: any) => {
@@ -60,14 +62,15 @@ export const dataService = {
     if (USE_API) {
       return await api.getLoan(id);
     }
-    return db.getLoan(id);
+    const loans = db.getLoans();
+    return loans.find(l => l.id === id);
   },
 
   createLoan: async (data: any) => {
     if (USE_API) {
       return await api.createLoan(data);
     }
-    return db.createLoan(data);
+    return db.addLoan(data);
   },
 
   updateLoan: async (id: number, data: any) => {
@@ -96,14 +99,15 @@ export const dataService = {
     if (USE_API) {
       return await api.getDepositor(id);
     }
-    return db.getDepositor(id);
+    const depositors = db.getDepositors();
+    return depositors.find(d => d.id === id);
   },
 
   createDepositor: async (data: any) => {
     if (USE_API) {
       return await api.createDepositor(data);
     }
-    return db.createDepositor(data);
+    return db.addDepositor(data);
   },
 
   updateDepositor: async (id: number, data: any) => {
@@ -132,14 +136,15 @@ export const dataService = {
     if (USE_API) {
       return await api.getDeposit(id);
     }
-    return db.getDeposit(id);
+    const deposits = db.getDeposits();
+    return deposits.find(d => d.id === id);
   },
 
   createDeposit: async (data: any) => {
     if (USE_API) {
       return await api.createDeposit(data);
     }
-    return db.createDeposit(data);
+    return db.addDeposit(data);
   },
 
   updateDeposit: async (id: number, data: any) => {
@@ -168,14 +173,15 @@ export const dataService = {
     if (USE_API) {
       return await api.getDonation(id);
     }
-    return db.getDonation(id);
+    const donations = db.getDonations();
+    return donations.find(d => d.id === id);
   },
 
   createDonation: async (data: any) => {
     if (USE_API) {
       return await api.createDonation(data);
     }
-    return db.createDonation(data);
+    return db.addDonation(data);
   },
 
   updateDonation: async (id: number, data: any) => {
@@ -231,7 +237,6 @@ export const dataService = {
   },
   
   // פונקציות נוספות שנשארות מקומיות לעת עתה
-  getBorrowers: () => db.getBorrowers(),
   hasOverdueLoans: () => db.hasOverdueLoans(),
   getOverdueLoans: () => db.getOverdueLoans(),
   getOverdueStats: () => db.getOverdueStats(),

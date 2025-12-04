@@ -13,6 +13,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:web": "tsc && vite build --mode production",
     "preview": "vite preview",
     "electron": "electron .",
     "electron-dev": "ELECTRON_IS_DEV=true electron .",

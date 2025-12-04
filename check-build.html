@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>בדיקת Build</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <h1>בדיקת משתני סביבה</h1>
+    <div id="info"></div>
+    
+    <script>
+        // פתח את הקונסול ותראה מה מודפס
+        console.log('=== Build Check ===');
+        console.log('VITE_USE_API:', import.meta.env.VITE_USE_API);
+        console.log('VITE_API_URL:', import.meta.env.VITE_API_URL);
+        
+        document.getElementById('info').innerHTML = `
+            <p><strong>VITE_USE_API:</strong> ${import.meta.env.VITE_USE_API}</p>
+            <p><strong>VITE_API_URL:</strong> ${import.meta.env.VITE_API_URL}</p>
+            <p><strong>MODE:</strong> ${import.meta.env.MODE}</p>
+        `;
+    </script>
+</body>
+</html>

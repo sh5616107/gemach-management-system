@@ -1,11 +1,17 @@
 const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 
 const prisma = new PrismaClient();
 
 async function createAdmin() {
   try {
     const password = 'admin123';
+    
+    // Delete existing admin if exists
+    await prisma.user.deleteMany({
+      where: { username: 'admin' }
+    });
+    
     const hashedPassword = await bcrypt.hash(password, 10);
     
     console.log('\n🔄 Creating admin user...');

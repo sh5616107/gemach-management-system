@@ -8,36 +8,44 @@ export const authRouter = Router();
 // התחברות
 authRouter.post('/login', async (req, res) => {
   try {
-    const { password } = req.body;
+    const { username, password } = req.body;
 
-    if (!password) {
-      return res.status(400).json({ error: 'נדרשת סיסמה' });
+    if (!username || !password) {
+      return res.status(400).json({ error: 'נדרשים שם משתמש וסיסמה' });
     }
 
-    // קבל הגדרות
-    const settings = await prisma.settings.findFirst();
+    // חפש משתמש
+    const user = await prisma.user.findUnique({
+      where: { username }
+    });
 
-    // אם אין סיסמה מוגדרת - אפשר כניסה
-    if (!settings?.appPassword) {
-      const token = generateToken('admin');
-      return res.json({ 
-        access_token: token,
-        expiresIn: '24h',
-        message: 'התחברות ללא סיסמה'
-      });
+    if (!user) {
+      return res.status(401).json({ error: 'שם משתמש או סיסמה שגויים' });
     }
 
     // בדוק סיסמה
-    const isValid = await bcrypt.compare(password, settings.appPassword);
+    const isValid = await bcrypt.compare(password, user.password);
 
     if (!isValid) {
-      return res.status(401).json({ error: 'סיסמה שגויה' });
+      return res.status(401).json({ error: 'שם משתמש או סיסמה שגויים' });
     }
 
-    const token = generateToken('admin');
+    // עדכן lastLogin
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { lastLogin: new Date() }
+    });
+
+    const token = generateToken(user.username, user.id);
     res.json({ 
       access_token: token,
-      expiresIn: '24h'
+      expiresIn: '24h',
+      user: {
+        id: user.id,
+        username: user.username,
+        fullName: user.fullName,
+        role: user.role
+      }
     });
 
   } catch (error) {
@@ -90,11 +98,11 @@ authRouter.post('/set-password', async (req, res) => {
 });
 
 // פונקציה ליצירת טוקן
-function generateToken(username: string): string {
+function generateToken(username: string, userId: number): string {
   const secret = process.env.JWT_SECRET || 'default-secret-change-this';
   
   return jwt.sign(
-    { username, sub: 1 },
+    { username, sub: userId },
     secret,
     { expiresIn: '24h' }
   );

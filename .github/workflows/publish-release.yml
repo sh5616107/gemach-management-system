@@ -40,10 +40,9 @@ jobs:
     - name: Build React app
       run: npm run build
       
-    - name: Build Electron app
-      run: npm run build-electron
+    - name: Build Electron app (without publish)
+      run: npm run dist
       env:
-        GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
         ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
         
     - name: List built files

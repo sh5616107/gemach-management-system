@@ -9,6 +9,13 @@ let mainWindow
 if (!isDev) {
   // הגדר את auto-updater רק בפרודקשן (ללא בדיקה אוטומטית)
   
+  // הגדרת מאגר ציבורי ל-releases
+  autoUpdater.setFeedURL({
+    provider: 'github',
+    owner: 'sh5616107',
+    repo: 'gemach-releases'
+  })
+  
   // לוג עדכונים
   autoUpdater.logger = require('electron-log')
   autoUpdater.logger.transports.file.level = 'info'

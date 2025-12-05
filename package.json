@@ -1,6 +1,6 @@
 {
   "name": "gemach-management-system",
-  "version": "2.9.55",
+  "version": "2.9.56",
   "description": "Gemach Management System - Comprehensive system for managing loans, deposits and donations",
   "main": "electron.js",
   "homepage": "./",
@@ -12,15 +12,14 @@
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "build:web": "tsc && vite build --mode production",
+    "build": "vite build",
+    "build:web": "vite build --mode production",
     "preview": "vite preview",
     "electron": "electron .",
     "electron-dev": "ELECTRON_IS_DEV=true electron .",
     "build-electron": "npm run build && electron-builder --publish=always",
     "dist": "npm run build && electron-builder --publish=never",
-    "pack": "electron-builder --dir",
-    "postinstall": "electron-builder install-app-deps"
+    "pack": "electron-builder --dir"
   },
   "build": {
     "appId": "com.gemach.management",
@@ -98,7 +97,7 @@
     "publish": {
       "provider": "github",
       "owner": "sh5616107",
-      "repo": "gemach-management-system"
+      "repo": "gemach-releases"
     },
     "generateUpdatesFilesForAllChannels": false,
     "releaseInfo": {
@@ -110,9 +109,9 @@
     "@types/react-dom": "^18.2.7",
     "@vitejs/plugin-react": "^4.0.3",
     "electron": "^27.0.0",
-    "electron-builder": "^24.6.4",
+    "electron-builder": "^24.13.3",
     "electron-is-dev": "^2.0.0",
-    "typescript": "^5.0.2",
+    "typescript": "^5.9.3",
     "vite": "^4.4.5"
   },
   "dependencies": {

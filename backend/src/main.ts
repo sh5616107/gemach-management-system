@@ -22,10 +22,27 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(helmet()); // אבטחה בסיסית
+
+// CORS - אפשר גישה ממספר מקורות
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:8080',
+  'http://localhost:3000',
+  process.env.FRONTEND_URL
+].filter(Boolean); // הסר undefined
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // אפשר בקשות ללא origin (כמו Postman) או מהרשימה
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
+
 app.use(express.json({ limit: '10mb' }));
 
 // Rate limiting - הגבלת קצב בקשות

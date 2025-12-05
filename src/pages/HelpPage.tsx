@@ -14,12 +14,12 @@ function HelpPage() {
                     <h2 className="form-title">📖 מדריך שימוש במערכת</h2>
 
                     <div style={{ background: '#e8f5e8', padding: '15px', borderRadius: '8px', margin: '20px 0', textAlign: 'center', border: '2px solid #27ae60' }}>
-                        <h3 style={{ color: '#27ae60', margin: '0 0 10px 0' }}>🆕 גרסה 2.9.40 - מה חדש?</h3>
+                        <h3 style={{ color: '#27ae60', margin: '0 0 10px 0' }}>🆕 גרסה 2.9.56 - תיקון דחוף!</h3>
                         <div style={{ textAlign: 'right', fontSize: '14px' }}>
                             <ul style={{ margin: '10px 0', paddingRight: '20px' }}>
-                                <li><strong>מודל ברכה חדש</strong> - הצגת תכונות אופציונליות בכניסה למערכת</li>
-                                <li><strong>שיפורים כלליים</strong> - אופטימיזציה של ביצועי המערכת</li>
-                                <li><strong>תיקוני באגים</strong> - תיקונים שונים לשיפור היציבות</li>
+                                <li><strong>🚨 תיקון קריטי</strong> - תוקנה בעיית שמירת נתונים בגרסה 2.9.55</li>
+                                <li><strong>✅ שמירה תקינה</strong> - המערכת חוזרת לשמור נתונים כראוי</li>
+                                <li><strong>🔒 יציבות משופרת</strong> - בדיקות נוספות לפני כל שחרור</li>
                             </ul>
                             <div style={{ marginTop: '15px', padding: '10px', background: 'rgba(255,255,255,0.5)', borderRadius: '5px' }}>
                                 <strong>גרסאות קודמות כללו:</strong>

@@ -10,7 +10,7 @@ dist-electron/
 build/
 web/
 
-# Environment variables
+# Environment variables - NEVER commit these!
 .env
 .env.local
 .env.development.local
@@ -20,6 +20,10 @@ backend/.env
 backend/.env.local
 backend/.env.development.local
 backend/.env.production.local
+
+# Keep only .env.example files for documentation
+!.env.example
+!backend/.env.example
 
 # IDE files
 .vscode/

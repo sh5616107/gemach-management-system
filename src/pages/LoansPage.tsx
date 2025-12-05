@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { db, DatabaseLoan, DatabasePayment, DatabaseBorrower, DatabaseGuarantor, DatabaseGuarantorDebt } from '../database/database'
+import { dataService } from '../api/dataService'
 import NumberInput from '../components/NumberInput'
 import GuarantorDebtCard from '../components/GuarantorDebtCard'
 
@@ -807,7 +808,7 @@ function LoansPage() {
     }
   }
 
-  const saveBorrower = () => {
+  const saveBorrower = async () => {
     if (!currentBorrower.firstName || !currentBorrower.lastName) {
       showNotification('⚠️ אנא מלא שם פרטי ושם משפחה', 'error')
       return
@@ -821,19 +822,17 @@ function LoansPage() {
 
     if (selectedBorrowerId) {
       // עדכון לווה קיים
-      const result = db.updateBorrower(selectedBorrowerId, currentBorrower as DatabaseBorrower)
-      if (result.success) {
+      try {
+        await dataService.updateBorrower(selectedBorrowerId, currentBorrower as DatabaseBorrower)
         showNotification('✅ פרטי הלווה עודכנו בהצלחה!')
         loadData()
-      } else {
-        showNotification(`❌ ${result.error}`, 'error')
+      } catch (error: any) {
+        showNotification(`❌ ${error.response?.data?.error || error.message || 'שגיאה בעדכון לווה'}`, 'error')
       }
     } else {
       // הוספת לווה חדש
-      const result = db.addBorrower(currentBorrower as Omit<DatabaseBorrower, 'id'>)
-      if ('error' in result) {
-        showNotification(`❌ ${result.error}`, 'error')
-      } else {
+      try {
+        const result = await dataService.createBorrower(currentBorrower)
         setSelectedBorrowerId(result.id)
         // אפס את טופס ההלוואה עם הלווה החדש
         setCurrentLoan({
@@ -878,6 +877,8 @@ function LoansPage() {
         }, 50)
 
         loadData()
+      } catch (error: any) {
+        showNotification(`❌ ${error.response?.data?.error || error.message || 'שגיאה ביצירת לווה'}`, 'error')
       }
     }
   }

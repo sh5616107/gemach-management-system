@@ -1,0 +1,103 @@
+name: Publish to Public Releases
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., v2.9.57)'
+        required: true
+        default: 'v2.9.57'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Clear npm cache
+      run: |
+        npm cache clean --force
+        if (Test-Path node_modules) { Remove-Item -Recurse -Force node_modules }
+        if (Test-Path package-lock.json) { Remove-Item -Force package-lock.json }
+        
+    - name: Install dependencies
+      run: npm install --no-audit --no-fund
+      
+    - name: Build React app
+      run: npm run build
+      
+    - name: Build Electron app
+      run: npm run build-electron
+      env:
+        GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+        
+    - name: List built files
+      run: |
+        echo "Listing dist-electron directory:"
+        dir dist-electron
+        
+    - name: Get version
+      id: version
+      run: |
+        if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+          $version = "${{ github.event.inputs.version }}"
+        } else {
+          $version = "${{ github.ref_name }}"
+        }
+        echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+        
+    - name: Create Release in Public Repo
+      uses: softprops/action-gh-release@v2
+      with:
+        repository: sh5616107/gemach-releases
+        tag_name: ${{ steps.version.outputs.VERSION }}
+        name: מערכת ניהול גמ"ח ${{ steps.version.outputs.VERSION }}
+        body: |
+          ## 🏛️ מערכת ניהול גמ"ח - גרסה ${{ steps.version.outputs.VERSION }}
+          
+          ### ✨ תכונות עיקריות:
+          - 💰 ניהול הלוואות מתקדם עם מעקב פרעונות
+          - 🏦 ניהול פקדונות ומשיכות
+          - 🎁 ניהול תרומות עם הדפסת קבלות
+          - 🖨️ הדפסה משופרת עם פתרון בעיית Windows
+          - 📁 שמירת PDF (ב-Electron)
+          - ⚙️ פונקציות מתקדמות אופציונליות
+          - 🎨 ממשק בעברית עם ערכות נושא
+          - 📊 דוחות וסטטיסטיקות
+          - 🛠️ כלים מנהליים: ניהול ערבים, רשימה שחורה ומכתבי התראה
+          - 🏦 בחירת סניף בנק למסמכים
+          
+          ### 🔧 הוראות התקנה:
+          1. הורד את קובץ ה-Setup.exe
+          2. הפעל את הקובץ והתקן
+          3. פתח את האפליקציה
+          4. התחל להזין נתונים
+          
+          ### 📚 תיעוד:
+          למדריך שימוש מפורט, בקר ב-[README](https://github.com/sh5616107/gemach-releases)
+          
+          ---
+          **פותח עבור קהילת הגמ"חים בישראל 🇮🇱**
+        files: |
+          dist-electron/gemach-management-system-setup-*.exe
+        draft: false
+        prerelease: false
+        fail_on_unmatched_files: false
+        generate_release_notes: false
+        make_latest: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.RELEASES_TOKEN }}

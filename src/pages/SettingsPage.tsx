@@ -174,15 +174,24 @@ function SettingsPage() {
   } */
 
   const handleSettingChange = (key: keyof DatabaseSettings, value: any) => {
-    const newSettings = { ...settings, [key]: value }
+    console.log('🔧 handleSettingChange called:', { key, value })
+    
+    // עדכן את ה-DB
+    const currentSettings = db.getSettings()
+    const newSettings = { ...currentSettings, [key]: value }
 
     // עדכון סמל המטבע אוטומטית
     if (key === 'currency') {
       newSettings.currencySymbol = value === 'USD' ? '$' : '₪'
     }
 
-    setSettings(newSettings)
+    console.log('💾 Saving settings:', newSettings)
     db.updateSettings(newSettings)
+    
+    // טען מחדש את ההגדרות מה-DB כדי לוודא סנכרון
+    const updatedSettings = db.getSettings()
+    setSettings(updatedSettings)
+    console.log('✅ Settings saved and reloaded:', updatedSettings)
   }
 
   const exportSettings = () => {
@@ -522,14 +531,20 @@ function SettingsPage() {
                           handleSettingChange('appPassword', '')
                           handleSettingChange('passwordHint', '')
                           sessionStorage.removeItem('gemach_session')
-                          showConfirmModal({
-                            title: '✅ הסיסמה הוסרה',
-                            message: 'הסיסמה הוסרה בהצלחה מהמערכת.',
-                            confirmText: 'הבנתי',
-                            type: 'success',
-                            showCancelButton: false,
-                            onConfirm: () => {}
-                          })
+                          // טען מחדש את ההגדרות מה-DB
+                          const updatedSettings = db.getSettings()
+                          setSettings(updatedSettings)
+                          // המתן רגע לפני הצגת המודל הבא
+                          setTimeout(() => {
+                            showConfirmModal({
+                              title: '✅ הסיסמה הוסרה',
+                              message: 'הסיסמה הוסרה בהצלחה מהמערכת.',
+                              confirmText: 'הבנתי',
+                              type: 'success',
+                              showCancelButton: false,
+                              onConfirm: () => {}
+                            })
+                          }, 100)
                         }
                       })
                     }}
@@ -1175,13 +1190,18 @@ function SettingsPage() {
             <div style={{ display: 'flex', gap: '15px', justifyContent: 'center' }}>
               <button
                 onClick={() => {
+                  console.log('🔘 Continue button clicked')
                   if (newPasswordInput.length < 4) {
+                    console.log('❌ Password too short:', newPasswordInput.length)
                     return
                   }
+                  console.log('✅ Password valid, proceeding...')
                   const password = newPasswordInput
                   const hint = passwordHintInput
+                  console.log('📝 Password:', password, 'Hint:', hint)
                   setPasswordModalOpen(false)
                   setShowPassword(false)
+                  console.log('🔔 Showing confirm modal...')
                   showConfirmModal({
                     title: 'אישור שינוי סיסמה',
                     message: `האם אתה בטוח שברצונך ${settings.appPassword ? 'לשנות' : 'להגדיר'} את הסיסמה?\n\nשים לב: במקרה של שכחה תצטרך לפנות למפתח התוכנה לקבלת קוד שחזור.\n\n📧 sh5616107@gmail.com`,
@@ -1191,14 +1211,20 @@ function SettingsPage() {
                     onConfirm: () => {
                       handleSettingChange('appPassword', password)
                       handleSettingChange('passwordHint', hint)
-                      showConfirmModal({
-                        title: '✅ הסיסמה עודכנה בהצלחה',
-                        message: 'הסיסמה החדשה נשמרה במערכת.\n\nהסיסמה תידרש בכניסה הבאה למערכת.',
-                        confirmText: 'הבנתי',
-                        type: 'success',
-                        showCancelButton: false,
-                        onConfirm: () => {}
-                      })
+                      // טען מחדש את ההגדרות מה-DB
+                      const updatedSettings = db.getSettings()
+                      setSettings(updatedSettings)
+                      // המתן רגע לפני הצגת המודל הבא
+                      setTimeout(() => {
+                        showConfirmModal({
+                          title: '✅ הסיסמה עודכנה בהצלחה',
+                          message: 'הסיסמה החדשה נשמרה במערכת.\n\nהסיסמה תידרש בכניסה הבאה למערכת.',
+                          confirmText: 'הבנתי',
+                          type: 'success',
+                          showCancelButton: false,
+                          onConfirm: () => {}
+                        })
+                      }, 100)
                     }
                   })
                 }}

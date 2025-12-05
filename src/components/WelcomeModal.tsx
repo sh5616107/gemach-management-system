@@ -59,7 +59,7 @@ function WelcomeModal({ onClose }: WelcomeModalProps) {
             ברוכים הבאים למערכת ניהול הגמ"ח!
           </h2>
           <p style={{ color: '#666', fontSize: '14px', margin: 0 }}>
-            גרסה 2.9.40
+            גרסה 2.9.56 - תיקון דחוף
           </p>
         </div>
 

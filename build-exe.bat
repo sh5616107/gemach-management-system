@@ -4,7 +4,11 @@ echo    בניית קובץ EXE למערכת ניהול גמ"ח
 echo ========================================
 echo.
 
-echo שלב 1: בניית אפליקציית React...
+echo שלב 1: בניית אפליקציית React עבור Electron...
+echo גיבוי .env.production...
+if exist .env.production copy /Y .env.production .env.production.web
+echo העתקת .env.electron ל-.env.production...
+copy /Y .env.electron .env.production
 call npm run build
 if %errorlevel% neq 0 (
     echo שגיאה בבניית React!
@@ -35,6 +39,11 @@ if %errorlevel% neq 0 (
     pause
     exit /b 1
 )
+
+echo.
+echo שחזור .env.production המקורי...
+if exist .env.production.web copy /Y .env.production.web .env.production
+if exist .env.production.web del .env.production.web
 
 echo.
 echo ========================================

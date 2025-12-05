@@ -45,13 +45,11 @@ jobs:
     - name: Build React app
       run: npm run build
       
-    - name: Install Electron dependencies
-      run: npm run postinstall
-      
     - name: Build Electron app
       run: npm run build-electron
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
         
     - name: List built files
       run: |

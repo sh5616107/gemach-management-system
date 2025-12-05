@@ -44,6 +44,7 @@ jobs:
       run: npm run build-electron
       env:
         GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+        ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
         
     - name: List built files
       run: |

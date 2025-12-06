@@ -62,6 +62,8 @@ jobs:
         
     - name: Create Release in Public Repo
       uses: softprops/action-gh-release@v2
+      continue-on-error: true
+      id: create_release
       with:
         repository: sh5616107/gemach-releases
         tag_name: ${{ steps.version.outputs.VERSION }}
@@ -101,3 +103,9 @@ jobs:
         make_latest: true
       env:
         GITHUB_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+        
+    - name: Check Release Status
+      if: steps.create_release.outcome == 'failure'
+      run: |
+        echo "⚠️ Release creation had issues, but file may have been uploaded"
+        echo "Check: https://github.com/sh5616107/gemach-releases/releases"

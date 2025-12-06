@@ -79,13 +79,28 @@ function LoginPage({ onLogin }: LoginPageProps) {
     // אם אין סיסמה שמורה, זו הגדרה ראשונה
     if (!savedPassword) {
       if (password.length < 4) {
-        alert('⚠️ הסיסמה חייבת להכיל לפחות 4 תווים')
+        setModalConfig({
+          isOpen: true,
+          title: '⚠️ סיסמה קצרה מדי',
+          message: 'הסיסמה חייבת להכיל לפחות 4 תווים.\n\nאנא בחר סיסמה ארוכה יותר.',
+          confirmText: 'הבנתי',
+          type: 'error'
+        })
         return
       }
       
       db.updateSettings({ appPassword: password })
-      alert('✅ הסיסמה נשמרה בהצלחה!\n\nשים לב: אם תשכח את הסיסמה, תוכל להשתמש בקוד שחזור מאסטר.')
-      onLogin()
+      setModalConfig({
+        isOpen: true,
+        title: '✅ הסיסמה נשמרה בהצלחה',
+        message: 'הסיסמה החדשה נשמרה במערכת.\n\n💡 שים לב: אם תשכח את הסיסמה, תוכל להשתמש בקוד שחזור מאסטר.',
+        confirmText: 'המשך',
+        type: 'success'
+      })
+      // המתן שהמשתמש יסגור את המודל ואז התחבר
+      setTimeout(() => {
+        onLogin()
+      }, 100)
       return
     }
 
@@ -107,7 +122,13 @@ function LoginPage({ onLogin }: LoginPageProps) {
         localStorage.setItem('loginLockUntil', lockUntil.toString())
         setIsLocked(true)
         setLockTimer(300)
-        alert('🔒 יותר מדי ניסיונות שגויים!\n\nהמערכת ננעלה ל-5 דקות.')
+        setModalConfig({
+          isOpen: true,
+          title: '🔒 המערכת ננעלה',
+          message: 'יותר מדי ניסיונות שגויים!\n\nהמערכת ננעלה ל-5 דקות.\n\nתוכל לנסות שוב לאחר מכן או להשתמש בקוד שחזור.',
+          confirmText: 'הבנתי',
+          type: 'error'
+        })
       } else {
         // הצג רמז אם קיים
         const passwordHint = settings.passwordHint
@@ -256,6 +277,25 @@ function LoginPage({ onLogin }: LoginPageProps) {
             >
               {db.getSettings().appPassword ? '🔓 כניסה' : '✅ הגדר סיסמה'}
             </button>
+
+            {!db.getSettings().appPassword && (
+              <button
+                onClick={onLogin}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  fontSize: '16px',
+                  color: '#7f8c8d',
+                  background: 'transparent',
+                  border: '2px dashed #bdc3c7',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  marginBottom: '15px'
+                }}
+              >
+                ⏭️ דלג לעת עתה
+              </button>
+            )}
 
             {db.getSettings().appPassword && (
               <button

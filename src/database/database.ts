@@ -30,6 +30,7 @@ export interface DatabaseLoan {
   isRecurring?: boolean // האם הלוואה מחזורית
   recurringDay?: number // יום בחודש להלוואה מחזורית (1-31)
   recurringMonths?: number // כמה חודשים ההלוואה המחזורית תמשך
+  lastRecurringDate?: string // תאריך ההלוואה המחזורית האחרונה שנוצרה
   autoPayment?: boolean // פרעון אוטומטי
   autoPaymentAmount?: number // סכום פרעון אוטומטי
   autoPaymentDay?: number // יום בחודש לפרעון אוטומטי
@@ -427,6 +428,7 @@ class GemachDatabase {
     this.migrateRequireIdNumberSetting()
     this.updateTextsToNewDefaults() // עדכון טקסטים לברירות מחדל חדשות
     this.migrateLoansToGuarantors() // מיגרציה של ערבים מהלוואות קיימות
+    this.processRecurringLoans() // עיבוד הלוואות מחזוריות אוטומטיות
     this.processRecurringDeposits() // עיבוד הפקדות מחזוריות אוטומטיות
   }
 
@@ -920,6 +922,120 @@ class GemachDatabase {
     // הצג הודעה למשתמש (תישמר ב-localStorage להצגה בממשק)
     const migrationMessage = `המערכת עודכנה! ${depositorsCreated} מפקידים ו-${depositsUpdated} הפקדות הומרו בהצלחה למבנה החדש.`
     localStorage.setItem('gemach_migration_message', migrationMessage)
+  }
+
+  // עיבוד הלוואות מחזוריות אוטומטיות
+  private processRecurringLoans(): void {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    let loansCreated = 0
+    
+    // מצא את כל ההלוואות המחזוריות הפעילות
+    const recurringLoans = this.dataFile.loans.filter(l => 
+      l.isRecurring && 
+      l.borrowerId && 
+      l.status === 'active' &&
+      (!l.recurringMonths || !l.lastRecurringDate || this.getRecurringLoansCount(l) < l.recurringMonths)
+    )
+
+    for (const recurringLoan of recurringLoans) {
+      // קבע את תאריך ההלוואה האחרונה שנוצרה
+      const lastDate = recurringLoan.lastRecurringDate 
+        ? new Date(recurringLoan.lastRecurringDate)
+        : new Date(recurringLoan.loanDate)
+      lastDate.setHours(0, 0, 0, 0)
+
+      // חשב את תאריך ההלוואה הבאה
+      let nextDate = new Date(lastDate)
+      
+      // אם זו הלוואה חדשה (אין lastRecurringDate) ויש יום ספציפי
+      if (!recurringLoan.lastRecurringDate && recurringLoan.recurringDay) {
+        // קבע את היום הספציפי בחודש הנוכחי
+        nextDate.setDate(recurringLoan.recurringDay)
+        
+        // אם היום הספציפי כבר עבר החודש, עבור לחודש הבא
+        if (nextDate <= lastDate) {
+          nextDate.setMonth(nextDate.getMonth() + 1)
+          nextDate.setDate(recurringLoan.recurringDay)
+        }
+      } else {
+        // הלוואה קיימת - פשוט הוסף חודש
+        nextDate.setMonth(nextDate.getMonth() + 1)
+        
+        // אם יש יום ספציפי בחודש, השתמש בו
+        if (recurringLoan.recurringDay) {
+          nextDate.setDate(recurringLoan.recurringDay)
+        }
+      }
+
+      // בדוק אם הגיע הזמן ליצור הלוואה חדשה
+      if (nextDate <= today) {
+        // בדוק אם לא עברנו את מספר החודשים המקסימלי
+        if (recurringLoan.recurringMonths) {
+          const loansCount = this.getRecurringLoansCount(recurringLoan)
+          if (loansCount >= recurringLoan.recurringMonths) {
+            continue
+          }
+        }
+
+        // קבל את פרטי הלווה
+        const borrower = this.dataFile.borrowers.find(b => b.id === recurringLoan.borrowerId)
+        if (!borrower) continue
+
+        // חשב תאריך החזרה (חודש אחד קדימה מתאריך ההלוואה)
+        const returnDate = new Date(nextDate)
+        returnDate.setMonth(returnDate.getMonth() + 1)
+
+        // צור הלוואה חדשה
+        const newLoan: DatabaseLoan = {
+          id: this.getNextId(this.dataFile.loans),
+          borrowerId: recurringLoan.borrowerId,
+          amount: recurringLoan.amount,
+          loanDate: nextDate.toISOString().split('T')[0],
+          returnDate: returnDate.toISOString().split('T')[0],
+          loanType: recurringLoan.loanType,
+          notes: `${recurringLoan.notes || ''} (הלוואה מחזורית אוטומטית)`.trim(),
+          status: 'active',
+          createdDate: new Date().toISOString(),
+          guarantor1: recurringLoan.guarantor1 || '',
+          guarantor2: recurringLoan.guarantor2 || '',
+          guarantor1Id: recurringLoan.guarantor1Id,
+          guarantor2Id: recurringLoan.guarantor2Id,
+          // לא מעתיק את השדות המחזוריים - זו הלוואה רגילה
+          isRecurring: false
+        }
+
+        this.dataFile.loans.push(newLoan)
+        
+        // עדכן את תאריך ההלוואה האחרונה בהלוואה המקורית
+        recurringLoan.lastRecurringDate = nextDate.toISOString().split('T')[0]
+        
+        loansCreated++
+        console.log(`✅ נוצרה הלוואה מחזורית אוטומטית: ₪${newLoan.amount} ללווה ${borrower.firstName} ${borrower.lastName}`)
+      }
+    }
+
+    if (loansCreated > 0) {
+      this.saveData()
+      console.log(`🔄 נוצרו ${loansCreated} הלוואות מחזוריות אוטומטיות`)
+    }
+  }
+
+  // ספירת הלוואות מחזוריות שנוצרו
+  private getRecurringLoansCount(recurringLoan: DatabaseLoan): number {
+    if (!recurringLoan.lastRecurringDate) {
+      return 1 // ההלוואה המקורית
+    }
+    
+    const originalDate = new Date(recurringLoan.loanDate)
+    const lastDate = new Date(recurringLoan.lastRecurringDate)
+    
+    // חשב כמה חודשים עברו
+    const monthsDiff = (lastDate.getFullYear() - originalDate.getFullYear()) * 12 + 
+                       (lastDate.getMonth() - originalDate.getMonth())
+    
+    return monthsDiff + 1 // +1 כי אנחנו כוללים את ההלוואה המקורית
   }
 
   // עיבוד הפקדות מחזוריות אוטומטיות

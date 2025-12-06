@@ -390,14 +390,16 @@ function HomePage() {
             </button>
           </div>
         ) : (
-          <h1
-            onClick={() => setIsEditingHeader(true)}
-            style={{ cursor: 'pointer', position: 'relative' }}
-            title="לחץ לעריכת הכותרת"
-          >
-            {headerTitle}
-            <span style={{ fontSize: '14px', marginLeft: '10px', opacity: 0.7 }}>✏️</span>
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', justifyContent: 'center' }}>
+            <h1
+              onClick={() => setIsEditingHeader(true)}
+              style={{ cursor: 'pointer', position: 'relative', margin: 0 }}
+              title="לחץ לעריכת הכותרת"
+            >
+              {headerTitle}
+              <span style={{ fontSize: '14px', marginLeft: '10px', opacity: 0.7 }}>✏️</span>
+            </h1>
+          </div>
         )}
       </header>
 

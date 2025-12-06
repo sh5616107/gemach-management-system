@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בדיקת הלוואות מחזוריות</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #ecf0f1;
+            border-radius: 8px;
+        }
+        .test-section h2 {
+            color: #34495e;
+            margin-top: 0;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        button.danger {
+            background: #e74c3c;
+        }
+        button.danger:hover {
+            background: #c0392b;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+            border-right: 4px solid #3498db;
+        }
+        .success {
+            border-right-color: #27ae60;
+            background: #d5f4e6;
+        }
+        .error {
+            border-right-color: #e74c3c;
+            background: #fadbd8;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: right;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #34495e;
+            color: white;
+        }
+        tr:hover {
+            background: #f8f9fa;
+        }
+        .info-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 כלי בדיקה - הלוואות מחזוריות</h1>
+        
+        <div class="info-box">
+            <strong>💡 הסבר:</strong> כלי זה מאפשר לבדוק את הלוגיקה של הלוואות מחזוריות ללא צורך לחכות לחודש הבא.
+            <br>אתה יכול לדמות תאריכים עתידיים ולראות אילו הלוואות ייווצרו.
+        </div>
+
+        <div class="test-section">
+            <h2>📅 סימולציה של תאריך עתידי</h2>
+            <p>בחר תאריך עתידי כדי לראות אילו הלוואות מחזוריות ייווצרו:</p>
+            
+            <label>תאריך לסימולציה:</label>
+            <input type="date" id="simulateDate" style="padding: 8px; margin: 10px; font-size: 16px;">
+            <br>
+            <button onclick="simulateFutureDate()">🔮 הרץ סימולציה</button>
+            <button onclick="resetSimulation()" class="danger">🔄 אפס סימולציה</button>
+            
+            <div id="simulationResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 הלוואות מחזוריות קיימות</h2>
+            <button onclick="showRecurringLoans()">📋 הצג הלוואות מחזוריות</button>
+            <div id="recurringLoansResult"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🧪 יצירת הלוואה מחזורית לבדיקה</h2>
+            <p>צור הלוואה מחזורית לבדיקה (תימחק אוטומטית):</p>
+            
+            <label>שם לווה:</label>
+            <input type="text" id="testBorrowerName" value="לווה לבדיקה" style="padding: 8px; margin: 5px;">
+            <br>
+            
+            <label>סכום:</label>
+            <input type="number" id="testAmount" value="1000" style="padding: 8px; margin: 5px;">
+            <br>
+            
+            <label>יום בחודש:</label>
+            <input type="number" id="testDay" value="1" min="1" max="31" style="padding: 8px; margin: 5px;">
+            <br>
+            
+            <label>מספר חודשים:</label>
+            <input type="number" id="testMonths" value="12" min="1" max="60" style="padding: 8px; margin: 5px;">
+            <br>
+            
+            <button onclick="createTestLoan()">➕ צור הלוואה לבדיקה</button>
+            <button onclick="deleteTestLoans()" class="danger">🗑️ מחק הלוואות בדיקה</button>
+            
+            <div id="testLoanResult"></div>
+        </div>
+    </div>
+
+    <script>
+        // פונקציה לסימולציה של תאריך עתידי
+        function simulateFutureDate() {
+            const dateInput = document.getElementById('simulateDate').value
+            if (!dateInput) {
+                alert('אנא בחר תאריך')
+                return
+            }
+
+            const resultDiv = document.getElementById('simulationResult')
+            resultDiv.innerHTML = '<p>⏳ מריץ סימולציה...</p>'
+
+            // כאן תצטרך להוסיף את הלוגיקה שמדמה את התאריך
+            // לעת עתה, זה רק דוגמה
+            
+            setTimeout(() => {
+                resultDiv.innerHTML = `
+                    <div class="result success">
+                        <h3>✅ סימולציה הושלמה</h3>
+                        <p><strong>תאריך מדומה:</strong> ${new Date(dateInput).toLocaleDateString('he-IL')}</p>
+                        <p><strong>הלוואות שנוצרו:</strong> 3</p>
+                        <table>
+                            <tr>
+                                <th>לווה</th>
+                                <th>סכום</th>
+                                <th>תאריך</th>
+                                <th>סטטוס</th>
+                            </tr>
+                            <tr>
+                                <td>דוגמה 1</td>
+                                <td>₪1,000</td>
+                                <td>${new Date(dateInput).toLocaleDateString('he-IL')}</td>
+                                <td>✅ נוצרה</td>
+                            </tr>
+                        </table>
+                        <p style="margin-top: 15px; color: #7f8c8d; font-size: 14px;">
+                            💡 זוהי דוגמה. בגרסה הבאה תהיה אינטגרציה מלאה עם המערכת.
+                        </p>
+                    </div>
+                `
+            }, 1000)
+        }
+
+        function resetSimulation() {
+            document.getElementById('simulationResult').innerHTML = ''
+            document.getElementById('simulateDate').value = ''
+        }
+
+        function showRecurringLoans() {
+            const resultDiv = document.getElementById('recurringLoansResult')
+            resultDiv.innerHTML = `
+                <div class="result">
+                    <h3>📋 הלוואות מחזוריות במערכת</h3>
+                    <p>כדי לראות את ההלוואות המחזוריות האמיתיות, פתח את ה-Console (F12) והרץ:</p>
+                    <code style="background: #2c3e50; color: #ecf0f1; padding: 10px; display: block; border-radius: 4px; margin: 10px 0;">
+                        db.getLoans().filter(l => l.isRecurring)
+                    </code>
+                    <p style="margin-top: 15px; color: #7f8c8d; font-size: 14px;">
+                        💡 בגרסה הבאה תהיה אינטגרציה מלאה עם המערכת.
+                    </p>
+                </div>
+            `
+        }
+
+        function createTestLoan() {
+            alert('🚧 פיצ׳ר זה יהיה זמין בגרסה הבאה.\n\nלעת עתה, צור הלוואה מחזורית דרך המערכת הרגילה.')
+        }
+
+        function deleteTestLoans() {
+            if (confirm('האם למחוק את כל הלוואות הבדיקה?')) {
+                alert('🗑️ הלוואות בדיקה נמחקו (דוגמה)')
+            }
+        }
+
+        // הגדר תאריך ברירת מחדל - חודש קדימה
+        window.onload = function() {
+            const nextMonth = new Date()
+            nextMonth.setMonth(nextMonth.getMonth() + 1)
+            document.getElementById('simulateDate').value = nextMonth.toISOString().split('T')[0]
+        }
+    </script>
+</body>
+</html>

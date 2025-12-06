@@ -7,11 +7,13 @@ interface LoginPageProps {
 
 function LoginPage({ onLogin }: LoginPageProps) {
   const [password, setPassword] = useState('')
+  const [passwordHint, setPasswordHint] = useState('')
   const [showRecovery, setShowRecovery] = useState(false)
   const [recoveryCode, setRecoveryCode] = useState('')
   const [attempts, setAttempts] = useState(0)
   const [isLocked, setIsLocked] = useState(false)
   const [lockTimer, setLockTimer] = useState(0)
+  const [dontShowAgain, setDontShowAgain] = useState(false)
   
   // State למודלים
   const [modalConfig, setModalConfig] = useState<{
@@ -89,7 +91,10 @@ function LoginPage({ onLogin }: LoginPageProps) {
         return
       }
       
-      db.updateSettings({ appPassword: password })
+      db.updateSettings({ 
+        appPassword: password,
+        passwordHint: passwordHint.trim() || undefined
+      })
       setModalConfig({
         isOpen: true,
         title: '✅ הסיסמה נשמרה בהצלחה',
@@ -242,6 +247,42 @@ function LoginPage({ onLogin }: LoginPageProps) {
               />
             </div>
 
+            {!db.getSettings().appPassword && (
+              <div style={{ marginBottom: '20px' }}>
+                <label style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  color: '#2c3e50',
+                  fontWeight: 'bold'
+                }}>
+                  רמז לסיסמה (אופציונלי):
+                </label>
+                <input
+                  type="text"
+                  value={passwordHint}
+                  onChange={(e) => setPasswordHint(e.target.value)}
+                  placeholder="למשל: שם הכלב שלי..."
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    fontSize: '14px',
+                    border: '2px solid #ddd',
+                    borderRadius: '8px',
+                    boxSizing: 'border-box',
+                    textAlign: 'right'
+                  }}
+                />
+                <p style={{ 
+                  fontSize: '12px', 
+                  color: '#666', 
+                  margin: '5px 0 0 0',
+                  textAlign: 'right'
+                }}>
+                  💡 הרמז יוצג אם תשכח את הסיסמה
+                </p>
+              </div>
+            )}
+
             {isLocked && (
               <div style={{
                 background: '#fee',
@@ -279,22 +320,48 @@ function LoginPage({ onLogin }: LoginPageProps) {
             </button>
 
             {!db.getSettings().appPassword && (
-              <button
-                onClick={onLogin}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  fontSize: '16px',
-                  color: '#7f8c8d',
-                  background: 'transparent',
-                  border: '2px dashed #bdc3c7',
-                  borderRadius: '8px',
+              <>
+                <button
+                  onClick={() => {
+                    if (dontShowAgain) {
+                      localStorage.setItem('skipPasswordSetup', 'true')
+                    }
+                    onLogin()
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    fontSize: '16px',
+                    color: '#7f8c8d',
+                    background: 'transparent',
+                    border: '2px dashed #bdc3c7',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    marginBottom: '10px'
+                  }}
+                >
+                  ⏭️ דלג לעת עתה
+                </button>
+                
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  fontSize: '14px',
+                  color: '#666',
                   cursor: 'pointer',
                   marginBottom: '15px'
-                }}
-              >
-                ⏭️ דלג לעת עתה
-              </button>
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={dontShowAgain}
+                    onChange={(e) => setDontShowAgain(e.target.checked)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <span>אל תבקש ממני להגדיר סיסמה שוב</span>
+                </label>
+              </>
             )}
 
             {db.getSettings().appPassword && (

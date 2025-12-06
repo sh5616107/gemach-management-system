@@ -36,9 +36,10 @@ function App() {
   // בדיקה אם המשתמש מחובר
   useEffect(() => {
     const sessionToken = sessionStorage.getItem('gemach_session')
+    const skipPasswordSetup = localStorage.getItem('skipPasswordSetup')
     
-    // בדוק רק אם יש טוקן סשן תקף
-    if (sessionToken === 'authenticated') {
+    // בדוק רק אם יש טוקן סשן תקף או אם המשתמש בחר לדלג על הגדרת סיסמה
+    if (sessionToken === 'authenticated' || skipPasswordSetup === 'true') {
       setIsLoggedIn(true)
     }
     

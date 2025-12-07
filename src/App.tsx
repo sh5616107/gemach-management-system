@@ -1,5 +1,6 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
+import { STORAGE_KEYS } from './utils/constants'
 // CSS נטען דינמית לפי מצב ביצועים - לא מייבאים כאן!
 import LoginPage from './pages/LoginPage'
 import LoginPageAPI from './pages/LoginPageAPI'
@@ -35,8 +36,8 @@ function App() {
 
   // בדיקה אם המשתמש מחובר
   useEffect(() => {
-    const sessionToken = sessionStorage.getItem('gemach_session')
-    const skipPasswordSetup = localStorage.getItem('skipPasswordSetup')
+    const sessionToken = sessionStorage.getItem(STORAGE_KEYS.SESSION)
+    const skipPasswordSetup = localStorage.getItem(STORAGE_KEYS.SKIP_PASSWORD_SETUP)
     
     // בדוק רק אם יש טוקן סשן תקף או אם המשתמש בחר לדלג על הגדרת סיסמה
     if (sessionToken === 'authenticated' || skipPasswordSetup === 'true') {
@@ -47,19 +48,12 @@ function App() {
   }, [])
 
   const handleLogin = () => {
-    sessionStorage.setItem('gemach_session', 'authenticated')
+    sessionStorage.setItem(STORAGE_KEYS.SESSION, 'authenticated')
     setIsLoggedIn(true)
   }
 
   // אופטימיזציה לטעינה באלקטרון
   useEffect(() => {
-    // סמן שהאפליקציה נטענה
-    document.body.classList.add('loaded')
-  }, [])
-
-  // אופטימיזציה לטעינה באלקטרון
-  useEffect(() => {
-    // סמן שהאפליקציה נטענה
     document.body.classList.add('loaded')
   }, [])
 

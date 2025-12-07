@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { db } from '../database/database'
+import { TIME, STORAGE_KEYS, VALIDATION } from '../utils/constants'
 
 interface LoginPageProps {
   onLogin: () => void
@@ -40,16 +41,16 @@ function LoginPage({ onLogin }: LoginPageProps) {
 
   // בדיקת נעילה
   useEffect(() => {
-    const lockUntil = localStorage.getItem('loginLockUntil')
+    const lockUntil = localStorage.getItem(STORAGE_KEYS.LOGIN_LOCK_UNTIL)
     if (lockUntil) {
       const lockTime = parseInt(lockUntil)
       const now = Date.now()
       if (now < lockTime) {
         setIsLocked(true)
-        setLockTimer(Math.ceil((lockTime - now) / 1000))
+        setLockTimer(Math.ceil((lockTime - now) / TIME.SECOND))
       } else {
-        localStorage.removeItem('loginLockUntil')
-        localStorage.removeItem('loginAttempts')
+        localStorage.removeItem(STORAGE_KEYS.LOGIN_LOCK_UNTIL)
+        localStorage.removeItem(STORAGE_KEYS.LOGIN_ATTEMPTS)
       }
     }
   }, [])
@@ -62,10 +63,10 @@ function LoginPage({ onLogin }: LoginPageProps) {
         if (lockTimer === 1) {
           setIsLocked(false)
           setAttempts(0)
-          localStorage.removeItem('loginLockUntil')
-          localStorage.removeItem('loginAttempts')
+          localStorage.removeItem(STORAGE_KEYS.LOGIN_LOCK_UNTIL)
+          localStorage.removeItem(STORAGE_KEYS.LOGIN_ATTEMPTS)
         }
-      }, 1000)
+      }, TIME.SECOND)
       return () => clearTimeout(timer)
     }
   }, [lockTimer])
@@ -80,7 +81,7 @@ function LoginPage({ onLogin }: LoginPageProps) {
 
     // אם אין סיסמה שמורה, זו הגדרה ראשונה
     if (!savedPassword) {
-      if (password.length < 4) {
+      if (password.length < VALIDATION.MIN_PASSWORD_LENGTH) {
         setModalConfig({
           isOpen: true,
           title: '⚠️ סיסמה קצרה מדי',
@@ -113,18 +114,18 @@ function LoginPage({ onLogin }: LoginPageProps) {
     if (password === savedPassword) {
       // סיסמה נכונה
       setAttempts(0)
-      localStorage.removeItem('loginAttempts')
+      localStorage.removeItem(STORAGE_KEYS.LOGIN_ATTEMPTS)
       onLogin()
     } else {
       // סיסמה שגויה
       const newAttempts = attempts + 1
       setAttempts(newAttempts)
-      localStorage.setItem('loginAttempts', newAttempts.toString())
+      localStorage.setItem(STORAGE_KEYS.LOGIN_ATTEMPTS, newAttempts.toString())
 
-      if (newAttempts >= 5) {
+      if (newAttempts >= TIME.MAX_LOGIN_ATTEMPTS) {
         // נעילה ל-5 דקות
-        const lockUntil = Date.now() + (5 * 60 * 1000)
-        localStorage.setItem('loginLockUntil', lockUntil.toString())
+        const lockUntil = Date.now() + TIME.LOGIN_LOCK_DURATION
+        localStorage.setItem(STORAGE_KEYS.LOGIN_LOCK_UNTIL, lockUntil.toString())
         setIsLocked(true)
         setLockTimer(300)
         setModalConfig({
@@ -137,7 +138,7 @@ function LoginPage({ onLogin }: LoginPageProps) {
       } else {
         // הצג רמז אם קיים
         const passwordHint = settings.passwordHint
-        let message = `הסיסמה שהזנת אינה נכונה.\n\nנותרו ${5 - newAttempts} ניסיונות לפני נעילה.`
+        let message = `הסיסמה שהזנת אינה נכונה.\n\nנותרו ${TIME.MAX_LOGIN_ATTEMPTS - newAttempts} ניסיונות לפני נעילה.`
         
         if (passwordHint && passwordHint.trim() !== '') {
           message += `\n\n💡 רמז: ${passwordHint}`
@@ -163,8 +164,8 @@ function LoginPage({ onLogin }: LoginPageProps) {
       db.updateSettings({ appPassword: '' })
       setAttempts(0)
       setIsLocked(false)
-      localStorage.removeItem('loginAttempts')
-      localStorage.removeItem('loginLockUntil')
+      localStorage.removeItem(STORAGE_KEYS.LOGIN_ATTEMPTS)
+      localStorage.removeItem(STORAGE_KEYS.LOGIN_LOCK_UNTIL)
       setShowRecovery(false)
       setRecoveryCode('')
       setModalConfig({
@@ -230,7 +231,7 @@ function LoginPage({ onLogin }: LoginPageProps) {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && !isLocked && handleLogin()}
+                onKeyDown={(e) => e.key === 'Enter' && !isLocked && handleLogin()}
                 disabled={isLocked}
                 placeholder="הזן סיסמה..."
                 style={{
@@ -324,7 +325,7 @@ function LoginPage({ onLogin }: LoginPageProps) {
                 <button
                   onClick={() => {
                     if (dontShowAgain) {
-                      localStorage.setItem('skipPasswordSetup', 'true')
+                      localStorage.setItem(STORAGE_KEYS.SKIP_PASSWORD_SETUP, 'true')
                     }
                     onLogin()
                   }}
@@ -421,7 +422,7 @@ function LoginPage({ onLogin }: LoginPageProps) {
                 type="text"
                 value={recoveryCode}
                 onChange={(e) => setRecoveryCode(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleRecovery()}
+                onKeyDown={(e) => e.key === 'Enter' && handleRecovery()}
                 placeholder="הזן קוד בן 6 ספרות..."
                 maxLength={6}
                 style={{

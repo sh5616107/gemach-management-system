@@ -1,4 +1,4 @@
-// מסד נתונים מקומי עם קובץ JSON
+// מסד נתונים מקומי עם קובץ JSON ושמירה לקובץ ב-Electron
 
 export interface DatabaseBorrower {
   id: number
@@ -434,109 +434,154 @@ class GemachDatabase {
 
   private loadData(): void {
     try {
-      // נסה לטעון מ-localStorage
-      const borrowers = localStorage.getItem('gemach_borrowers')
-      const loans = localStorage.getItem('gemach_loans')
-      const deposits = localStorage.getItem('gemach_deposits')
-      const depositors = localStorage.getItem('gemach_depositors')
-      const donations = localStorage.getItem('gemach_donations')
-      const payments = localStorage.getItem('gemach_payments')
-      const withdrawals = localStorage.getItem('gemach_withdrawals')
-      const guarantors = localStorage.getItem('gemach_guarantors')
-      const blacklist = localStorage.getItem('gemach_blacklist')
-      const warningLetters = localStorage.getItem('gemach_warning_letters')
-      const guarantorDebts = localStorage.getItem('gemach_guarantor_debts')
-      const expenses = localStorage.getItem('gemach_expenses')
-
-      const gemachName = localStorage.getItem('gemach_name')
-      const gemachLogo = localStorage.getItem('gemach_logo')
-      const settings = localStorage.getItem('gemach_settings')
-      const masavSettings = localStorage.getItem('gemach_masav_settings')
-
-      this.dataFile = {
-        borrowers: borrowers ? JSON.parse(borrowers) : [],
-        loans: loans ? JSON.parse(loans) : [],
-        deposits: deposits ? JSON.parse(deposits) : [],
-        depositors: depositors ? JSON.parse(depositors) : [],
-        donations: donations ? JSON.parse(donations) : [],
-        payments: payments ? JSON.parse(payments) : [],
-        withdrawals: withdrawals ? JSON.parse(withdrawals) : [],
-        guarantors: guarantors ? JSON.parse(guarantors) : [],
-        blacklist: blacklist ? JSON.parse(blacklist) : [],
-        warningLetters: warningLetters ? JSON.parse(warningLetters) : [],
-        guarantorDebts: guarantorDebts ? JSON.parse(guarantorDebts) : [],
-        expenses: expenses ? JSON.parse(expenses) : [],
-        masavFiles: [],
-        masavSettings: masavSettings ? JSON.parse(masavSettings) : undefined,
-        lastUpdated: new Date().toISOString(),
-        gemachName: gemachName || 'נר שרה',
-        gemachLogo: gemachLogo || undefined,
-        settings: (settings && settings !== 'undefined') ? JSON.parse(settings) : {
-          currency: 'ILS',
-          currencySymbol: '₪',
-          autoExport: false,
-          exportFrequency: 'weekly',
-          showOverdueWarnings: true,
-          defaultLoanPeriod: 12,
-          theme: 'light',
-          customBackgroundColor: '#87CEEB',
-          headerTitle: 'מערכת לניהול גמ"ח כספים',
-          footerText: 'אמר רבי אבא אמר רבי שמעון בן לקיש גדול המלוה יותר מן העושה צדקה (שבת סג.)',
-          contactText: 'ניתן להפצה לזיכוי הרבים\n⭐ עולם חסד יבנה',
-          enableRecurringLoans: false,
-          enableRecurringPayments: false,
-          requireIdNumber: false,
-          showHebrewDates: false,
-          showDateWarnings: true,
-          trackPaymentMethods: false,
-          quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
-          enableMasav: false,
-          appPassword: '',
-          passwordHint: '',
-          enableCommission: false,
-          commissionType: 'percentage',
-          commissionValue: 0,
-          commissionAutoRecord: true
-        }
+      // בדוק אם יש electronAPI (רץ ב-Electron)
+      const electronAPI = (window as any).electronAPI
+      
+      // קודם נסה לטעון מקובץ ב-Electron
+      if (electronAPI && electronAPI.readDataFile) {
+        // טעינה אסינכרונית מקובץ - נעשה sync עם localStorage כגיבוי
+        electronAPI.readDataFile().then((result: any) => {
+          if (result.success && result.data) {
+            console.log('נתונים נטענו מקובץ Electron!')
+            this.loadFromData(result.data)
+            // סנכרן ל-localStorage כגיבוי
+            this.saveToLocalStorage()
+          } else {
+            console.log('אין קובץ נתונים, טוען מ-localStorage')
+            this.loadFromLocalStorage()
+          }
+        }).catch((err: any) => {
+          console.error('שגיאה בטעינה מקובץ:', err)
+          this.loadFromLocalStorage()
+        })
       }
-
-      console.log('נתונים נטענו:', {
-        borrowers: this.dataFile.borrowers.length,
-        loans: this.dataFile.loans.length,
-        deposits: this.dataFile.deposits.length,
-        donations: this.dataFile.donations.length,
-        payments: this.dataFile.payments.length
-      })
+      
+      // תמיד טען מ-localStorage קודם (סינכרוני)
+      this.loadFromLocalStorage()
+      
     } catch (error) {
       console.error('שגיאה בטעינת נתונים:', error)
+    }
+  }
+  
+  private loadFromLocalStorage(): void {
+    const borrowers = localStorage.getItem('gemach_borrowers')
+    const loans = localStorage.getItem('gemach_loans')
+    const deposits = localStorage.getItem('gemach_deposits')
+    const depositors = localStorage.getItem('gemach_depositors')
+    const donations = localStorage.getItem('gemach_donations')
+    const payments = localStorage.getItem('gemach_payments')
+    const withdrawals = localStorage.getItem('gemach_withdrawals')
+    const guarantors = localStorage.getItem('gemach_guarantors')
+    const blacklist = localStorage.getItem('gemach_blacklist')
+    const warningLetters = localStorage.getItem('gemach_warning_letters')
+    const guarantorDebts = localStorage.getItem('gemach_guarantor_debts')
+    const expenses = localStorage.getItem('gemach_expenses')
+
+    const gemachName = localStorage.getItem('gemach_name')
+    const gemachLogo = localStorage.getItem('gemach_logo')
+    const settings = localStorage.getItem('gemach_settings')
+    const masavSettings = localStorage.getItem('gemach_masav_settings')
+
+    this.dataFile = {
+      borrowers: borrowers ? JSON.parse(borrowers) : [],
+      loans: loans ? JSON.parse(loans) : [],
+      deposits: deposits ? JSON.parse(deposits) : [],
+      depositors: depositors ? JSON.parse(depositors) : [],
+      donations: donations ? JSON.parse(donations) : [],
+      payments: payments ? JSON.parse(payments) : [],
+      withdrawals: withdrawals ? JSON.parse(withdrawals) : [],
+      guarantors: guarantors ? JSON.parse(guarantors) : [],
+      blacklist: blacklist ? JSON.parse(blacklist) : [],
+      warningLetters: warningLetters ? JSON.parse(warningLetters) : [],
+      guarantorDebts: guarantorDebts ? JSON.parse(guarantorDebts) : [],
+      expenses: expenses ? JSON.parse(expenses) : [],
+      masavFiles: [],
+      masavSettings: masavSettings ? JSON.parse(masavSettings) : undefined,
+      lastUpdated: new Date().toISOString(),
+      gemachName: gemachName || 'נר שרה',
+      gemachLogo: gemachLogo || undefined,
+      settings: (settings && settings !== 'undefined') ? JSON.parse(settings) : this.getDefaultSettings()
+    }
+
+    console.log('נתונים נטענו מ-localStorage:', {
+      borrowers: this.dataFile.borrowers.length,
+      loans: this.dataFile.loans.length,
+      deposits: this.dataFile.deposits.length,
+      donations: this.dataFile.donations.length,
+      payments: this.dataFile.payments.length
+    })
+  }
+  
+  private loadFromData(data: any): void {
+    this.dataFile = {
+      borrowers: data.borrowers || [],
+      loans: data.loans || [],
+      deposits: data.deposits || [],
+      depositors: data.depositors || [],
+      donations: data.donations || [],
+      payments: data.payments || [],
+      withdrawals: data.withdrawals || [],
+      guarantors: data.guarantors || [],
+      blacklist: data.blacklist || [],
+      warningLetters: data.warningLetters || [],
+      guarantorDebts: data.guarantorDebts || [],
+      expenses: data.expenses || [],
+      masavFiles: data.masavFiles || [],
+      masavSettings: data.masavSettings || undefined,
+      lastUpdated: data.lastUpdated || new Date().toISOString(),
+      gemachName: data.gemachName || 'נר שרה',
+      gemachLogo: data.gemachLogo || undefined,
+      settings: data.settings || this.getDefaultSettings()
+    }
+    
+    console.log('נתונים נטענו מקובץ:', {
+      borrowers: this.dataFile.borrowers.length,
+      loans: this.dataFile.loans.length,
+      deposits: this.dataFile.deposits.length,
+      donations: this.dataFile.donations.length,
+      payments: this.dataFile.payments.length
+    })
+  }
+  
+  private getDefaultSettings(): DatabaseSettings {
+    return {
+      currency: 'ILS',
+      currencySymbol: '₪',
+      autoExport: false,
+      exportFrequency: 'weekly',
+      showOverdueWarnings: true,
+      defaultLoanPeriod: 12,
+      theme: 'light',
+      customBackgroundColor: '#87CEEB',
+      headerTitle: 'מערכת לניהול גמ"ח כספים',
+      footerText: 'אמר רבי אבא אמר רבי שמעון בן לקיש גדול המלוה יותר מן העושה צדקה (שבת סג.)',
+      contactText: 'ניתן להפצה לזיכוי הרבים\n⭐ עולם חסד יבנה',
+      enableRecurringLoans: false,
+      enableRecurringPayments: false,
+      requireIdNumber: false,
+      showHebrewDates: false,
+      showDateWarnings: true,
+      trackPaymentMethods: false,
+      quickActions: ['loans', 'deposits', 'donations', 'statistics', 'borrower-report', 'admin-tools'],
+      enableMasav: false,
+      appPassword: '',
+      passwordHint: '',
+      enableCommission: false,
+      commissionType: 'percentage',
+      commissionValue: 0,
+      commissionAutoRecord: true
     }
   }
 
   private saveData(): void {
     this.dataFile.lastUpdated = new Date().toISOString()
     try {
-      // שמור ב-localStorage
-      localStorage.setItem('gemach_borrowers', JSON.stringify(this.dataFile.borrowers))
-      localStorage.setItem('gemach_loans', JSON.stringify(this.dataFile.loans))
-      localStorage.setItem('gemach_deposits', JSON.stringify(this.dataFile.deposits))
-      localStorage.setItem('gemach_depositors', JSON.stringify(this.dataFile.depositors))
-      localStorage.setItem('gemach_donations', JSON.stringify(this.dataFile.donations))
-      localStorage.setItem('gemach_payments', JSON.stringify(this.dataFile.payments))
-      localStorage.setItem('gemach_withdrawals', JSON.stringify(this.dataFile.withdrawals))
-      localStorage.setItem('gemach_guarantors', JSON.stringify(this.dataFile.guarantors))
-      localStorage.setItem('gemach_blacklist', JSON.stringify(this.dataFile.blacklist))
-      localStorage.setItem('gemach_warning_letters', JSON.stringify(this.dataFile.warningLetters))
-      localStorage.setItem('gemach_guarantor_debts', JSON.stringify(this.dataFile.guarantorDebts))
-      localStorage.setItem('gemach_expenses', JSON.stringify(this.dataFile.expenses))
-      localStorage.setItem('gemach_name', this.dataFile.gemachName)
-      if (this.dataFile.gemachLogo) {
-        localStorage.setItem('gemach_logo', this.dataFile.gemachLogo)
-      }
-      localStorage.setItem('gemach_settings', JSON.stringify(this.dataFile.settings))
-      localStorage.setItem('gemach_masav_settings', JSON.stringify(this.dataFile.masavSettings))
-
-      // גם שמור את הקובץ המלא ב-localStorage לייצוא
-      localStorage.setItem('gemach_full_data', JSON.stringify(this.dataFile))
+      // שמור ב-localStorage (תמיד - כגיבוי)
+      this.saveToLocalStorage()
+      
+      // שמור גם לקובץ ב-Electron
+      this.saveToFile()
 
       console.log('נתונים נשמרו:', {
         borrowers: this.dataFile.borrowers.length,
@@ -554,6 +599,45 @@ class GemachDatabase {
       })
     } catch (error) {
       console.error('שגיאה בשמירת נתונים:', error)
+    }
+  }
+  
+  private saveToLocalStorage(): void {
+    localStorage.setItem('gemach_borrowers', JSON.stringify(this.dataFile.borrowers))
+    localStorage.setItem('gemach_loans', JSON.stringify(this.dataFile.loans))
+    localStorage.setItem('gemach_deposits', JSON.stringify(this.dataFile.deposits))
+    localStorage.setItem('gemach_depositors', JSON.stringify(this.dataFile.depositors))
+    localStorage.setItem('gemach_donations', JSON.stringify(this.dataFile.donations))
+    localStorage.setItem('gemach_payments', JSON.stringify(this.dataFile.payments))
+    localStorage.setItem('gemach_withdrawals', JSON.stringify(this.dataFile.withdrawals))
+    localStorage.setItem('gemach_guarantors', JSON.stringify(this.dataFile.guarantors))
+    localStorage.setItem('gemach_blacklist', JSON.stringify(this.dataFile.blacklist))
+    localStorage.setItem('gemach_warning_letters', JSON.stringify(this.dataFile.warningLetters))
+    localStorage.setItem('gemach_guarantor_debts', JSON.stringify(this.dataFile.guarantorDebts))
+    localStorage.setItem('gemach_expenses', JSON.stringify(this.dataFile.expenses))
+    localStorage.setItem('gemach_name', this.dataFile.gemachName)
+    if (this.dataFile.gemachLogo) {
+      localStorage.setItem('gemach_logo', this.dataFile.gemachLogo)
+    }
+    localStorage.setItem('gemach_settings', JSON.stringify(this.dataFile.settings))
+    localStorage.setItem('gemach_masav_settings', JSON.stringify(this.dataFile.masavSettings))
+
+    // גם שמור את הקובץ המלא ב-localStorage לייצוא
+    localStorage.setItem('gemach_full_data', JSON.stringify(this.dataFile))
+  }
+  
+  private saveToFile(): void {
+    const electronAPI = (window as any).electronAPI
+    if (electronAPI && electronAPI.saveDataFile) {
+      electronAPI.saveDataFile(this.dataFile).then((result: any) => {
+        if (result.success) {
+          console.log('נתונים נשמרו לקובץ בהצלחה!')
+        } else {
+          console.error('שגיאה בשמירה לקובץ:', result.error)
+        }
+      }).catch((err: any) => {
+        console.error('שגיאה בשמירה לקובץ:', err)
+      })
     }
   }
 

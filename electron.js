@@ -1,9 +1,44 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron')
 const { autoUpdater } = require('electron-updater')
 const path = require('path')
+const fs = require('fs')
 const isDev = require('electron-is-dev')
 
 let mainWindow
+
+// נתיב לקובץ הנתונים - בתיקיית userData של Electron (קבועה!)
+const getDataFilePath = () => {
+  const userDataPath = app.getPath('userData')
+  return path.join(userDataPath, 'gemach-data.json')
+}
+
+// פונקציה לקריאת נתונים מקובץ
+const readDataFromFile = () => {
+  try {
+    const filePath = getDataFilePath()
+    if (fs.existsSync(filePath)) {
+      const data = fs.readFileSync(filePath, 'utf8')
+      console.log('נתונים נקראו מקובץ:', filePath)
+      return JSON.parse(data)
+    }
+  } catch (error) {
+    console.error('שגיאה בקריאת קובץ נתונים:', error)
+  }
+  return null
+}
+
+// פונקציה לשמירת נתונים לקובץ
+const saveDataToFile = (data) => {
+  try {
+    const filePath = getDataFilePath()
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8')
+    console.log('נתונים נשמרו לקובץ:', filePath)
+    return true
+  } catch (error) {
+    console.error('שגיאה בשמירת קובץ נתונים:', error)
+    return false
+  }
+}
 
 // הגדרות auto-updater
 if (!isDev) {
@@ -242,6 +277,7 @@ function createWindow() {
       webSecurity: true,
       backgroundThrottling: false, // מונע האטה ברקע
       preload: path.join(__dirname, 'preload.js')
+      // הסרנו partition כי זה גרם לאיבוד נתונים - עכשיו שומרים לקובץ
     },
     icon: path.join(__dirname, 'assets/icon.png'),
     title: 'מערכת ניהול גמ"ח',
@@ -490,7 +526,7 @@ ${logsPath}
               type: 'info',
               title: 'אודות',
               message: 'מערכת ניהול גמ"ח',
-              detail: 'גרסה 2.9.57\nמערכת מקיפה לניהול גמילות חסדים\nכולל: הלוואות, פקדונות, תרומות ודוחות\nעם ניהול ערבים, רשימה שחורה ומכתבי התראה\n\n🆕 חדש בגרסה 2.9.57:\n• ⏭️ דלג על הגדרת סיסמה - אפשרות לדלג בהתקנה ראשונה\n• 💬 מודלים משופרים - כל ההודעות עכשיו לא חוסמות\n• 🔄 עדכונים אוטומטיים - תמיכה במאגר ציבורי\n\n🆕 חדש בגרסה 2.9.56:\n• 🔐 רמז לסיסמה - הוספת אפשרות לרמז שמוצג בעת סיסמה שגויה\n• 💬 מודלים למחיקה - הודעות מחיקה יפות שלא חוסמות\n• 🎨 שיפורי UX - חוויית משתמש משופרת\n• 🐛 תיקוני באגים - תיקון מחיקת מפקידים והפקדות\n\nהמערכת כוללת:\n✅ ניהול הלוואות, פקדונות ותרומות\n✅ ניהול ערבים ורשימה שחורה\n✅ תאריכים עבריים ולועזיים\n✅ דוחות וסטטיסטיקות מפורטים\n✅ הלוואות מחזוריות ופרעונות אוטומטיים\n\nפותח עבור קהילת הגמ"חים בישראל 🇮🇱'
+              detail: 'גרסה 2.9.58\nמערכת מקיפה לניהול גמילות חסדים\nכולל: הלוואות, פקדונות, תרומות ודוחות\nעם ניהול ערבים, רשימה שחורה ומכתבי התראה\n\n🆕 חדש בגרסה 2.9.58:\n• 💾 שמירת נתונים לקובץ - תיקון קריטי לאיבוד נתונים!\n• 📁 נתונים נשמרים בתיקיית userData של Electron\n• 🔄 גיבוי כפול - localStorage + קובץ\n\n🆕 חדש בגרסה 2.9.57:\n• ⏭️ דלג על הגדרת סיסמה - אפשרות לדלג בהתקנה ראשונה\n• 💬 מודלים משופרים - כל ההודעות עכשיו לא חוסמות\n• 🔄 עדכונים אוטומטיים - תמיכה במאגר ציבורי\n\nהמערכת כוללת:\n✅ ניהול הלוואות, פקדונות ותרומות\n✅ ניהול ערבים ורשימה שחורה\n✅ תאריכים עבריים ולועזיים\n✅ דוחות וסטטיסטיקות מפורטים\n✅ הלוואות מחזוריות ופרעונות אוטומטיים\n\nפותח עבור קהילת הגמ"חים בישראל 🇮🇱'
             })
           }
         }
@@ -683,6 +719,31 @@ function checkForUpdates() {
 ipcMain.handle('check-for-updates', async () => {
   checkForUpdates()
   return { success: true }
+})
+
+// IPC handlers לשמירה וקריאה של נתונים מקובץ
+ipcMain.handle('read-data-file', async () => {
+  try {
+    const data = readDataFromFile()
+    return { success: true, data }
+  } catch (error) {
+    console.error('שגיאה בקריאת נתונים:', error)
+    return { success: false, error: error.message }
+  }
+})
+
+ipcMain.handle('save-data-file', async (event, data) => {
+  try {
+    const success = saveDataToFile(data)
+    return { success }
+  } catch (error) {
+    console.error('שגיאה בשמירת נתונים:', error)
+    return { success: false, error: error.message }
+  }
+})
+
+ipcMain.handle('get-data-file-path', async () => {
+  return { path: getDataFilePath() }
 })
 
 // האפליקציה מוכנה

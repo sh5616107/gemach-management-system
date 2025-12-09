@@ -10,6 +10,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // פונקציות עדכון
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   
+  // פונקציות שמירה וקריאה של נתונים מקובץ
+  readDataFile: () => ipcRenderer.invoke('read-data-file'),
+  saveDataFile: (data) => ipcRenderer.invoke('save-data-file', data),
+  getDataFilePath: () => ipcRenderer.invoke('get-data-file-path'),
+  
+  
   // מידע על הסביבה
   isElectron: true,
   platform: process.platform,

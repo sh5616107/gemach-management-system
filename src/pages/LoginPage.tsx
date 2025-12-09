@@ -262,7 +262,7 @@ function LoginPage({ onLogin }: LoginPageProps) {
                   type="text"
                   value={passwordHint}
                   onChange={(e) => setPasswordHint(e.target.value)}
-                  placeholder="למשל: שם הכלב שלי..."
+                  placeholder="למשל: שם הילד שלי..."
                   style={{
                     width: '100%',
                     padding: '12px',

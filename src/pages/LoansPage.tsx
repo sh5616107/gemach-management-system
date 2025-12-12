@@ -1,12 +1,58 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { db, DatabaseLoan, DatabasePayment, DatabaseBorrower, DatabaseGuarantor, DatabaseGuarantorDebt } from '../database/database'
-import { dataService } from '../api/dataService'
+
 import NumberInput from '../components/NumberInput'
 import GuarantorDebtCard from '../components/GuarantorDebtCard'
 
 import { formatCombinedDate, formatHebrewDateOnly } from '../utils/hebrewDate'
 import BankBranchSelector from '../components/BankBranchSelector'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { formatDateForInput } from '../utils'
+import { formatDateForInput } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
+import { showNotification } from '../utils'
 
 function LoansPage() {
   const navigate = useNavigate()
@@ -822,18 +868,21 @@ function LoansPage() {
 
     if (selectedBorrowerId) {
       // עדכון לווה קיים
-      try {
-        await dataService.updateBorrower(selectedBorrowerId, currentBorrower as DatabaseBorrower)
-        showNotification('✅ פרטי הלווה עודכנו בהצלחה!')
-        loadData()
-      } catch (error: any) {
-        showNotification(`❌ ${error.response?.data?.error || error.message || 'שגיאה בעדכון לווה'}`, 'error')
+      const updateResult = db.updateBorrower(selectedBorrowerId, currentBorrower as DatabaseBorrower)
+      if ('error' in updateResult) {
+        showNotification(`❌ ${updateResult.error}`, 'error')
+        return
       }
+      showNotification('✅ פרטי הלווה עודכנו בהצלחה!')
+      loadData()
     } else {
       // הוספת לווה חדש
-      try {
-        const result = await dataService.createBorrower(currentBorrower)
-        setSelectedBorrowerId(result.id)
+      const result = db.addBorrower(currentBorrower as Omit<DatabaseBorrower, 'id'>)
+      if ('error' in result) {
+        showNotification(`❌ ${result.error}`, 'error')
+        return
+      }
+      setSelectedBorrowerId(result.id)
         // אפס את טופס ההלוואה עם הלווה החדש
         setCurrentLoan({
           borrowerId: result.id,
@@ -877,9 +926,6 @@ function LoansPage() {
         }, 50)
 
         loadData()
-      } catch (error: any) {
-        showNotification(`❌ ${error.response?.data?.error || error.message || 'שגיאה ביצירת לווה'}`, 'error')
-      }
     }
   }
 

@@ -9,7 +9,7 @@ on:
       version:
         description: 'Version number (e.g., v2.1.0)'
         required: true
-        default: 'v2.9.58'
+        default: 'v2.9.59'
 
 permissions:
   contents: write
@@ -52,13 +52,6 @@ jobs:
       run: |
         echo "Listing dist-electron directory:"
         dir dist-electron
-        
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: מערכת-ניהול-גמח-windows
-        path: |
-          dist-electron/*Setup*.exe
           
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
@@ -69,9 +62,9 @@ jobs:
         body: |
           ## 🏛️ מערכת ניהול גמ"ח - גרסה ${{ github.event.inputs.version || github.ref_name }}
           
-          ### 🔥 תיקון קריטי בגרסה 2.9.58:
-          - � נ**תיקון איבוד נתונים** - הנתונים נשמרים עכשיו לקובץ בדיסק
-          - 🔐 **תיקון לוגין** - שימוש בלוגין המקומי במקום לוגין הווב
+          ### 🔥 תיקון קריטי בגרסה 2.9.59:
+          - 🔧 **תיקון preload.js** - הקובץ נכלל עכשיו בבנייה
+          - 💾 **שמירה לקובץ עובדת** - הנתונים נשמרים לקובץ בדיסק
           - 🔄 **גיבוי כפול** - שמירה גם ב-localStorage וגם בקובץ
           
           ### ✨ תכונות עיקריות:

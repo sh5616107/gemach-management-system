@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react'
 import { STORAGE_KEYS } from './utils/constants'
 // CSS נטען דינמית לפי מצב ביצועים - לא מייבאים כאן!
 import LoginPage from './pages/LoginPage'
-import LoginPageAPI from './pages/LoginPageAPI'
 import HomePage from './pages/HomePage'
 import LoansPage from './pages/LoansPage'
 import DepositsPage from './pages/DepositsPage'
@@ -76,19 +75,7 @@ function App() {
 
   // אם לא מחובר, הצג מסך התחברות
   if (!isLoggedIn) {
-    // בדוק אם להשתמש ב-API או LocalStorage
-    const useAPI = import.meta.env.VITE_USE_API === 'true'
-    
-    console.log('🔐 Login Page Selection:')
-    console.log('  VITE_USE_API:', import.meta.env.VITE_USE_API)
-    console.log('  useAPI:', useAPI)
-    console.log('  Selected:', useAPI ? 'LoginPageAPI (Web)' : 'LoginPage (Electron)')
-    
-    if (useAPI) {
-      return <LoginPageAPI onLogin={handleLogin} />
-    } else {
-      return <LoginPage onLogin={handleLogin} />
-    }
+    return <LoginPage onLogin={handleLogin} />
   }
 
   return (

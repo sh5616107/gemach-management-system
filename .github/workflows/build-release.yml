@@ -9,7 +9,7 @@ on:
       version:
         description: 'Version number (e.g., v2.1.0)'
         required: true
-        default: 'v2.9.70'
+        default: 'v2.9.71'
 
 permissions:
   contents: write
@@ -89,6 +89,7 @@ jobs:
           **פותח עבור קהילת הגמ"חים בישראל 🇮🇱**
         files: |
           dist-electron/gemach-management-system-setup-*.exe
+          dist-electron/latest.yml
         draft: false
         prerelease: false
         fail_on_unmatched_files: false

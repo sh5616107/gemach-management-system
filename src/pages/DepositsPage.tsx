@@ -158,6 +158,249 @@ function DepositsPage() {
     setWithdrawingDeposit({ id: depositId, balance: availableBalance })
   }
 
+  // פונקציה לביצוע משיכה מרובה
+  const performMultipleWithdrawal = (activeDeposits: any[], amount: number, paymentMethod?: string, paymentDetails?: string) => {
+    let remainingAmount = amount
+    
+    // עבור על ההפקדות לפי סדר (מהישנה לחדשה) ומשוך מכל אחת
+    for (const deposit of activeDeposits) {
+      if (remainingAmount <= 0) break
+      
+      const withdrawnAmount = db.getTotalWithdrawnAmount(deposit.id)
+      const balance = deposit.amount - withdrawnAmount
+      
+      if (balance <= 0) continue
+      
+      const withdrawAmount = Math.min(balance, remainingAmount)
+      
+      db.addWithdrawal({
+        depositId: deposit.id,
+        amount: withdrawAmount,
+        date: new Date().toISOString().split('T')[0],
+        paymentMethod: paymentMethod as 'cash' | 'transfer' | 'check' | 'credit' | 'other' | undefined,
+        paymentDetails: paymentDetails || undefined,
+        notes: `משיכה מרובה - חלק מ-₪${amount.toLocaleString()}`
+      })
+      
+      remainingAmount -= withdrawAmount
+      
+      // בדוק אם ההפקדה נמשכה במלואה
+      const newBalance = balance - withdrawAmount
+      if (newBalance <= 0) {
+        db.updateDeposit(deposit.id, { status: 'withdrawn' })
+      }
+    }
+    
+    showNotification(`✅ משיכה מרובה בוצעה בהצלחה!<br>סכום: ₪${amount.toLocaleString()}`)
+    loadDepositors()
+    // עדכן את המפקיד הנבחר כדי לרענן את התצוגה
+    if (selectedDepositor) {
+      const updated = db.getDepositorById(selectedDepositor.id)
+      if (updated) setSelectedDepositor({...updated})
+    }
+  }
+
+  // פונקציה להצגת מודל משיכה מרובה
+  const showMultipleWithdrawalModal = () => {
+    if (!selectedDepositor) return
+    
+    const deposits = db.getDepositorDeposits(selectedDepositor.id)
+    const activeDeposits = deposits.filter(d => {
+      const withdrawn = db.getTotalWithdrawnAmount(d.id)
+      return d.amount - withdrawn > 0
+    }).sort((a, b) => new Date(a.depositDate).getTime() - new Date(b.depositDate).getTime())
+    
+    if (activeDeposits.length === 0) {
+      showNotification('❌ אין הפקדות פעילות למשיכה', 'error')
+      return
+    }
+    
+    const totalBalance = activeDeposits.reduce((sum, d) => {
+      const withdrawn = db.getTotalWithdrawnAmount(d.id)
+      return sum + (d.amount - withdrawn)
+    }, 0)
+    
+    let withdrawalMethod = ''
+    let withdrawalDetails = ''
+    
+    const modalContent = document.createElement('div')
+    modalContent.innerHTML = `
+      <div style="
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5); display: flex; align-items: center;
+        justify-content: center; z-index: 10000;
+      ">
+        <div style="
+          background: white; border-radius: 10px; padding: 30px;
+          max-width: 500px; width: 90%; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        ">
+          <h3 style="margin-bottom: 20px; color: #3498db; text-align: center;">💸 משיכה מרובה</h3>
+          
+          <p style="margin-bottom: 15px; text-align: center;">
+            הפקדות פעילות: ${activeDeposits.length}<br>
+            יתרה כוללת: ₪${totalBalance.toLocaleString()}
+          </p>
+          
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">סכום למשיכה:</label>
+            <input type="number" id="multipleWithdrawalAmount" placeholder="הכנס סכום" style="
+              width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px;
+              font-size: 16px; text-align: center; box-sizing: border-box;
+            " max="${totalBalance}" />
+          </div>
+          
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: bold;">אמצעי משיכה:</label>
+            <select id="multipleWithdrawalMethodSelect" style="
+              width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 5px; font-size: 14px;
+            ">
+              <option value="">בחר אמצעי תשלום</option>
+              <option value="cash">מזומן</option>
+              <option value="transfer">העברה בנקאית</option>
+              <option value="check">צ'ק</option>
+              <option value="other">אחר</option>
+            </select>
+          </div>
+          
+          <div id="multipleWithdrawalDetailsContainer" style="margin-bottom: 15px; display: none;">
+          </div>
+          
+          <div style="display: flex; gap: 15px; justify-content: center; margin-top: 20px;">
+            <button id="confirmMultipleWithdrawal" style="
+              background: #3498db; color: white; border: none; padding: 12px 24px;
+              border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold;
+            ">בצע משיכה מרובה</button>
+            <button id="cancelMultipleWithdrawal" style="
+              background: #95a5a6; color: white; border: none; padding: 12px 24px;
+              border-radius: 5px; font-size: 16px; cursor: pointer;
+            ">ביטול</button>
+          </div>
+        </div>
+      </div>
+    `
+    
+    document.body.appendChild(modalContent)
+    
+    const amountInput = modalContent.querySelector('#multipleWithdrawalAmount') as HTMLInputElement
+    const methodSelect = modalContent.querySelector('#multipleWithdrawalMethodSelect') as HTMLSelectElement
+    const detailsContainer = modalContent.querySelector('#multipleWithdrawalDetailsContainer') as HTMLDivElement
+    const confirmBtn = modalContent.querySelector('#confirmMultipleWithdrawal') as HTMLButtonElement
+    const cancelBtn = modalContent.querySelector('#cancelMultipleWithdrawal') as HTMLButtonElement
+    
+    amountInput.focus()
+    
+    // אירוע שינוי אמצעי תשלום
+    methodSelect.addEventListener('change', (e) => {
+      const method = (e.target as HTMLSelectElement).value
+      withdrawalMethod = method
+      
+      if (method && detailsContainer) {
+        detailsContainer.style.display = 'block'
+        detailsContainer.innerHTML = getPaymentDetailsHTML(method)
+        addPaymentDetailsListeners(detailsContainer, method, (details) => {
+          withdrawalDetails = details
+        })
+      } else if (detailsContainer) {
+        detailsContainer.style.display = 'none'
+      }
+    })
+    
+    // אישור משיכה
+    confirmBtn.addEventListener('click', () => {
+      const amount = Number(amountInput.value)
+      
+      if (!amount || amount <= 0) {
+        showNotification('❌ יש להזין סכום תקין', 'error')
+        return
+      }
+      
+      if (amount > totalBalance) {
+        showNotification(`❌ הסכום גדול מהיתרה הכוללת (₪${totalBalance.toLocaleString()})`, 'error')
+        return
+      }
+      
+      performMultipleWithdrawal(activeDeposits, amount, withdrawalMethod || undefined, withdrawalDetails || undefined)
+      document.body.removeChild(modalContent)
+    })
+    
+    // ביטול
+    cancelBtn.addEventListener('click', () => {
+      document.body.removeChild(modalContent)
+    })
+    
+    // סגירה בלחיצה על הרקע
+    modalContent.addEventListener('click', (e) => {
+      if (e.target === modalContent.firstElementChild) {
+        document.body.removeChild(modalContent)
+      }
+    })
+  }
+  
+  // פונקציה ליצירת HTML לפרטי תשלום
+  const getPaymentDetailsHTML = (method: string): string => {
+    switch (method) {
+      case 'check':
+        return `
+          <div style="background: #f8f9fa; padding: 15px; border-radius: 5px;">
+            <label style="display: block; margin-bottom: 5px;">מספר צ'ק:</label>
+            <input type="text" id="checkNumber" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 3px; box-sizing: border-box;" />
+            <label style="display: block; margin-bottom: 5px;">בנק:</label>
+            <input type="text" id="checkBank" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 3px; box-sizing: border-box;" />
+            <label style="display: block; margin-bottom: 5px;">סניף:</label>
+            <input type="text" id="checkBranch" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 3px; box-sizing: border-box;" />
+          </div>
+        `
+      case 'transfer':
+        return `
+          <div style="background: #f8f9fa; padding: 15px; border-radius: 5px;">
+            <label style="display: block; margin-bottom: 5px;">מספר אסמכתא:</label>
+            <input type="text" id="transferRef" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 3px; box-sizing: border-box;" />
+          </div>
+        `
+      case 'other':
+        return `
+          <div style="background: #f8f9fa; padding: 15px; border-radius: 5px;">
+            <label style="display: block; margin-bottom: 5px;">פרטים:</label>
+            <textarea id="otherDetails" rows="2" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 3px; box-sizing: border-box;"></textarea>
+          </div>
+        `
+      default:
+        return ''
+    }
+  }
+  
+  // פונקציה להוספת event listeners לפרטי תשלום
+  const addPaymentDetailsListeners = (container: HTMLDivElement, method: string, onUpdate: (details: string) => void) => {
+    const inputs = container.querySelectorAll('input, textarea')
+    inputs.forEach(input => {
+      input.addEventListener('input', () => {
+        let details: any = {}
+        
+        switch (method) {
+          case 'check':
+            details = {
+              checkNumber: (container.querySelector('#checkNumber') as HTMLInputElement)?.value || '',
+              bank: (container.querySelector('#checkBank') as HTMLInputElement)?.value || '',
+              branch: (container.querySelector('#checkBranch') as HTMLInputElement)?.value || ''
+            }
+            break
+          case 'transfer':
+            details = {
+              referenceNumber: (container.querySelector('#transferRef') as HTMLInputElement)?.value || ''
+            }
+            break
+          case 'other':
+            details = {
+              description: (container.querySelector('#otherDetails') as HTMLTextAreaElement)?.value || ''
+            }
+            break
+        }
+        
+        onUpdate(JSON.stringify(details))
+      })
+    })
+  }
+
   const handlePrintDepositDocument = (deposit: any) => {
     const gemachName = db.getGemachName()
     const depositText = db.getDepositReceiptTemplate()
@@ -617,6 +860,25 @@ function DepositsPage() {
           >
             ➕ הפקדה חדשה
           </button>
+          {totalBalance > 0 && depositorDeposits.length > 0 && (
+            <button
+              onClick={showMultipleWithdrawalModal}
+              style={{
+                flex: 1,
+                padding: '12px',
+                backgroundColor: '#3498db',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer',
+                fontSize: '16px',
+                fontWeight: 'bold'
+              }}
+              title="משוך מכמה הפקדות יחד - הסכום יחולק אוטומטית"
+            >
+              💸 משיכה מרובה
+            </button>
+          )}
         </div>
       </div>
 

@@ -9,7 +9,7 @@ on:
       version:
         description: 'Version number (e.g., v2.1.0)'
         required: true
-        default: 'v2.9.59'
+        default: 'v2.9.70'
 
 permissions:
   contents: write
@@ -62,9 +62,9 @@ jobs:
         body: |
           ## 🏛️ מערכת ניהול גמ"ח - גרסה ${{ github.event.inputs.version || github.ref_name }}
           
-          ### 🔥 תיקון קריטי בגרסה 2.9.59:
-          - 🔧 **תיקון preload.js** - הקובץ נכלל עכשיו בבנייה
-          - 💾 **שמירה לקובץ עובדת** - הנתונים נשמרים לקובץ בדיסק
+          ### 🆕 חדש בגרסה 2.9.70:
+          - 💸 **משיכה מרובה בהפקדות** - משיכה מכמה הפקדות בפעולה אחת
+          - 🔧 **תיקון preload.js** - שמירת נתונים לקובץ עובדת
           - 🔄 **גיבוי כפול** - שמירה גם ב-localStorage וגם בקובץ
           
           ### ✨ תכונות עיקריות:

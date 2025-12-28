@@ -434,30 +434,49 @@ class GemachDatabase {
 
   private loadData(): void {
     try {
+      // קודם טען מ-localStorage (סינכרוני) כברירת מחדל
+      this.loadFromLocalStorage()
+      
       // בדוק אם יש electronAPI (רץ ב-Electron)
       const electronAPI = (window as any).electronAPI
       
-      // קודם נסה לטעון מקובץ ב-Electron
+      // נסה לטעון מקובץ ב-Electron (אסינכרוני)
       if (electronAPI && electronAPI.readDataFile) {
-        // טעינה אסינכרונית מקובץ - נעשה sync עם localStorage כגיבוי
         electronAPI.readDataFile().then((result: any) => {
           if (result.success && result.data) {
-            console.log('נתונים נטענו מקובץ Electron!')
-            this.loadFromData(result.data)
-            // סנכרן ל-localStorage כגיבוי
-            this.saveToLocalStorage()
+            // בדוק אם הקובץ מכיל יותר נתונים מ-localStorage
+            const fileDataCount = (result.data.borrowers?.length || 0) + 
+                                  (result.data.loans?.length || 0) + 
+                                  (result.data.deposits?.length || 0)
+            const localDataCount = this.dataFile.borrowers.length + 
+                                   this.dataFile.loans.length + 
+                                   this.dataFile.deposits.length
+            
+            // אם הקובץ מכיל נתונים (ו-localStorage ריק או הקובץ מעודכן יותר)
+            if (fileDataCount > 0 && (localDataCount === 0 || fileDataCount >= localDataCount)) {
+              console.log('נתונים נטענו מקובץ Electron! (קובץ מכיל יותר נתונים)')
+              this.loadFromData(result.data)
+              // סנכרן ל-localStorage כגיבוי
+              this.saveToLocalStorage()
+              // הפעל מחדש את עיבוד ההלוואות המחזוריות
+              this.processRecurringLoans()
+              this.processRecurringDeposits()
+            } else {
+              console.log('localStorage מכיל יותר נתונים, משתמש בו')
+              // סנכרן לקובץ
+              this.saveToFile()
+            }
           } else {
-            console.log('אין קובץ נתונים, טוען מ-localStorage')
-            this.loadFromLocalStorage()
+            console.log('אין קובץ נתונים, משתמש ב-localStorage')
+            // שמור את הנתונים מ-localStorage לקובץ
+            if (this.dataFile.borrowers.length > 0 || this.dataFile.loans.length > 0) {
+              this.saveToFile()
+            }
           }
         }).catch((err: any) => {
           console.error('שגיאה בטעינה מקובץ:', err)
-          this.loadFromLocalStorage()
         })
       }
-      
-      // תמיד טען מ-localStorage קודם (סינכרוני)
-      this.loadFromLocalStorage()
       
     } catch (error) {
       console.error('שגיאה בטעינת נתונים:', error)
@@ -1053,19 +1072,19 @@ class GemachDatabase {
         }
       }
 
-      // בדוק אם הגיע הזמן ליצור הלוואה חדשה
-      if (nextDate <= today) {
+      // לולאה ליצירת כל ההלוואות שפספסנו (אם לא פתחנו את התוכנה כמה ימים)
+      while (nextDate <= today) {
         // בדוק אם לא עברנו את מספר החודשים המקסימלי
         if (recurringLoan.recurringMonths) {
           const loansCount = this.getRecurringLoansCount(recurringLoan)
           if (loansCount >= recurringLoan.recurringMonths) {
-            continue
+            break
           }
         }
 
         // קבל את פרטי הלווה
         const borrower = this.dataFile.borrowers.find(b => b.id === recurringLoan.borrowerId)
-        if (!borrower) continue
+        if (!borrower) break
 
         // חשב תאריך החזרה (חודש אחד קדימה מתאריך ההלוואה)
         const returnDate = new Date(nextDate)
@@ -1096,7 +1115,13 @@ class GemachDatabase {
         recurringLoan.lastRecurringDate = nextDate.toISOString().split('T')[0]
         
         loansCreated++
-        console.log(`✅ נוצרה הלוואה מחזורית אוטומטית: ₪${newLoan.amount} ללווה ${borrower.firstName} ${borrower.lastName}`)
+        console.log(`✅ נוצרה הלוואה מחזורית אוטומטית: ₪${newLoan.amount} ללווה ${borrower.firstName} ${borrower.lastName} לתאריך ${nextDate.toISOString().split('T')[0]}`)
+        
+        // חשב את התאריך הבא
+        nextDate.setMonth(nextDate.getMonth() + 1)
+        if (recurringLoan.recurringDay) {
+          nextDate.setDate(recurringLoan.recurringDay)
+        }
       }
     }
 
